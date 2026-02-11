@@ -1,0 +1,49 @@
+{
+  "name": "specter-mcp",
+  "version": "1.0.0",
+  "description": "Give your codebase a voice. A Copilot CLI plugin that builds a knowledge graph and lets you talk to your code.",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "specter": "dist/cli.js",
+    "specter-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "scan": "node dist/cli.js scan",
+    "test": "node --test"
+  },
+  "keywords": [
+    "copilot",
+    "mcp",
+    "codebase",
+    "knowledge-graph",
+    "ast",
+    "code-analysis",
+    "github-copilot-cli"
+  ],
+  "author": "Liz Stein",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/forbiddenlink/specter"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "chalk": "^5.3.0",
+    "commander": "^12.1.0",
+    "ora": "^8.0.1",
+    "simple-git": "^3.22.0",
+    "ts-morph": "^22.0.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.3.0"
+  }
+}

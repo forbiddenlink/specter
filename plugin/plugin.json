@@ -1,0 +1,16 @@
+{
+  "name": "specter",
+  "version": "1.0.0",
+  "description": "Give your codebase a voice. A Copilot CLI plugin that builds a knowledge graph and lets you talk to your code.",
+  "author": "Liz Stein",
+  "repository": "https://github.com/forbiddenlink/specter",
+  "license": "MIT",
+  "keywords": [
+    "codebase",
+    "knowledge-graph",
+    "ast",
+    "code-analysis",
+    "mcp",
+    "github-copilot-cli"
+  ]
+}
