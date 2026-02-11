@@ -50,6 +50,10 @@ import { gatherWrappedData, formatWrapped } from './wrapped.js';
 import { summonSpirits, formatSeance, listRecentlyDeleted } from './seance.js';
 import { generateReading, formatReading } from './fortune.js';
 import { generateDNA, formatDNA, generateBadge } from './dna.js';
+import { generateTour, formatTour } from './tour.js';
+import { findExperts, formatWho } from './who.js';
+import { analyzeZones, formatSafeZones, formatDangerZones } from './zones.js';
+import { generateMorning, formatMorning } from './morning.js';
 
 const program = new Command();
 
@@ -2073,6 +2077,244 @@ program
         console.log(chalk.italic.green(`  ${line}`));
       } else if (line.includes('╭') || line.includes('╰') || line.includes('├')) {
         console.log(chalk.dim.cyan(`  ${line}`));
+      } else {
+        console.log(chalk.white(`  ${line}`));
+      }
+    }
+    console.log();
+  });
+
+program
+  .command('tour')
+  .description('Get an interactive walkthrough of the codebase')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .action(async (options) => {
+    const rootDir = path.resolve(options.dir);
+
+    const spinner = createSpinner('Preparing your tour...');
+    spinner.start();
+
+    const graph = await loadGraph(rootDir);
+
+    if (!graph) {
+      spinner.fail('No graph found. Run `specter scan` first.');
+      return;
+    }
+
+    const tour = generateTour(graph);
+    spinner.stop();
+
+    const output = formatTour(tour);
+
+    console.log();
+    for (const line of output.split('\n')) {
+      if (line.includes('╔') || line.includes('╚') || line.includes('║')) {
+        console.log(chalk.bold.cyan(`  ${line}`));
+      } else if (line.includes('═')) {
+        console.log(chalk.dim.cyan(`  ${line}`));
+      } else if (line.startsWith('OVERVIEW') || line.startsWith('ARCHITECTURE') || line.includes('QUICK START')) {
+        console.log(chalk.bold.yellow(`  ${line}`));
+      } else if (line.startsWith('📍')) {
+        console.log(chalk.bold.magenta(`  ${line}`));
+      } else if (line.startsWith('─')) {
+        console.log(chalk.dim(`  ${line}`));
+      } else if (line.startsWith('🔴')) {
+        console.log(chalk.red(`  ${line}`));
+      } else if (line.startsWith('🟡')) {
+        console.log(chalk.yellow(`  ${line}`));
+      } else if (line.startsWith('🟢')) {
+        console.log(chalk.green(`  ${line}`));
+      } else if (line.includes('💡')) {
+        console.log(chalk.italic.cyan(`  ${line}`));
+      } else if (line.startsWith('Legend:')) {
+        console.log(chalk.dim(`  ${line}`));
+      } else {
+        console.log(chalk.white(`  ${line}`));
+      }
+    }
+    console.log();
+  });
+
+program
+  .command('who <file>')
+  .description('Find out who knows the most about a file')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .action(async (file, options) => {
+    const rootDir = path.resolve(options.dir);
+
+    const spinner = createSpinner('Finding experts...');
+    spinner.start();
+
+    const graph = await loadGraph(rootDir);
+
+    if (!graph) {
+      spinner.fail('No graph found. Run `specter scan` first.');
+      return;
+    }
+
+    const result = await findExperts(rootDir, file, graph);
+    spinner.stop();
+
+    const output = formatWho(result);
+
+    console.log();
+    for (const line of output.split('\n')) {
+      if (line.includes('┏') || line.includes('┗') || line.includes('┃')) {
+        console.log(chalk.bold.cyan(`  ${line}`));
+      } else if (line.includes('━')) {
+        console.log(chalk.dim.cyan(`  ${line}`));
+      } else if (line.startsWith('File:')) {
+        console.log(chalk.yellow(`  ${line}`));
+      } else if (line.startsWith('EXPERTS') || line.startsWith('RELATED') || line.startsWith('SUGGESTIONS')) {
+        console.log(chalk.bold.magenta(`  ${line}`));
+      } else if (line.startsWith('─')) {
+        console.log(chalk.dim(`  ${line}`));
+      } else if (line.startsWith('🥇')) {
+        console.log(chalk.bold.yellow(`  ${line}`));
+      } else if (line.startsWith('🥈')) {
+        console.log(chalk.yellow(`  ${line}`));
+      } else if (line.startsWith('🥉')) {
+        console.log(chalk.dim.yellow(`  ${line}`));
+      } else if (line.includes('⭐ Primary')) {
+        console.log(chalk.green(`  ${line}`));
+      } else if (line.includes('💡')) {
+        console.log(chalk.italic.cyan(`  ${line}`));
+      } else if (line.includes('⚠️')) {
+        console.log(chalk.yellow(`  ${line}`));
+      } else {
+        console.log(chalk.white(`  ${line}`));
+      }
+    }
+    console.log();
+  });
+
+program
+  .command('safe')
+  .description('Find safe zones for new contributors')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .action(async (options) => {
+    const rootDir = path.resolve(options.dir);
+
+    const spinner = createSpinner('Mapping safe zones...');
+    spinner.start();
+
+    const graph = await loadGraph(rootDir);
+
+    if (!graph) {
+      spinner.fail('No graph found. Run `specter scan` first.');
+      return;
+    }
+
+    const zones = analyzeZones(graph);
+    spinner.stop();
+
+    const output = formatSafeZones(zones);
+
+    console.log();
+    for (const line of output.split('\n')) {
+      if (line.includes('┏') || line.includes('┗') || line.includes('┃')) {
+        console.log(chalk.bold.green(`  ${line}`));
+      } else if (line.startsWith('🟢')) {
+        console.log(chalk.green(`  ${line}`));
+      } else if (line.includes('Safety:')) {
+        console.log(chalk.cyan(`  ${line}`));
+      } else if (line.includes('✓')) {
+        console.log(chalk.dim.green(`  ${line}`));
+      } else if (line.startsWith('─')) {
+        console.log(chalk.dim(`  ${line}`));
+      } else {
+        console.log(chalk.white(`  ${line}`));
+      }
+    }
+    console.log();
+  });
+
+program
+  .command('danger')
+  .description('Find danger zones requiring caution')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .action(async (options) => {
+    const rootDir = path.resolve(options.dir);
+
+    const spinner = createSpinner('Mapping danger zones...');
+    spinner.start();
+
+    const graph = await loadGraph(rootDir);
+
+    if (!graph) {
+      spinner.fail('No graph found. Run `specter scan` first.');
+      return;
+    }
+
+    const zones = analyzeZones(graph);
+    spinner.stop();
+
+    const output = formatDangerZones(zones);
+
+    console.log();
+    for (const line of output.split('\n')) {
+      if (line.includes('┏') || line.includes('┗') || line.includes('┃')) {
+        console.log(chalk.bold.red(`  ${line}`));
+      } else if (line.startsWith('🔴')) {
+        console.log(chalk.red(`  ${line}`));
+      } else if (line.includes('Risk:')) {
+        console.log(chalk.yellow(`  ${line}`));
+      } else if (line.includes('⚠️')) {
+        console.log(chalk.yellow(`  ${line}`));
+      } else if (line.includes('💡')) {
+        console.log(chalk.italic.cyan(`  ${line}`));
+      } else if (line.startsWith('─')) {
+        console.log(chalk.dim(`  ${line}`));
+      } else {
+        console.log(chalk.white(`  ${line}`));
+      }
+    }
+    console.log();
+  });
+
+program
+  .command('morning')
+  .description('Get your daily codebase briefing')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .action(async (options) => {
+    const rootDir = path.resolve(options.dir);
+
+    const spinner = createSpinner('Preparing your briefing...');
+    spinner.start();
+
+    const graph = await loadGraph(rootDir);
+
+    if (!graph) {
+      spinner.fail('No graph found. Run `specter scan` first.');
+      return;
+    }
+
+    const briefing = await generateMorning(graph, rootDir);
+    spinner.stop();
+
+    const output = formatMorning(briefing);
+
+    console.log();
+    for (const line of output.split('\n')) {
+      if (line.includes('╔') || line.includes('╚') || line.includes('║')) {
+        console.log(chalk.bold.yellow(`  ${line}`));
+      } else if (line.includes('═')) {
+        console.log(chalk.dim.yellow(`  ${line}`));
+      } else if (line.startsWith('CODEBASE') || line.startsWith('LAST 24') || line.startsWith('HOT FILES') || line.startsWith("TODAY'S")) {
+        console.log(chalk.bold.cyan(`  ${line}`));
+      } else if (line.includes('⚠️  ALERTS')) {
+        console.log(chalk.bold.red(`  ${line}`));
+      } else if (line.startsWith('─')) {
+        console.log(chalk.dim(`  ${line}`));
+      } else if (line.includes('💚') || line.includes('💛') || line.includes('❤️')) {
+        const color = line.includes('💚') ? chalk.green : line.includes('💛') ? chalk.yellow : chalk.red;
+        console.log(color(`  ${line}`));
+      } else if (line.includes('🔥')) {
+        console.log(chalk.red(`  ${line}`));
+      } else if (line.startsWith('  →')) {
+        console.log(chalk.cyan(`  ${line}`));
+      } else if (line.includes('Have a productive')) {
+        console.log(chalk.italic.yellow(`  ${line}`));
       } else {
         console.log(chalk.white(`  ${line}`));
       }
