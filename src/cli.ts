@@ -25,6 +25,11 @@ function createSpinner(text: string): Ora {
 import { buildKnowledgeGraph, getGraphStats } from './graph/builder.js';
 import { saveGraph, loadGraph, loadMetadata, graphExists, deleteGraph, isGraphStale } from './graph/persistence.js';
 import { findComplexityHotspots, generateComplexityReport, getComplexityEmoji } from './analyzers/complexity.js';
+import { loadSnapshots, getSnapshotCount } from './history/storage.js';
+import { analyzeTrends, getTimeSpan } from './history/trends.js';
+import { coloredSparkline, healthBar } from './ui/index.js';
+import type { PersonalityMode } from './personality/types.js';
+import { formatHealthComment, formatTrendComment, formatRiskComment } from './personality/formatter.js';
 
 const program = new Command();
 
@@ -205,9 +210,11 @@ program
   .description('Generate a codebase health report')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
   .option('-l, --limit <n>', 'Number of hotspots to show', '10')
+  .option('-p, --personality <mode>', 'Output personality: mentor, critic, historian, cheerleader, minimalist', 'default')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
     const limit = parseInt(options.limit, 10);
+    const personality = options.personality as PersonalityMode;
 
     const graph = await loadGraph(rootDir);
 
@@ -294,14 +301,259 @@ program
 
     console.log(chalk.bold('╚' + '═'.repeat(W) + '╝'));
 
-    // Summary line
+    // Summary line with personality
     console.log();
+    const healthComment = formatHealthComment(healthScore, personality);
     if (healthScore >= 80) {
-      console.log(chalk.green('  ✨ Your codebase is in great shape!'));
+      console.log(chalk.green(`  ${healthComment}`));
     } else if (healthScore >= 60) {
-      console.log(chalk.yellow('  ⚠️  Some areas could use attention.'));
+      console.log(chalk.yellow(`  ${healthComment}`));
     } else {
-      console.log(chalk.red('  🚨 Consider refactoring high-complexity functions.'));
+      console.log(chalk.red(`  ${healthComment}`));
+    }
+  });
+
+/**
+ * Trends command - show health trends over time
+ */
+program
+  .command('trends')
+  .description('Show health trends over time')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('--period <period>', 'Time period: day, week, month, all', 'week')
+  .option('-p, --personality <mode>', 'Output personality: mentor, critic, historian, cheerleader, minimalist', 'default')
+  .action(async (options) => {
+    const rootDir = path.resolve(options.dir);
+    const period = options.period as 'day' | 'week' | 'month' | 'all';
+    const personality = options.personality as PersonalityMode;
+
+    const graph = await loadGraph(rootDir);
+
+    if (!graph) {
+      console.log(chalk.yellow('No graph found. Run `specter scan` first.'));
+      return;
+    }
+
+    const snapshots = await loadSnapshots(rootDir);
+    const snapshotCount = snapshots.length;
+
+    if (snapshotCount === 0) {
+      console.log(chalk.yellow('No health history yet. Run `specter scan` a few times to build up trend data.'));
+      return;
+    }
+
+    const analysis = analyzeTrends(snapshots);
+    const timeSpan = getTimeSpan(snapshots);
+
+    const W = 60; // inner width
+
+    console.log();
+    console.log(chalk.bold('╔' + '═'.repeat(W) + '╗'));
+    console.log(chalk.bold('║') + '  📈 ' + chalk.bold.white('SPECTER HEALTH TRENDS') + ' '.repeat(W - 27) + chalk.bold('║'));
+    console.log(chalk.bold('╠' + '═'.repeat(W) + '╣'));
+
+    // Current health
+    if (analysis.current) {
+      const { healthScore, avgComplexity, hotspotCount, fileCount, totalLines } = analysis.current.metrics;
+      const grade = healthScore >= 90 ? 'A' : healthScore >= 80 ? 'B' : healthScore >= 70 ? 'C' : healthScore >= 60 ? 'D' : 'F';
+      const scoreColor = healthScore >= 80 ? chalk.green : healthScore >= 60 ? chalk.yellow : chalk.red;
+
+      const scoreLine = `  Current Health: ${scoreColor(String(healthScore))}/100 (Grade ${grade})`;
+      console.log(chalk.bold('║') + scoreLine + ' '.repeat(W - scoreLine.length + 13) + chalk.bold('║'));
+
+      const bar = healthBar(healthScore, 40);
+      console.log(chalk.bold('║') + '  ' + bar + ' '.repeat(W - 44) + chalk.bold('║'));
+
+      console.log(chalk.bold('║') + chalk.dim('  ' + '─'.repeat(W - 4)) + chalk.bold('║'));
+
+      // Metrics
+      const metricsLine1 = `  Files: ${fileCount}  |  Lines: ${totalLines.toLocaleString()}  |  Hotspots: ${hotspotCount}`;
+      console.log(chalk.bold('║') + metricsLine1 + ' '.repeat(W - metricsLine1.length + 2) + chalk.bold('║'));
+
+      if (analysis.current.commitHash) {
+        const commitLine = `  Commit: ${analysis.current.commitHash}`;
+        console.log(chalk.bold('║') + chalk.dim(commitLine) + ' '.repeat(W - commitLine.length + 2) + chalk.bold('║'));
+      }
+    }
+
+    console.log(chalk.bold('╠' + '═'.repeat(W) + '╣'));
+
+    // Sparkline trend
+    if (snapshots.length >= 2) {
+      const scores = [...snapshots].reverse().map(s => s.metrics.healthScore);
+      const sparkline = coloredSparkline(scores, true);
+      const sparkTitle = `  Health over ${timeSpan} (${snapshotCount} snapshots):`;
+      console.log(chalk.bold('║') + sparkTitle + ' '.repeat(W - sparkTitle.length + 2) + chalk.bold('║'));
+      console.log(chalk.bold('║') + '  ' + sparkline + ' '.repeat(W - sparkline.length - 2) + chalk.bold('║'));
+      console.log(chalk.bold('║') + chalk.dim('  ' + '─'.repeat(W - 4)) + chalk.bold('║'));
+    }
+
+    // Period trends
+    const selectedTrend = analysis.trends[period];
+    if (selectedTrend && selectedTrend.snapshots.length >= 1) {
+      const directionEmoji = {
+        improving: '↗️',
+        stable: '→',
+        declining: '↘️',
+      }[selectedTrend.direction];
+
+      const periodLabel = {
+        day: 'Today',
+        week: 'This Week',
+        month: 'This Month',
+        all: 'All Time',
+      }[period];
+
+      const trendTitle = `  📊 ${periodLabel}: ${directionEmoji} ${selectedTrend.direction.charAt(0).toUpperCase() + selectedTrend.direction.slice(1)}`;
+      console.log(chalk.bold('║') + trendTitle + ' '.repeat(W - trendTitle.length + 2) + chalk.bold('║'));
+
+      if (selectedTrend.changePercent !== 0) {
+        const sign = selectedTrend.changePercent > 0 ? '+' : '';
+        const changeLine = `  Change: ${sign}${selectedTrend.changePercent}%`;
+        const changeColor = selectedTrend.changePercent > 0 ? chalk.green : chalk.red;
+        console.log(chalk.bold('║') + changeColor(changeLine) + ' '.repeat(W - changeLine.length + 2) + chalk.bold('║'));
+      }
+
+      // Insights
+      if (selectedTrend.insights.length > 0) {
+        console.log(chalk.bold('║') + ' '.repeat(W) + chalk.bold('║'));
+        const insightsTitle = '  Insights:';
+        console.log(chalk.bold('║') + chalk.cyan(insightsTitle) + ' '.repeat(W - insightsTitle.length + 2) + chalk.bold('║'));
+        for (const insight of selectedTrend.insights.slice(0, 5)) {
+          const insightLine = `  • ${insight}`.slice(0, W - 2);
+          console.log(chalk.bold('║') + insightLine + ' '.repeat(W - insightLine.length + 2) + chalk.bold('║'));
+        }
+      }
+    } else {
+      const noDataLine = `  Not enough data for ${period} trends. Keep scanning!`;
+      console.log(chalk.bold('║') + chalk.dim(noDataLine) + ' '.repeat(W - noDataLine.length + 2) + chalk.bold('║'));
+    }
+
+    console.log(chalk.bold('╚' + '═'.repeat(W) + '╝'));
+
+    // First-person summary with personality
+    console.log();
+    if (selectedTrend && personality !== 'default') {
+      const personalitySummary = formatTrendComment(selectedTrend.direction, selectedTrend.changePercent, personality);
+      console.log(chalk.italic(personalitySummary));
+    } else {
+      console.log(chalk.italic(analysis.summary));
+    }
+    console.log();
+  });
+
+/**
+ * Risk command - analyze commit/PR risk
+ */
+program
+  .command('risk')
+  .description('Analyze risk of staged changes or commits')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('--staged', 'Analyze staged changes (default)', true)
+  .option('-b, --branch <branch>', 'Compare against branch')
+  .option('-c, --commit <hash>', 'Analyze specific commit')
+  .option('-p, --personality <mode>', 'Output personality: mentor, critic, historian, cheerleader, minimalist', 'default')
+  .action(async (options) => {
+    const rootDir = path.resolve(options.dir);
+    const personality = options.personality as PersonalityMode;
+
+    const graph = await loadGraph(rootDir);
+    if (!graph) {
+      console.log(chalk.yellow('No graph found. Run `specter scan` first.'));
+      return;
+    }
+
+    const spinner = createSpinner('Analyzing risk...').start();
+
+    try {
+      // Dynamic import to avoid loading risk code unless needed
+      const { calculateRiskScore } = await import('./risk/scorer.js');
+
+      const risk = await calculateRiskScore(rootDir, graph, {
+        staged: options.staged,
+        branch: options.branch,
+        commit: options.commit,
+      });
+
+      spinner.stop();
+
+      // Display risk score with visual
+      const levelColor = risk.level === 'low' ? chalk.green :
+                        risk.level === 'medium' ? chalk.yellow :
+                        risk.level === 'high' ? chalk.hex('#FFA500') :
+                        chalk.red;
+
+      const levelEmoji = risk.level === 'low' ? '\u{1F7E2}' :
+                        risk.level === 'medium' ? '\u{1F7E1}' :
+                        risk.level === 'high' ? '\u{1F7E0}' : '\u{1F534}';
+
+      const W = 55; // inner width
+
+      console.log();
+      console.log(chalk.bold('\u2554' + '\u2550'.repeat(W) + '\u2557'));
+      console.log(chalk.bold('\u2551') + '  \u{1F47B} ' + chalk.bold.white('SPECTER RISK ANALYSIS') + ' '.repeat(W - 27) + chalk.bold('\u2551'));
+      console.log(chalk.bold('\u2560' + '\u2550'.repeat(W) + '\u2563'));
+
+      // Overall score with big display
+      const riskLabel = `  ${levelEmoji} Risk: ${levelColor(risk.level.toUpperCase())} ${risk.overall}/100`;
+      console.log(chalk.bold('\u2551') + riskLabel + ' '.repeat(W - riskLabel.length + 13) + chalk.bold('\u2551'));
+
+      // Progress bar for risk
+      const barWidth = 40;
+      const filled = Math.round((risk.overall / 100) * barWidth);
+      const empty = barWidth - filled;
+      const bar = levelColor('\u2588'.repeat(filled)) + chalk.dim('\u2591'.repeat(empty));
+      console.log(chalk.bold('\u2551') + '  ' + bar + ' '.repeat(W - barWidth - 4) + chalk.bold('\u2551'));
+
+      console.log(chalk.bold('\u2560' + '\u2550'.repeat(W) + '\u2563'));
+
+      // Factor breakdown
+      const factorTitle = '  Risk Factors:';
+      console.log(chalk.bold('\u2551') + chalk.cyan(factorTitle) + ' '.repeat(W - factorTitle.length + 2) + chalk.bold('\u2551'));
+      console.log(chalk.bold('\u2551') + chalk.dim('  ' + '\u2500'.repeat(W - 4)) + chalk.bold('\u2551'));
+
+      for (const [, factor] of Object.entries(risk.factors)) {
+        const factorBar = (() => {
+          const fWidth = 12;
+          const fFilled = Math.round((factor.score / 100) * fWidth);
+          const fEmpty = fWidth - fFilled;
+          const fColor = factor.score <= 25 ? chalk.green :
+                        factor.score <= 50 ? chalk.yellow :
+                        factor.score <= 75 ? chalk.hex('#FFA500') : chalk.red;
+          return fColor('\u2588'.repeat(fFilled)) + chalk.dim('\u2591'.repeat(fEmpty));
+        })();
+        const scorePad = factor.score.toString().padStart(3);
+        const factorLine = `  ${factor.name.padEnd(18)} ${factorBar} ${scorePad}`;
+        console.log(chalk.bold('\u2551') + factorLine + ' '.repeat(W - factorLine.length + 2) + chalk.bold('\u2551'));
+      }
+
+      console.log(chalk.bold('\u2560' + '\u2550'.repeat(W) + '\u2563'));
+
+      // Recommendations
+      if (risk.recommendations.length > 0) {
+        const recTitle = '  Recommendations:';
+        console.log(chalk.bold('\u2551') + chalk.yellow(recTitle) + ' '.repeat(W - recTitle.length + 2) + chalk.bold('\u2551'));
+        for (const rec of risk.recommendations) {
+          const recLine = `  \u2022 ${rec.slice(0, W - 6)}`;
+          console.log(chalk.bold('\u2551') + recLine + ' '.repeat(Math.max(0, W - recLine.length + 2)) + chalk.bold('\u2551'));
+        }
+      }
+
+      console.log(chalk.bold('\u255A' + '\u2550'.repeat(W) + '\u255D'));
+
+      // Summary with personality
+      console.log();
+      if (personality !== 'default') {
+        const personalitySummary = formatRiskComment(risk.level, risk.overall, personality);
+        console.log(chalk.italic(personalitySummary));
+      } else {
+        console.log(chalk.italic(risk.summary));
+      }
+      console.log();
+
+    } catch (error) {
+      spinner.fail('Risk analysis failed');
+      console.error(chalk.red(error instanceof Error ? error.message : String(error)));
     }
   });
 
@@ -317,6 +569,57 @@ program
 
     await deleteGraph(rootDir);
     console.log(chalk.green('✓ Graph cache removed.'));
+  });
+
+/**
+ * Dashboard command - launch interactive web dashboard
+ */
+program
+  .command('dashboard')
+  .description('Launch interactive web dashboard')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('-p, --port <port>', 'Port to listen on', '3333')
+  .option('--no-open', 'Do not open browser automatically')
+  .action(async (options) => {
+    const rootDir = path.resolve(options.dir);
+    const port = parseInt(options.port, 10);
+
+    // Check graph exists
+    if (!(await graphExists(rootDir))) {
+      console.log(chalk.yellow('No graph found. Run `specter scan` first.'));
+      return;
+    }
+
+    console.log();
+    console.log(chalk.bold.magenta('  👻 Starting Specter Dashboard...'));
+    console.log();
+
+    // Dynamic import to avoid loading dashboard code unless needed
+    const { startDashboard } = await import('./dashboard/index.js');
+
+    const { url, close } = await startDashboard({ rootDir, port });
+
+    console.log(chalk.green(`  Dashboard running at ${chalk.bold(url)}`));
+    console.log();
+
+    // Open browser (macOS/Linux/Windows)
+    if (options.open !== false) {
+      const { exec } = await import('child_process');
+      const platform = process.platform;
+      const command = platform === 'darwin' ? 'open' :
+                     platform === 'win32' ? 'start' : 'xdg-open';
+      exec(`${command} ${url}`);
+    }
+
+    console.log(chalk.dim('  Press Ctrl+C to stop'));
+    console.log();
+
+    // Handle shutdown
+    process.on('SIGINT', async () => {
+      console.log(chalk.yellow('\n  Shutting down...'));
+      await close();
+      process.exit(0);
+    });
   });
 
 program.parse();

@@ -8,8 +8,12 @@
 import { z } from 'zod';
 import type { KnowledgeGraph, CodebaseStats, GraphNode } from '../graph/types.js';
 import { getComplexityEmoji } from '../analyzers/complexity.js';
+import { formatSummary } from '../personality/formatter.js';
+import type { PersonalityMode } from '../personality/types.js';
 
-export const schema = {};
+export const schema = {
+  personality: z.enum(['mentor', 'critic', 'historian', 'cheerleader', 'minimalist', 'default']).optional().describe('Output personality mode'),
+};
 
 export type Input = z.infer<z.ZodObject<typeof schema>>;
 
@@ -31,7 +35,7 @@ export interface CodebaseSummaryResult {
   personality: string;
 }
 
-export function execute(graph: KnowledgeGraph): CodebaseSummaryResult {
+export function execute(graph: KnowledgeGraph, input?: { personality?: PersonalityMode }): CodebaseSummaryResult {
   // Count by type
   let functions = 0;
   let classes = 0;
@@ -106,7 +110,20 @@ export function execute(graph: KnowledgeGraph): CodebaseSummaryResult {
 
   // Generate summary and personality
   const summary = generateSummary(stats, graph.metadata.languages, topDirectories);
-  const personality = generatePersonality(stats, topDirectories, behavioralInsights);
+  const personalityMode = input?.personality || 'default';
+
+  // Use formatSummary for non-default personality modes
+  let personalityText: string;
+  if (personalityMode !== 'default') {
+    const healthScore = Math.max(0, 100 - (stats.avgComplexity * 5));
+    personalityText = formatSummary({
+      stats: { files: stats.files, lines: stats.lines, functions: stats.functions, classes: stats.classes },
+      healthScore: Math.round(healthScore),
+      complexityIssues: stats.hotspotCount,
+    }, personalityMode);
+  } else {
+    personalityText = generatePersonality(stats, topDirectories, behavioralInsights);
+  }
 
   return {
     stats,
@@ -114,7 +131,7 @@ export function execute(graph: KnowledgeGraph): CodebaseSummaryResult {
     topDirectories,
     behavioralInsights,
     summary,
-    personality,
+    personality: personalityText,
   };
 }
 

@@ -8,6 +8,8 @@
 import fs from 'fs/promises';
 import path from 'path';
 import type { KnowledgeGraph, GraphMetadata } from './types.js';
+import { createSnapshot } from '../history/snapshot.js';
+import { saveSnapshot } from '../history/storage.js';
 
 const SPECTER_DIR = '.specter';
 const GRAPH_FILE = 'graph.json';
@@ -44,6 +46,14 @@ export async function saveGraph(graph: KnowledgeGraph, rootDir: string): Promise
 
   // Add .specter to .gitignore if not already there
   await addToGitignore(rootDir);
+
+  // Auto-create health snapshot for trend tracking
+  try {
+    const snapshot = await createSnapshot(graph);
+    await saveSnapshot(rootDir, snapshot);
+  } catch {
+    // Snapshot creation is non-critical, don't fail the save
+  }
 }
 
 /**

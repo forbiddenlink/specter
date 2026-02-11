@@ -13,3 +13,9 @@ dist/
 
 # OS
 .DS_Store
+
+# Claude Code local config
+.claude/
+
+# Development thoughts/planning
+thoughts/

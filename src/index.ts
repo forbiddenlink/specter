@@ -25,6 +25,8 @@ import * as getChangeCoupling from './tools/get-change-coupling.js';
 import * as getImpactAnalysis from './tools/get-impact-analysis.js';
 import * as getBusFactor from './tools/get-bus-factor.js';
 import * as getArchaeology from './tools/get-archaeology.js';
+import * as getHealthTrends from './tools/get-health-trends.js';
+import * as getRiskScore from './tools/get-risk-score.js';
 
 // Global graph cache
 let cachedGraph: KnowledgeGraph | null = null;
@@ -261,6 +263,41 @@ function createServer(): McpServer {
     async (args) => {
       const graph = await getGraph();
       const result = await getArchaeology.execute(graph, args);
+      return {
+        content: [{ type: 'text', text: result.summary }],
+      };
+    }
+  );
+
+  // Tool: get_health_trends
+  server.tool(
+    'get_health_trends',
+    'Analyze how the codebase health has changed over time. Shows trends in complexity, hotspots, and overall health score with sparkline visualizations. Useful for tracking technical debt.',
+    {
+      period: z.enum(['day', 'week', 'month', 'all']).optional()
+        .describe('Time period to analyze: day, week, month, or all (default: all)'),
+    },
+    async (args) => {
+      const graph = await getGraph();
+      const result = await getHealthTrends.execute(graph, args);
+      return {
+        content: [{ type: 'text', text: result.summary }],
+      };
+    }
+  );
+
+  // Tool: get_risk_score
+  server.tool(
+    'get_risk_score',
+    'Analyze the risk of staged changes, a branch, or a specific commit. Evaluates multiple factors including files changed, complexity, dependencies, bus factor, and test coverage to provide an overall risk score and recommendations.',
+    {
+      staged: z.boolean().optional().describe('Analyze staged changes (default: true)'),
+      branch: z.string().optional().describe('Compare against this branch (e.g., "main")'),
+      commit: z.string().optional().describe('Analyze a specific commit hash'),
+    },
+    async (args) => {
+      const graph = await getGraph();
+      const result = await getRiskScore.execute(graph, args);
       return {
         content: [{ type: 'text', text: result.summary }],
       };
