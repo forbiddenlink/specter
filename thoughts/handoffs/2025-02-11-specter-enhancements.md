@@ -48,14 +48,35 @@ plugin/agents/specter.agent.md     # Added new tools to agent
 ## Current State
 
 - **Tool count:** 12 MCP tools (up from 8)
+- **Hooks:** SessionStart (graph detection) + PreToolUse (risk warnings)
 - **Build:** Passing
 - **Tests:** None (potential next step)
+
+### Proactive Risk Warnings (NEW)
+
+Added `file-risk-warning.ts` hook that triggers on Edit/Write:
+- Warns about high complexity files (>15)
+- Warns about files with many dependents (>5)
+- Warns about single-owner files (bus factor)
+- Warns about stale code (>6 months)
+- Warns about high-churn files (>30 modifications)
+
+Example output:
+```
+👻 **Specter Warning**
+
+⚠️ **High complexity file** (max: 22)
+This is one of my more tangled areas. Consider breaking changes into smaller pieces.
+
+🔗 **8 files depend on this**
+Changes here will ripple. Be careful with exports and interfaces.
+```
 
 ## Suggested Next Steps
 
 ### Tier 1: Quick Wins
 1. **Add test suite** - Core modules need tests for confidence
-2. **Proactive warnings via hooks** - Alert when editing high-risk files
+2. ~~**Proactive warnings via hooks**~~ ✅ DONE - Alert when editing high-risk files
 3. **Store historical snapshots** - Enable trend analysis over time
 
 ### Tier 2: Differentiation
