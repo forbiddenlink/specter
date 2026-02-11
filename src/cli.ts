@@ -45,6 +45,11 @@ import type { PersonalityMode } from './personality/types.js';
 import { coloredSparkline, healthBar } from './ui/index.js';
 import { calculateStats, checkAchievements, achievements } from './achievements.js';
 import { formatHoroscope, generateHoroscope } from './horoscope.js';
+import { gatherOriginData, generateOriginStory } from './origin.js';
+import { gatherWrappedData, formatWrapped } from './wrapped.js';
+import { summonSpirits, formatSeance, listRecentlyDeleted } from './seance.js';
+import { generateReading, formatReading } from './fortune.js';
+import { generateDNA, formatDNA, generateBadge } from './dna.js';
 
 const program = new Command();
 
@@ -1774,6 +1779,304 @@ program
       }
     }
     console.log(chalk.bold.magenta('  ' + '\u2500'.repeat(50)));
+    console.log();
+  });
+
+program
+  .command('origin')
+  .description('Discover the origin story of your codebase')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .action(async (options) => {
+    const rootDir = path.resolve(options.dir);
+
+    const spinner = createSpinner('Consulting the ancient git logs...');
+    spinner.start();
+
+    const graph = await loadGraph(rootDir);
+
+    if (!graph) {
+      spinner.fail('No graph found. Run `specter scan` first.');
+      return;
+    }
+
+    const originData = await gatherOriginData(graph, rootDir);
+    spinner.stop();
+
+    const story = generateOriginStory(originData);
+
+    console.log();
+    // Print with styling
+    for (const line of story.split('\n')) {
+      if (line.startsWith('THE ORIGIN OF') || line.startsWith('THE MYSTERY OF')) {
+        console.log(chalk.bold.cyan(`  ${line}`));
+      } else if (line.startsWith('═')) {
+        console.log(chalk.dim.cyan(`  ${line}`));
+      } else if (line.startsWith('CHAPTER')) {
+        console.log(chalk.bold.yellow(`  ${line}`));
+      } else if (line.startsWith('─')) {
+        console.log(chalk.dim.yellow(`  ${line}`));
+      } else if (line.startsWith('THE CURRENT EPOCH') || line.startsWith('KEY MILESTONES')) {
+        console.log(chalk.bold.magenta(`  ${line}`));
+      } else if (line.startsWith('  •') || line.startsWith('  🏷️') || line.startsWith('  👤')) {
+        console.log(chalk.white(`  ${line}`));
+      } else if (line.includes('first words spoken')) {
+        console.log(chalk.italic.green(`  ${line}`));
+      } else if (line.startsWith('The story of')) {
+        console.log(chalk.italic.cyan(`  ${line}`));
+      } else {
+        console.log(chalk.white(`  ${line}`));
+      }
+    }
+    console.log();
+  });
+
+program
+  .command('wrapped')
+  .description('Get your Spotify Wrapped-style yearly summary')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('-y, --year <year>', 'Year to summarize (default: current year)')
+  .action(async (options) => {
+    const rootDir = path.resolve(options.dir);
+    const year = options.year ? parseInt(options.year, 10) : undefined;
+
+    const spinner = createSpinner('Unwrapping your year...');
+    spinner.start();
+
+    const graph = await loadGraph(rootDir);
+
+    if (!graph) {
+      spinner.fail('No graph found. Run `specter scan` first.');
+      return;
+    }
+
+    const wrappedData = await gatherWrappedData(graph, rootDir, year);
+    spinner.stop();
+
+    const output = formatWrapped(wrappedData);
+
+    console.log();
+    // Print with gradient styling
+    for (const line of output.split('\n')) {
+      if (line.startsWith('YOUR ') && line.includes('WRAPPED')) {
+        console.log(chalk.bold.magenta(`  ${line}`));
+      } else if (line.includes('EDITION')) {
+        console.log(chalk.bold.magenta(`  ${line}`));
+      } else if (line.startsWith('━')) {
+        console.log(chalk.dim.magenta(`  ${line}`));
+      } else if (line.startsWith('─')) {
+        console.log(chalk.dim(`  ${line}`));
+      } else if (line.match(/^THIS YEAR|^YOUR TOP|^BUSIEST|^STREAKS|^FUN FACTS/)) {
+        console.log(chalk.bold.cyan(`  ${line}`));
+      } else if (line.match(/^\s+\d+,?\d* COMMITS$/)) {
+        console.log(chalk.bold.green(`  ${line}`));
+      } else if (line.startsWith('🥇') || line.startsWith('🥈') || line.startsWith('🥉')) {
+        console.log(chalk.yellow(`  ${line}`));
+      } else if (line.match(/^\d\./)) {
+        console.log(chalk.white(`  ${line}`));
+      } else if (line.startsWith('   "')) {
+        console.log(chalk.dim.italic(`  ${line}`));
+      } else if (line.startsWith('•')) {
+        console.log(chalk.white(`  ${line}`));
+      } else if (line.startsWith('#Specter')) {
+        console.log(chalk.bold.magenta(`  ${line}`));
+      } else if (line.startsWith('Thanks for')) {
+        console.log(chalk.italic.cyan(`  ${line}`));
+      } else {
+        console.log(chalk.white(`  ${line}`));
+      }
+    }
+    console.log();
+  });
+
+program
+  .command('seance [query]')
+  .description('Commune with deleted files from git history')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('-l, --limit <n>', 'Maximum spirits to summon', '5')
+  .option('-c, --contents', 'Show last contents of deleted files')
+  .option('--list', 'List recently deleted files')
+  .action(async (query, options) => {
+    const rootDir = path.resolve(options.dir);
+    const limit = parseInt(options.limit, 10) || 5;
+
+    if (options.list) {
+      const spinner = createSpinner('Searching the void for lost souls...');
+      spinner.start();
+
+      const spirits = await listRecentlyDeleted(rootDir, 20);
+      spinner.stop();
+
+      console.log();
+      console.log(chalk.dim.magenta('  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░'));
+      console.log(chalk.bold.magenta('             RECENTLY DEPARTED'));
+      console.log(chalk.dim.magenta('  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░'));
+      console.log();
+
+      if (spirits.length === 0) {
+        console.log(chalk.dim('    No deleted files found in recent history.'));
+      } else {
+        for (const spirit of spirits) {
+          const date = new Date(spirit.deletedAt).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+          });
+          console.log(chalk.white(`    👻 ${spirit.path}`));
+          console.log(chalk.dim(`       Deleted ${date} by ${spirit.deletedBy}`));
+        }
+      }
+
+      console.log();
+      console.log(chalk.dim('    Use `specter seance <filename>` to commune with a spirit.'));
+      console.log(chalk.dim.magenta('  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░'));
+      console.log();
+      return;
+    }
+
+    if (!query) {
+      console.log(chalk.yellow('Please provide a file name to search for, or use --list to see recently deleted files.'));
+      console.log(chalk.dim('Example: specter seance utils.ts'));
+      return;
+    }
+
+    const spinner = createSpinner('Conducting séance...');
+    spinner.start();
+
+    const result = await summonSpirits(rootDir, query, {
+      limit,
+      showContents: options.contents,
+    });
+    spinner.stop();
+
+    const output = formatSeance(result);
+
+    console.log();
+    for (const line of output.split('\n')) {
+      if (line.includes('░')) {
+        console.log(chalk.dim.magenta(`  ${line}`));
+      } else if (line.includes('S É A N C E') || line.includes('Communing')) {
+        console.log(chalk.bold.magenta(`  ${line}`));
+      } else if (line.includes('👻') && line.includes('│')) {
+        console.log(chalk.bold.cyan(`  ${line}`));
+      } else if (line.includes('┌') || line.includes('┐') || line.includes('├') || line.includes('┤') || line.includes('└') || line.includes('┘')) {
+        console.log(chalk.dim.cyan(`  ${line}`));
+      } else if (line.includes('Passed on:') || line.includes('Deleted by:')) {
+        console.log(chalk.red(`  ${line}`));
+      } else if (line.includes('Born:') || line.includes('Created by:') || line.includes('Lived:')) {
+        console.log(chalk.green(`  ${line}`));
+      } else if (line.includes('Last words:')) {
+        console.log(chalk.italic.yellow(`  ${line}`));
+      } else if (line.includes('Final words from beyond:')) {
+        console.log(chalk.bold.white(`  ${line}`));
+      } else if (line.includes('May these files')) {
+        console.log(chalk.italic.magenta(`  ${line}`));
+      } else {
+        console.log(chalk.white(`  ${line}`));
+      }
+    }
+    console.log();
+  });
+
+program
+  .command('fortune')
+  .alias('tarot')
+  .description('Get a tarot reading for your codebase')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('-s, --single', 'Draw a single card instead of three')
+  .action(async (options) => {
+    const rootDir = path.resolve(options.dir);
+
+    const spinner = createSpinner('Shuffling the deck...');
+    spinner.start();
+
+    const graph = await loadGraph(rootDir);
+
+    if (!graph) {
+      spinner.fail('No graph found. Run `specter scan` first.');
+      return;
+    }
+
+    const spread = options.single ? 'single' : 'three-card';
+    const reading = generateReading(graph, spread);
+    spinner.stop();
+
+    const output = formatReading(reading);
+
+    console.log();
+    for (const line of output.split('\n')) {
+      if (line.includes('╔') || line.includes('╚') || line.includes('║')) {
+        console.log(chalk.bold.magenta(`  ${line}`));
+      } else if (line.includes('═')) {
+        console.log(chalk.dim.magenta(`  ${line}`));
+      } else if (line.startsWith('Reading for:') || line.startsWith('Date:') || line.startsWith('Spread:')) {
+        console.log(chalk.cyan(`  ${line}`));
+      } else if (line.includes('┌') || line.includes('┐') || line.includes('└') || line.includes('┘')) {
+        console.log(chalk.dim.yellow(`  ${line}`));
+      } else if (line.includes('│─') || (line.includes('│') && line.includes('─'))) {
+        console.log(chalk.dim.yellow(`  ${line}`));
+      } else if (line.match(/^│\s+(0|I|II|III|IV|V|VI|VII|VIII|IX|X|XI|XII|XIII|XIV|XV|XVI|XVII|XVIII|XIX|XX|XXI)\./)) {
+        console.log(chalk.bold.yellow(`  ${line}`));
+      } else if (line.includes('THE ') && line.includes('│')) {
+        console.log(chalk.bold.cyan(`  ${line}`));
+      } else if (line.includes('PAST') || line.includes('PRESENT') || line.includes('FUTURE')) {
+        console.log(chalk.bold.white(`  ${line}`));
+      } else if (line.includes('💡 Advice:')) {
+        console.log(chalk.bold.green(`  ${line}`));
+      } else if (line.includes('Reversed')) {
+        console.log(chalk.red(`  ${line}`));
+      } else if (line.includes('Remember:') || line.includes('you write the commits')) {
+        console.log(chalk.italic.magenta(`  ${line}`));
+      } else {
+        console.log(chalk.white(`  ${line}`));
+      }
+    }
+    console.log();
+  });
+
+program
+  .command('dna')
+  .description('Generate a unique visual DNA fingerprint of your codebase')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('-b, --badge', 'Output compact badge format')
+  .action(async (options) => {
+    const rootDir = path.resolve(options.dir);
+
+    const spinner = createSpinner('Sequencing codebase genome...');
+    spinner.start();
+
+    const graph = await loadGraph(rootDir);
+
+    if (!graph) {
+      spinner.fail('No graph found. Run `specter scan` first.');
+      return;
+    }
+
+    const profile = generateDNA(graph);
+    spinner.stop();
+
+    const output = options.badge ? generateBadge(profile) : formatDNA(profile);
+
+    console.log();
+    for (const line of output.split('\n')) {
+      if (line.includes('┏') || line.includes('┗') || line.includes('┃')) {
+        console.log(chalk.bold.cyan(`  ${line}`));
+      } else if (line.includes('━')) {
+        console.log(chalk.dim.cyan(`  ${line}`));
+      } else if (line.startsWith('  Specimen:') || line.startsWith('  Sequence:')) {
+        console.log(chalk.yellow(`  ${line}`));
+      } else if (line.includes('DOUBLE HELIX') || line.includes('GENETIC TRAITS') || line.includes('GENOME SIGNATURE')) {
+        console.log(chalk.bold.magenta(`  ${line}`));
+      } else if (line.includes('┌') || line.includes('┐') || line.includes('└') || line.includes('┘') || line.includes('│')) {
+        console.log(chalk.dim.blue(`  ${line}`));
+      } else if (line.includes('▓') || line.includes('░') || line.includes('─') || line.includes('┄')) {
+        console.log(chalk.cyan(`  ${line}`));
+      } else if (line.includes('unique to your codebase') || line.includes('No two projects')) {
+        console.log(chalk.italic.green(`  ${line}`));
+      } else if (line.includes('╭') || line.includes('╰') || line.includes('├')) {
+        console.log(chalk.dim.cyan(`  ${line}`));
+      } else {
+        console.log(chalk.white(`  ${line}`));
+      }
+    }
     console.log();
   });
 
