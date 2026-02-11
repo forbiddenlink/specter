@@ -124,9 +124,7 @@ function findPath(
   }
 
   // BFS
-  const queue: Array<{ node: string; path: string[] }> = [
-    { node: start, path: [start] },
-  ];
+  const queue: Array<{ node: string; path: string[] }> = [{ node: start, path: [start] }];
   const visited = new Set<string>([start]);
 
   while (queue.length > 0) {
@@ -166,7 +164,7 @@ function generatePathSummary(path: string[]): string {
     if (i === 0) {
       parts.push(node);
     } else {
-      const indent = '    '.repeat(i - 1);
+      const _indent = '    '.repeat(i - 1);
       const connector = i === path.length - 1 ? '└── ' : '├── ';
       const verticals = i > 1 ? '│   '.repeat(i - 1).slice(0, -4) + connector : connector;
       parts.push(verticals + node);
@@ -180,7 +178,9 @@ function generatePathSummary(path: string[]): string {
   if (path.length === 2) {
     parts.push(`Direct relationship: \`${path[0]}\` imports from \`${path[1]}\`.`);
   } else {
-    parts.push(`These are connected through ${path.length - 2} intermediate file${path.length > 3 ? 's' : ''}.`);
+    parts.push(
+      `These are connected through ${path.length - 2} intermediate file${path.length > 3 ? 's' : ''}.`
+    );
   }
 
   return parts.join('\n');

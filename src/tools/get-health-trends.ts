@@ -8,11 +8,13 @@ import { z } from 'zod';
 import type { KnowledgeGraph } from '../graph/types.js';
 import { loadSnapshots } from '../history/storage.js';
 import { analyzeTrends, getTimeSpan } from '../history/trends.js';
-import type { TrendAnalysis, HealthTrend } from '../history/types.js';
+import type { HealthTrend, TrendAnalysis } from '../history/types.js';
 import { coloredSparkline, healthBar } from '../ui/index.js';
 
 export const schema = {
-  period: z.enum(['day', 'week', 'month', 'all']).optional()
+  period: z
+    .enum(['day', 'week', 'month', 'all'])
+    .optional()
     .describe('Time period to analyze (default: all)'),
 };
 
@@ -25,10 +27,7 @@ export interface GetHealthTrendsResult {
   summary: string;
 }
 
-export async function execute(
-  graph: KnowledgeGraph,
-  input: Input
-): Promise<GetHealthTrendsResult> {
+export async function execute(graph: KnowledgeGraph, input: Input): Promise<GetHealthTrendsResult> {
   const { period = 'all' } = input;
 
   // Load all snapshots
@@ -57,7 +56,8 @@ function generateTrendSummary(analysis: TrendAnalysis, requestedPeriod: string):
 
   // Current status
   if (analysis.current) {
-    const { healthScore, avgComplexity, hotspotCount, fileCount, totalLines } = analysis.current.metrics;
+    const { healthScore, avgComplexity, hotspotCount, fileCount, totalLines } =
+      analysis.current.metrics;
     const grade = getGrade(healthScore);
 
     parts.push(`**Current Health:** ${healthScore}/100 (Grade ${grade})`);
@@ -81,7 +81,7 @@ function generateTrendSummary(analysis: TrendAnalysis, requestedPeriod: string):
   // Sparkline of health scores
   const allSnapshots = analysis.trends.all?.snapshots || [];
   if (allSnapshots.length >= 2) {
-    const scores = allSnapshots.map(s => s.metrics.healthScore);
+    const scores = allSnapshots.map((s) => s.metrics.healthScore);
     const sparkline = coloredSparkline(scores, true);
     const timeSpan = getTimeSpan(allSnapshots);
     parts.push(`**Trend (${timeSpan}):** ${sparkline}`);

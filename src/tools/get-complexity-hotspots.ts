@@ -5,8 +5,12 @@
  */
 
 import { z } from 'zod';
-import type { KnowledgeGraph, ComplexityHotspot } from '../graph/types.js';
-import { findComplexityHotspots, getComplexityEmoji, COMPLEXITY_THRESHOLDS } from '../analyzers/complexity.js';
+import {
+  COMPLEXITY_THRESHOLDS,
+  findComplexityHotspots,
+  getComplexityEmoji,
+} from '../analyzers/complexity.js';
+import type { ComplexityHotspot, KnowledgeGraph } from '../graph/types.js';
 
 export const schema = {
   limit: z.number().optional().describe('Maximum number of hotspots to return'),
@@ -37,23 +41,26 @@ export function execute(graph: KnowledgeGraph, input: Input): ComplexityHotspots
 
   // Calculate stats
   const allComplexities = Object.values(graph.nodes)
-    .filter(n => n.type !== 'file' && n.complexity !== undefined)
-    .map(n => n.complexity!);
+    .filter((n) => n.type !== 'file' && n.complexity !== undefined)
+    .map((n) => n.complexity!);
 
   const total = allComplexities.length;
-  const avgComplexity = total > 0
-    ? Math.round((allComplexities.reduce((a, b) => a + b, 0) / total) * 100) / 100
-    : 0;
+  const avgComplexity =
+    total > 0 ? Math.round((allComplexities.reduce((a, b) => a + b, 0) / total) * 100) / 100 : 0;
   const maxComplexity = total > 0 ? Math.max(...allComplexities) : 0;
 
   // Add emoji to hotspots
-  const hotspotsWithEmoji = hotspots.map(h => ({
+  const hotspotsWithEmoji = hotspots.map((h) => ({
     ...h,
     emoji: getComplexityEmoji(h.complexity),
   }));
 
   // Generate summary
-  const summary = generateSummary(hotspotsWithEmoji, { total, avgComplexity, maxComplexity }, threshold);
+  const summary = generateSummary(
+    hotspotsWithEmoji,
+    { total, avgComplexity, maxComplexity },
+    threshold
+  );
 
   return {
     hotspots: hotspotsWithEmoji,
@@ -72,9 +79,13 @@ function generateSummary(
   // Overall assessment
   if (hotspots.length === 0) {
     parts.push(`Great news! I have no functions with complexity above ${threshold}.`);
-    parts.push(`My average complexity is ${stats.avgComplexity}, which is ${stats.avgComplexity <= 5 ? 'excellent' : 'reasonable'}.`);
+    parts.push(
+      `My average complexity is ${stats.avgComplexity}, which is ${stats.avgComplexity <= 5 ? 'excellent' : 'reasonable'}.`
+    );
   } else {
-    parts.push(`I found ${hotspots.length} complexity hotspot${hotspots.length > 1 ? 's' : ''} above threshold ${threshold}.`);
+    parts.push(
+      `I found ${hotspots.length} complexity hotspot${hotspots.length > 1 ? 's' : ''} above threshold ${threshold}.`
+    );
 
     // Worst offender
     if (hotspots.length > 0) {

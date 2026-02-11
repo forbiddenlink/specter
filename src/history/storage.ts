@@ -4,13 +4,13 @@
  * Persists snapshots to .specter/history/ directory.
  */
 
-import fs from 'fs/promises';
-import path from 'path';
-import type { HealthSnapshot } from './types.js';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { getConfig } from '../config/index.js';
 import { getSpecterDir } from '../graph/persistence.js';
+import type { HealthSnapshot } from './types.js';
 
 const HISTORY_DIR = 'history';
-const MAX_SNAPSHOTS = 100;  // Keep last 100 snapshots
 
 /**
  * Get history directory path
@@ -40,9 +40,7 @@ async function ensureHistoryDir(rootDir: string): Promise<string> {
 function snapshotFilename(snapshot: HealthSnapshot): string {
   // Convert ISO timestamp to safe filename
   // 2024-01-15T10:30:00.000Z -> 2024-01-15T10-30-00.json
-  const safeTimestamp = snapshot.timestamp
-    .replace(/:/g, '-')
-    .replace(/\.\d{3}Z$/, '');
+  const safeTimestamp = snapshot.timestamp.replace(/:/g, '-').replace(/\.\d{3}Z$/, '');
   return `${safeTimestamp}.json`;
 }
 
@@ -95,8 +93,8 @@ export async function loadSnapshots(rootDir: string): Promise<HealthSnapshot[]> 
     }
 
     // Sort by timestamp, newest first
-    return snapshots.sort((a, b) =>
-      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    return snapshots.sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
     );
   } catch {
     // History directory doesn't exist
@@ -114,7 +112,7 @@ export async function loadSnapshotsInRange(
 ): Promise<HealthSnapshot[]> {
   const snapshots = await loadSnapshots(rootDir);
 
-  return snapshots.filter(s => {
+  return snapshots.filter((s) => {
     const time = new Date(s.timestamp).getTime();
     return time >= startDate.getTime() && time <= endDate.getTime();
   });
@@ -133,29 +131,31 @@ export async function getLatestSnapshot(rootDir: string): Promise<HealthSnapshot
  */
 export async function getSnapshotById(rootDir: string, id: string): Promise<HealthSnapshot | null> {
   const snapshots = await loadSnapshots(rootDir);
-  return snapshots.find(s => s.id === id) || null;
+  return snapshots.find((s) => s.id === id) || null;
 }
 
 /**
- * Delete old snapshots beyond MAX_SNAPSHOTS
+ * Delete old snapshots beyond the configured max
  */
 async function pruneOldSnapshots(rootDir: string): Promise<void> {
   const historyDir = getHistoryDir(rootDir);
+  const config = getConfig(rootDir);
+  const maxSnapshots = config.history.maxSnapshots;
 
   try {
     const files = await fs.readdir(historyDir);
-    const jsonFiles = files.filter(f => f.endsWith('.json'));
+    const jsonFiles = files.filter((f) => f.endsWith('.json'));
 
-    if (jsonFiles.length <= MAX_SNAPSHOTS) return;
+    if (jsonFiles.length <= maxSnapshots) return;
 
     // Sort files by timestamp (from filename)
     const fileTimestamps = jsonFiles
-      .map(f => ({ file: f, timestamp: parseFilenameTimestamp(f) }))
-      .filter(f => f.timestamp !== null)
+      .map((f) => ({ file: f, timestamp: parseFilenameTimestamp(f) }))
+      .filter((f) => f.timestamp !== null)
       .sort((a, b) => b.timestamp!.getTime() - a.timestamp!.getTime());
 
-    // Delete files beyond MAX_SNAPSHOTS
-    const toDelete = fileTimestamps.slice(MAX_SNAPSHOTS);
+    // Delete files beyond max
+    const toDelete = fileTimestamps.slice(maxSnapshots);
 
     for (const { file } of toDelete) {
       try {

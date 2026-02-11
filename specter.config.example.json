@@ -1,0 +1,72 @@
+{
+  "$schema": "./specter.config.schema.json",
+  "complexity": {
+    "low": 5,
+    "medium": 10,
+    "high": 20
+  },
+  "risk": {
+    "weights": {
+      "filesChanged": 0.15,
+      "linesChanged": 0.15,
+      "complexityTouched": 0.25,
+      "dependentImpact": 0.25,
+      "busFactorRisk": 0.1,
+      "testCoverage": 0.1
+    },
+    "levels": {
+      "low": 25,
+      "medium": 50,
+      "high": 75
+    },
+    "filesChanged": {
+      "small": 3,
+      "moderate": 10,
+      "large": 20
+    },
+    "linesChanged": {
+      "minor": 50,
+      "moderate": 200,
+      "significant": 500,
+      "large": 1000
+    }
+  },
+  "dashboard": {
+    "port": 3333,
+    "host": "localhost"
+  },
+  "history": {
+    "maxSnapshots": 100
+  },
+  "git": {
+    "maxCommitsPerFile": 50,
+    "maxCommitsForCoupling": 200,
+    "minCouplingStrength": 0.3,
+    "hotFileThreshold": 10,
+    "batchSize": 10
+  },
+  "impact": {
+    "maxIndirectDepth": 2,
+    "weights": {
+      "dependency": 0.35,
+      "coupling": 0.25,
+      "complexity": 0.25,
+      "churn": 0.15
+    }
+  },
+  "health": {
+    "complexityMultiplier": 5,
+    "grades": {
+      "a": 90,
+      "b": 80,
+      "c": 70,
+      "d": 60
+    },
+    "trendChangeThreshold": 2
+  },
+  "limits": {
+    "defaultHotspotsLimit": 10,
+    "maxReportHotspots": 20,
+    "maxRiskFactorItems": 5
+  }
+}

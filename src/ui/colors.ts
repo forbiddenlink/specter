@@ -124,10 +124,14 @@ export function getComplexityCategory(complexity: number): 'low' | 'medium' | 'h
 export function getComplexityEmoji(complexity: number): string {
   const category = getComplexityCategory(complexity);
   switch (category) {
-    case 'low': return '\u{1F7E2}'; // green circle
-    case 'medium': return '\u{1F7E1}'; // yellow circle
-    case 'high': return '\u{1F7E0}'; // orange circle
-    case 'critical': return '\u{1F534}'; // red circle
+    case 'low':
+      return '\u{1F7E2}'; // green circle
+    case 'medium':
+      return '\u{1F7E1}'; // yellow circle
+    case 'high':
+      return '\u{1F7E0}'; // orange circle
+    case 'critical':
+      return '\u{1F534}'; // red circle
   }
 }
 

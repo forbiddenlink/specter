@@ -5,7 +5,7 @@
  */
 
 import { simpleGit } from 'simple-git';
-import type { DiffFile, DiffStatus, DiffSizeAnalysis } from './types.js';
+import type { DiffFile, DiffSizeAnalysis, DiffStatus } from './types.js';
 
 /**
  * Parse numstat output into DiffFile objects
@@ -14,7 +14,10 @@ import type { DiffFile, DiffStatus, DiffSizeAnalysis } from './types.js';
 function parseNumstat(numstatOutput: string): DiffFile[] {
   const files: DiffFile[] = [];
 
-  const lines = numstatOutput.trim().split('\n').filter(line => line.trim());
+  const lines = numstatOutput
+    .trim()
+    .split('\n')
+    .filter((line) => line.trim());
 
   for (const line of lines) {
     const parts = line.split('\t');
@@ -45,7 +48,10 @@ function parseNumstat(numstatOutput: string): DiffFile[] {
 function parseNameStatus(nameStatusOutput: string): Map<string, DiffStatus> {
   const statusMap = new Map<string, DiffStatus>();
 
-  const lines = nameStatusOutput.trim().split('\n').filter(line => line.trim());
+  const lines = nameStatusOutput
+    .trim()
+    .split('\n')
+    .filter((line) => line.trim());
 
   for (const line of lines) {
     const parts = line.split('\t');
@@ -85,11 +91,8 @@ function parseNameStatus(nameStatusOutput: string): Map<string, DiffStatus> {
 /**
  * Combine numstat and name-status data
  */
-function combineData(
-  numstatFiles: DiffFile[],
-  statusMap: Map<string, DiffStatus>
-): DiffFile[] {
-  return numstatFiles.map(file => ({
+function combineData(numstatFiles: DiffFile[], statusMap: Map<string, DiffStatus>): DiffFile[] {
+  return numstatFiles.map((file) => ({
     ...file,
     status: statusMap.get(file.filePath) || file.status,
   }));
@@ -157,10 +160,7 @@ export async function getBranchChanges(
 /**
  * Get changes for a specific commit
  */
-export async function getCommitChanges(
-  rootDir: string,
-  commitHash: string
-): Promise<DiffFile[]> {
+export async function getCommitChanges(rootDir: string, commitHash: string): Promise<DiffFile[]> {
   const git = simpleGit(rootDir);
 
   try {

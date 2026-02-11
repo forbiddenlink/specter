@@ -20,7 +20,7 @@ export function registerApiRoutes(app: FastifyInstance, rootDir: string): void {
     }
     // Return nodes and edges formatted for Cytoscape.js
     return {
-      nodes: Object.values(graph.nodes).map(n => ({
+      nodes: Object.values(graph.nodes).map((n) => ({
         data: {
           id: n.id,
           label: n.name,
@@ -29,15 +29,15 @@ export function registerApiRoutes(app: FastifyInstance, rootDir: string): void {
           complexity: n.complexity || 0,
           lineStart: n.lineStart,
           lineEnd: n.lineEnd,
-        }
+        },
       })),
-      edges: graph.edges.map(e => ({
+      edges: graph.edges.map((e) => ({
         data: {
           id: e.id,
           source: e.source,
           target: e.target,
           type: e.type,
-        }
+        },
       })),
     };
   });
@@ -55,9 +55,10 @@ export function registerApiRoutes(app: FastifyInstance, rootDir: string): void {
     if (!graph) return reply.code(404).send({ error: 'No graph found' });
     const hotspots = getComplexityHotspots.execute(graph, { limit: 10 });
     // Calculate health score
-    const avgComplexity = hotspots.hotspots.length > 0
-      ? hotspots.hotspots.reduce((sum, h) => sum + h.complexity, 0) / hotspots.hotspots.length
-      : 0;
+    const avgComplexity =
+      hotspots.hotspots.length > 0
+        ? hotspots.hotspots.reduce((sum, h) => sum + h.complexity, 0) / hotspots.hotspots.length
+        : 0;
     const healthScore = Math.max(0, Math.round(100 - avgComplexity * 3));
     return {
       score: healthScore,
@@ -86,10 +87,12 @@ export function registerApiRoutes(app: FastifyInstance, rootDir: string): void {
     const graph = await loadGraph(rootDir);
     if (!graph) return reply.code(404).send({ error: 'No graph found' });
 
-    const node = Object.values(graph.nodes).find(n => n.filePath === filePath && n.type === 'file');
+    const node = Object.values(graph.nodes).find(
+      (n) => n.filePath === filePath && n.type === 'file'
+    );
     if (!node) return reply.code(404).send({ error: 'File not found' });
 
-    const related = graph.edges.filter(e => e.source === node.id || e.target === node.id);
+    const related = graph.edges.filter((e) => e.source === node.id || e.target === node.id);
     return { file: node, edges: related };
   });
 }

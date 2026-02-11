@@ -4,11 +4,12 @@
  * Serves the interactive web dashboard using Fastify.
  */
 
-import Fastify from 'fastify';
-import fastifyStatic from '@fastify/static';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import fastifyCors from '@fastify/cors';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import fastifyStatic from '@fastify/static';
+import Fastify from 'fastify';
+import { getConfig } from '../config/index.js';
 import { registerApiRoutes } from './api.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -19,8 +20,11 @@ export interface DashboardOptions {
   rootDir: string;
 }
 
-export async function startDashboard(options: DashboardOptions): Promise<{ url: string; close: () => Promise<void> }> {
-  const { port = 3333, host = 'localhost', rootDir } = options;
+export async function startDashboard(
+  options: DashboardOptions
+): Promise<{ url: string; close: () => Promise<void> }> {
+  const config = getConfig(options.rootDir);
+  const { port = config.dashboard.port, host = config.dashboard.host, rootDir } = options;
 
   const app = Fastify({ logger: false });
 

@@ -11,22 +11,21 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import { loadGraph } from './graph/persistence.js';
 import type { KnowledgeGraph } from './graph/types.js';
-
+import * as getArchaeology from './tools/get-archaeology.js';
+import * as getArchitecture from './tools/get-architecture.js';
+import * as getBusFactor from './tools/get-bus-factor.js';
+import * as getCallChain from './tools/get-call-chain.js';
+import * as getChangeCoupling from './tools/get-change-coupling.js';
+import * as getCodebaseSummary from './tools/get-codebase-summary.js';
+import * as getComplexityHotspots from './tools/get-complexity-hotspots.js';
+import * as getDeadCode from './tools/get-dead-code.js';
+import * as getFileHistory from './tools/get-file-history.js';
 // Import tool implementations
 import * as getFileRelationships from './tools/get-file-relationships.js';
-import * as getComplexityHotspots from './tools/get-complexity-hotspots.js';
-import * as getCodebaseSummary from './tools/get-codebase-summary.js';
-import * as getFileHistory from './tools/get-file-history.js';
-import * as getDeadCode from './tools/get-dead-code.js';
-import * as searchSymbols from './tools/search-symbols.js';
-import * as getCallChain from './tools/get-call-chain.js';
-import * as getArchitecture from './tools/get-architecture.js';
-import * as getChangeCoupling from './tools/get-change-coupling.js';
-import * as getImpactAnalysis from './tools/get-impact-analysis.js';
-import * as getBusFactor from './tools/get-bus-factor.js';
-import * as getArchaeology from './tools/get-archaeology.js';
 import * as getHealthTrends from './tools/get-health-trends.js';
+import * as getImpactAnalysis from './tools/get-impact-analysis.js';
 import * as getRiskScore from './tools/get-risk-score.js';
+import * as searchSymbols from './tools/search-symbols.js';
 
 // Global graph cache
 let cachedGraph: KnowledgeGraph | null = null;
@@ -83,8 +82,14 @@ function createServer(): McpServer {
     'Find the most complex functions and classes in the codebase. High complexity indicates code that may be difficult to understand or maintain.',
     {
       limit: z.number().optional().describe('Maximum number of hotspots to return (default: 10)'),
-      threshold: z.number().optional().describe('Minimum complexity to be considered a hotspot (default: 10)'),
-      includeFiles: z.boolean().optional().describe('Include file-level complexity (default: false)'),
+      threshold: z
+        .number()
+        .optional()
+        .describe('Minimum complexity to be considered a hotspot (default: 10)'),
+      includeFiles: z
+        .boolean()
+        .optional()
+        .describe('Include file-level complexity (default: false)'),
     },
     async (args) => {
       const graph = await getGraph();
@@ -104,9 +109,7 @@ function createServer(): McpServer {
       const graph = await getGraph();
       const result = getCodebaseSummary.execute(graph);
       return {
-        content: [
-          { type: 'text', text: result.personality + '\n\n' + result.summary },
-        ],
+        content: [{ type: 'text', text: `${result.personality}\n\n${result.summary}` }],
       };
     }
   );
@@ -150,7 +153,10 @@ function createServer(): McpServer {
     'Search for functions, classes, interfaces, types, and other symbols by name. Supports partial and fuzzy matching.',
     {
       query: z.string().describe('Search query (supports partial matches)'),
-      type: z.enum(['function', 'class', 'interface', 'type', 'variable', 'enum', 'all']).optional().describe('Filter by symbol type (default: all)'),
+      type: z
+        .enum(['function', 'class', 'interface', 'type', 'variable', 'enum', 'all'])
+        .optional()
+        .describe('Filter by symbol type (default: all)'),
       limit: z.number().optional().describe('Maximum number of results (default: 20)'),
       exportedOnly: z.boolean().optional().describe('Only show exported symbols (default: false)'),
     },
@@ -186,16 +192,19 @@ function createServer(): McpServer {
     'get_architecture',
     'Generate a visual ASCII diagram of the codebase architecture showing directory structure, file counts, and complexity indicators.',
     {
-      style: z.enum(['tree', 'boxes', 'compact']).optional().describe('Diagram style: tree (hierarchical), boxes (visual), or compact (bar chart). Default: boxes'),
+      style: z
+        .enum(['tree', 'boxes', 'compact'])
+        .optional()
+        .describe(
+          'Diagram style: tree (hierarchical), boxes (visual), or compact (bar chart). Default: boxes'
+        ),
       maxDepth: z.number().optional().describe('Maximum directory depth to show (default: 3)'),
     },
     async (args) => {
       const graph = await getGraph();
       const result = getArchitecture.execute(graph, args);
       return {
-        content: [
-          { type: 'text', text: '```\n' + result.diagram + '\n```\n\n' + result.summary },
-        ],
+        content: [{ type: 'text', text: `\`\`\`\n${result.diagram}\n\`\`\`\n\n${result.summary}` }],
       };
     }
   );
@@ -206,8 +215,14 @@ function createServer(): McpServer {
     'Find files that frequently change together in git commits, revealing hidden dependencies not visible in import graphs. This discovers files that are logically coupled even without explicit imports.',
     {
       filePath: z.string().describe('Path to the file to analyze (relative to project root)'),
-      minStrength: z.number().optional().describe('Minimum coupling strength 0-1 (default: 0.3, meaning 30% of commits)'),
-      maxResults: z.number().optional().describe('Maximum number of coupled files to return (default: 10)'),
+      minStrength: z
+        .number()
+        .optional()
+        .describe('Minimum coupling strength 0-1 (default: 0.3, meaning 30% of commits)'),
+      maxResults: z
+        .number()
+        .optional()
+        .describe('Maximum number of coupled files to return (default: 10)'),
     },
     async (args) => {
       const graph = await getGraph();
@@ -223,8 +238,13 @@ function createServer(): McpServer {
     'get_impact_analysis',
     'Analyze the risk and impact of changing a file. Combines dependency graph, change coupling, complexity, and churn into a comprehensive risk score. Answers "what will break if I change this?"',
     {
-      filePath: z.string().describe('Path to the file you want to change (relative to project root)'),
-      includeIndirect: z.boolean().optional().describe('Include indirect dependencies 2-3 hops away (default: true)'),
+      filePath: z
+        .string()
+        .describe('Path to the file you want to change (relative to project root)'),
+      includeIndirect: z
+        .boolean()
+        .optional()
+        .describe('Include indirect dependencies 2-3 hops away (default: true)'),
     },
     async (args) => {
       const graph = await getGraph();
@@ -258,7 +278,10 @@ function createServer(): McpServer {
     'Tell the story of how a file evolved over time. Code archaeology reveals rewrites, growth patterns, what approaches were tried and failed, and lessons encoded in commit history.',
     {
       filePath: z.string().describe('Path to the file to analyze (relative to project root)'),
-      functionName: z.string().optional().describe('Specific function to focus on (searches commit messages)'),
+      functionName: z
+        .string()
+        .optional()
+        .describe('Specific function to focus on (searches commit messages)'),
     },
     async (args) => {
       const graph = await getGraph();
@@ -274,7 +297,9 @@ function createServer(): McpServer {
     'get_health_trends',
     'Analyze how the codebase health has changed over time. Shows trends in complexity, hotspots, and overall health score with sparkline visualizations. Useful for tracking technical debt.',
     {
-      period: z.enum(['day', 'week', 'month', 'all']).optional()
+      period: z
+        .enum(['day', 'week', 'month', 'all'])
+        .optional()
         .describe('Time period to analyze: day, week, month, or all (default: all)'),
     },
     async (args) => {
@@ -430,25 +455,27 @@ function createServer(): McpServer {
         const hotspots = getComplexityHotspots.execute(graph, { limit: 10 });
 
         // Calculate health score
-        const avgComplexity = hotspots.hotspots.length > 0
-          ? hotspots.hotspots.reduce((sum, h) => sum + h.complexity, 0) / hotspots.hotspots.length
-          : 0;
+        const avgComplexity =
+          hotspots.hotspots.length > 0
+            ? hotspots.hotspots.reduce((sum, h) => sum + h.complexity, 0) / hotspots.hotspots.length
+            : 0;
         const healthScore = Math.max(0, Math.round(100 - avgComplexity * 3));
 
         const health = {
           score: healthScore,
           grade: healthScore >= 80 ? 'A' : healthScore >= 60 ? 'B' : healthScore >= 40 ? 'C' : 'D',
           hotspotCount: hotspots.hotspots.length,
-          topHotspots: hotspots.hotspots.slice(0, 5).map(h => ({
+          topHotspots: hotspots.hotspots.slice(0, 5).map((h) => ({
             file: h.filePath,
             name: h.name,
             complexity: h.complexity,
           })),
-          recommendation: healthScore >= 80
-            ? "I'm in great shape!"
-            : healthScore >= 60
-              ? 'Some areas could use refactoring.'
-              : 'I have significant complexity issues that need attention.',
+          recommendation:
+            healthScore >= 80
+              ? "I'm in great shape!"
+              : healthScore >= 60
+                ? 'Some areas could use refactoring.'
+                : 'I have significant complexity issues that need attention.',
         };
 
         return {

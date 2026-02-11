@@ -6,7 +6,14 @@
 
 export type NodeType = 'file' | 'function' | 'class' | 'interface' | 'type' | 'variable' | 'enum';
 
-export type EdgeType = 'imports' | 'exports' | 'calls' | 'extends' | 'implements' | 'uses' | 'contains';
+export type EdgeType =
+  | 'imports'
+  | 'exports'
+  | 'calls'
+  | 'extends'
+  | 'implements'
+  | 'uses'
+  | 'contains';
 
 export interface GraphNode {
   id: string;

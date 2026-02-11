@@ -5,16 +5,19 @@
  * codebase where knowledge is concentrated in too few people.
  */
 
-import { simpleGit, SimpleGit } from 'simple-git';
-import type { KnowledgeRisk, BusFactorAnalysis } from '../graph/types.js';
+import { simpleGit } from 'simple-git';
+import type { BusFactorAnalysis, KnowledgeRisk } from '../graph/types.js';
 
 export interface FileOwnership {
   filePath: string;
-  contributors: Map<string, {
-    commits: number;
-    linesChanged: number;
-    lastCommit: Date;
-  }>;
+  contributors: Map<
+    string,
+    {
+      commits: number;
+      linesChanged: number;
+      lastCommit: Date;
+    }
+  >;
   totalCommits: number;
   lastModified: Date;
 }
@@ -30,7 +33,7 @@ export async function analyzeKnowledgeDistribution(
     criticalThreshold?: number; // Bus factor <= this is critical
   } = {}
 ): Promise<BusFactorAnalysis> {
-  const { maxCommits = 500, criticalThreshold = 1 } = options;
+  const { maxCommits = 500, criticalThreshold: _criticalThreshold = 1 } = options;
 
   const git = simpleGit(rootDir);
 
@@ -72,7 +75,10 @@ export async function analyzeKnowledgeDistribution(
           commit.hash,
         ]);
 
-        const files = filesRaw.trim().split('\n').filter(f => f);
+        const files = filesRaw
+          .trim()
+          .split('\n')
+          .filter((f) => f);
 
         for (const file of files) {
           // Only track source files
@@ -107,16 +113,16 @@ export async function analyzeKnowledgeDistribution(
             });
           }
         }
-      } catch {
-        continue;
-      }
+      } catch {}
     }
   } catch (error) {
     return {
       overallBusFactor: 0,
       criticalAreas: [],
       ownershipDistribution: [],
-      insights: [`Error analyzing git history: ${error instanceof Error ? error.message : 'Unknown'}`],
+      insights: [
+        `Error analyzing git history: ${error instanceof Error ? error.message : 'Unknown'}`,
+      ],
     };
   }
 
@@ -124,15 +130,14 @@ export async function analyzeKnowledgeDistribution(
   const knowledgeRisks: KnowledgeRisk[] = [];
 
   for (const [filePath, ownership] of fileOwnership.entries()) {
-    const contributors = [...ownership.contributors.entries()]
-      .sort((a, b) => b[1].commits - a[1].commits);
+    const contributors = [...ownership.contributors.entries()].sort(
+      (a, b) => b[1].commits - a[1].commits
+    );
 
     if (contributors.length === 0) continue;
 
     const [primaryOwner, primaryStats] = contributors[0];
-    const ownershipPercentage = Math.round(
-      (primaryStats.commits / ownership.totalCommits) * 100
-    );
+    const ownershipPercentage = Math.round((primaryStats.commits / ownership.totalCommits) * 100);
 
     // Bus factor = number of people who have made significant contributions
     // "Significant" = at least 20% of commits
@@ -165,7 +170,9 @@ export async function analyzeKnowledgeDistribution(
   knowledgeRisks.sort((a, b) => riskOrder[a.riskLevel] - riskOrder[b.riskLevel]);
 
   // Calculate overall bus factor
-  const criticalAreas = knowledgeRisks.filter(r => r.riskLevel === 'critical' || r.riskLevel === 'high');
+  const criticalAreas = knowledgeRisks.filter(
+    (r) => r.riskLevel === 'critical' || r.riskLevel === 'high'
+  );
   const overallBusFactor = calculateOverallBusFactor(knowledgeRisks);
 
   // Calculate ownership distribution
@@ -209,7 +216,7 @@ function calculateOverallBusFactor(risks: KnowledgeRisk[]): number {
   if (risks.length === 0) return 0;
 
   // Overall bus factor is the average, weighted toward critical areas
-  const weighted = risks.map(r => {
+  const weighted = risks.map((r) => {
     const weight = r.riskLevel === 'critical' ? 2 : r.riskLevel === 'high' ? 1.5 : 1;
     return r.busFactor * weight;
   });
@@ -218,7 +225,7 @@ function calculateOverallBusFactor(risks: KnowledgeRisk[]): number {
     return sum + (r.riskLevel === 'critical' ? 2 : r.riskLevel === 'high' ? 1.5 : 1);
   }, 0);
 
-  return Math.round(weighted.reduce((a, b) => a + b, 0) / totalWeight * 10) / 10;
+  return Math.round((weighted.reduce((a, b) => a + b, 0) / totalWeight) * 10) / 10;
 }
 
 function calculateOwnershipDistribution(
@@ -228,8 +235,9 @@ function calculateOwnershipDistribution(
   const totalFiles = fileOwnership.size;
 
   for (const ownership of fileOwnership.values()) {
-    const contributors = [...ownership.contributors.entries()]
-      .sort((a, b) => b[1].commits - a[1].commits);
+    const contributors = [...ownership.contributors.entries()].sort(
+      (a, b) => b[1].commits - a[1].commits
+    );
 
     if (contributors.length > 0) {
       const [primaryOwner] = contributors[0];
@@ -254,11 +262,11 @@ function generateInsights(
   const insights: string[] = [];
 
   // Critical single-owner files
-  const singleOwner = risks.filter(r => r.busFactor === 1 && r.ownershipPercentage >= 80);
+  const singleOwner = risks.filter((r) => r.busFactor === 1 && r.ownershipPercentage >= 80);
   if (singleOwner.length > 0) {
     insights.push(
       `⚠️ ${singleOwner.length} files have a single owner with 80%+ ownership. ` +
-      `If they leave, this knowledge could be lost.`
+        `If they leave, this knowledge could be lost.`
     );
   }
 
@@ -266,16 +274,16 @@ function generateInsights(
   if (distribution.length > 0 && distribution[0].percentage > 50) {
     insights.push(
       `${distribution[0].contributor} owns ${distribution[0].percentage}% of the codebase. ` +
-      `Consider knowledge sharing to reduce risk.`
+        `Consider knowledge sharing to reduce risk.`
     );
   }
 
   // Stale critical areas
-  const staleCritical = criticalAreas.filter(a => a.daysSinceLastChange > 180);
+  const staleCritical = criticalAreas.filter((a) => a.daysSinceLastChange > 180);
   if (staleCritical.length > 0) {
     insights.push(
       `${staleCritical.length} critical areas haven't been touched in 6+ months. ` +
-      `The original authors may have forgotten the details.`
+        `The original authors may have forgotten the details.`
     );
   }
 
@@ -283,7 +291,7 @@ function generateInsights(
   if (criticalAreas.length === 0) {
     insights.push(
       `Good news! No critical knowledge concentration detected. ` +
-      `Your team's knowledge is well-distributed.`
+        `Your team's knowledge is well-distributed.`
     );
   }
 
@@ -298,20 +306,17 @@ export async function analyzeDirectoryKnowledge(
   directory: string,
   filePaths: string[]
 ): Promise<KnowledgeRisk | null> {
-  const dirFiles = filePaths.filter(f => f.startsWith(directory));
+  const dirFiles = filePaths.filter((f) => f.startsWith(directory));
   if (dirFiles.length === 0) return null;
 
   const analysis = await analyzeKnowledgeDistribution(rootDir, dirFiles);
 
   // Aggregate to directory level
   const contributors = new Map<string, number>();
-  let totalCommits = 0;
+  const _totalCommits = 0;
 
   for (const risk of analysis.criticalAreas) {
-    contributors.set(
-      risk.primaryOwner,
-      (contributors.get(risk.primaryOwner) || 0) + 1
-    );
+    contributors.set(risk.primaryOwner, (contributors.get(risk.primaryOwner) || 0) + 1);
   }
 
   const sorted = [...contributors.entries()].sort((a, b) => b[1] - a[1]);

@@ -5,11 +5,24 @@
  * for a codebase.
  */
 
-import path from 'path';
-import { createProject, getSourceFiles, analyzeSourceFile, type ASTAnalysisResult } from '../analyzers/ast.js';
-import { analyzeImports, analyzeExports, createImportEdges, buildDependencyMap, buildReverseDependencyMap, type ImportInfo, type ExportInfo } from '../analyzers/imports.js';
+import path from 'node:path';
+import {
+  type ASTAnalysisResult,
+  analyzeSourceFile,
+  createProject,
+  getSourceFiles,
+} from '../analyzers/ast.js';
 import { analyzeGitHistory, type GitAnalysisResult } from '../analyzers/git.js';
-import type { KnowledgeGraph, GraphNode, GraphEdge, GraphMetadata, FileNode } from './types.js';
+import {
+  analyzeExports,
+  analyzeImports,
+  buildDependencyMap,
+  buildReverseDependencyMap,
+  createImportEdges,
+  type ExportInfo,
+  type ImportInfo,
+} from '../analyzers/imports.js';
+import type { FileNode, GraphEdge, GraphMetadata, GraphNode, KnowledgeGraph } from './types.js';
 
 export interface BuildOptions {
   rootDir: string;
@@ -89,7 +102,6 @@ export async function buildKnowledgeGraph(options: BuildOptions): Promise<BuildR
       // Export analysis
       const exports = analyzeExports(sourceFile, rootDir);
       allExports.set(filePath, exports);
-
     } catch (error) {
       errors.push({
         file: filePath,
@@ -106,7 +118,7 @@ export async function buildKnowledgeGraph(options: BuildOptions): Promise<BuildR
 
   // Build dependency maps for later use
   const dependencies = buildDependencyMap(allImports);
-  const reverseDeps = buildReverseDependencyMap(allImports);
+  const _reverseDeps = buildReverseDependencyMap(allImports);
 
   // Update file nodes with dependency counts
   for (const [filePath, deps] of dependencies) {
@@ -122,12 +134,10 @@ export async function buildKnowledgeGraph(options: BuildOptions): Promise<BuildR
   if (includeGitHistory) {
     onProgress?.('Analyzing git history', 0, 1);
 
-    const filePaths = astResults.map(r => r.fileNode.filePath);
+    const filePaths = astResults.map((r) => r.fileNode.filePath);
 
-    gitResult = await analyzeGitHistory(
-      rootDir,
-      filePaths,
-      (completed, total) => onProgress?.('Analyzing git history', completed, total)
+    gitResult = await analyzeGitHistory(rootDir, filePaths, (completed, total) =>
+      onProgress?.('Analyzing git history', completed, total)
     );
 
     // Enrich nodes with git data
@@ -136,7 +146,7 @@ export async function buildKnowledgeGraph(options: BuildOptions): Promise<BuildR
       if (fileNode) {
         fileNode.lastModified = history.lastModified;
         fileNode.modificationCount = history.commitCount;
-        fileNode.contributors = history.contributors.map(c => c.name);
+        fileNode.contributors = history.contributors.map((c) => c.name);
       }
     }
 
@@ -206,8 +216,8 @@ function createEmptyGraph(rootDir: string, startTime: number): KnowledgeGraph {
  * Incrementally update graph with changed files
  */
 export async function updateGraphIncremental(
-  existingGraph: KnowledgeGraph,
-  changedFiles: string[],
+  _existingGraph: KnowledgeGraph,
+  _changedFiles: string[],
   options: BuildOptions
 ): Promise<BuildResult> {
   // For now, just rebuild the entire graph
@@ -231,12 +241,11 @@ export function getGraphStats(graph: KnowledgeGraph) {
   }
 
   const complexities = Object.values(graph.nodes)
-    .filter(n => n.complexity !== undefined)
-    .map(n => n.complexity!);
+    .filter((n) => n.complexity !== undefined)
+    .map((n) => n.complexity!);
 
-  const avgComplexity = complexities.length > 0
-    ? complexities.reduce((a, b) => a + b, 0) / complexities.length
-    : 0;
+  const avgComplexity =
+    complexities.length > 0 ? complexities.reduce((a, b) => a + b, 0) / complexities.length : 0;
 
   const maxComplexity = complexities.length > 0 ? Math.max(...complexities) : 0;
 

@@ -5,11 +5,11 @@
  * Graphs are stored in .specter/ directory in the project root.
  */
 
-import fs from 'fs/promises';
-import path from 'path';
-import type { KnowledgeGraph, GraphMetadata } from './types.js';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import { createSnapshot } from '../history/snapshot.js';
 import { saveSnapshot } from '../history/storage.js';
+import type { GraphMetadata, KnowledgeGraph } from './types.js';
 
 const SPECTER_DIR = '.specter';
 const GRAPH_FILE = 'graph.json';
@@ -191,7 +191,7 @@ async function addToGitignore(rootDir: string): Promise<void> {
     }
 
     if (!content.includes('.specter')) {
-      const newContent = content.trim() + '\n\n# Specter knowledge graph cache\n.specter/\n';
+      const newContent = `${content.trim()}\n\n# Specter knowledge graph cache\n.specter/\n`;
       await fs.writeFile(gitignorePath, newContent, 'utf-8');
     }
   } catch {

@@ -7,8 +7,8 @@
  */
 
 import { z } from 'zod';
-import type { KnowledgeGraph, GraphNode } from '../graph/types.js';
 import { analyzeChangeCoupling } from '../analyzers/git.js';
+import type { GraphNode, KnowledgeGraph } from '../graph/types.js';
 
 export const schema = {
   filePath: z.string().describe('Path to the file you want to change (relative to project root)'),
@@ -37,10 +37,7 @@ export interface ImpactAnalysisResult {
   summary: string;
 }
 
-export async function execute(
-  graph: KnowledgeGraph,
-  input: Input
-): Promise<ImpactAnalysisResult> {
+export async function execute(graph: KnowledgeGraph, input: Input): Promise<ImpactAnalysisResult> {
   const { filePath, includeIndirect = true } = input;
 
   // Check if file exists
@@ -72,16 +69,15 @@ export async function execute(
 
   // 3. Get change coupling data
   const importEdges = buildImportEdges(graph);
-  const coupling = await analyzeChangeCoupling(
-    graph.metadata.rootDir,
-    filePath,
-    { minCouplingStrength: 0.3, importEdges }
-  );
+  const coupling = await analyzeChangeCoupling(graph.metadata.rootDir, filePath, {
+    minCouplingStrength: 0.3,
+    importEdges,
+  });
 
-  const historicalCoChangers = coupling.coupledFiles.map(c => c.file2);
+  const historicalCoChangers = coupling.coupledFiles.map((c) => c.file2);
   const hiddenDependencies = coupling.coupledFiles
-    .filter(c => c.couplingStrength >= 0.5 && !c.hasImportRelationship)
-    .map(c => c.file2);
+    .filter((c) => c.couplingStrength >= 0.5 && !c.hasImportRelationship)
+    .map((c) => c.file2);
 
   // 4. Calculate complexity of the file and its functions
   const complexity = calculateFileComplexity(graph, filePath);
@@ -102,10 +98,7 @@ export async function execute(
 
   // 7. Calculate overall risk score (0-100)
   const riskScore = Math.round(
-    dependencyScore * 0.35 +
-    couplingScore * 0.25 +
-    complexityScore * 0.25 +
-    churnScore * 0.15
+    dependencyScore * 0.35 + couplingScore * 0.25 + complexityScore * 0.25 + churnScore * 0.15
   );
 
   const riskLevel = getRiskLevel(riskScore);
@@ -286,15 +279,15 @@ function generateRecommendations(data: {
   if (data.directDependents.length > 10) {
     recs.push(
       `This file has ${data.directDependents.length} direct dependents. ` +
-      'Consider if some functionality could be split into separate modules.'
+        'Consider if some functionality could be split into separate modules.'
     );
   }
 
   if (data.hiddenDependencies.length > 0) {
     recs.push(
       `Found ${data.hiddenDependencies.length} hidden dependencies: ` +
-      `${data.hiddenDependencies.slice(0, 3).join(', ')}. ` +
-      'These files change together but have no import relationship.'
+        `${data.hiddenDependencies.slice(0, 3).join(', ')}. ` +
+        'These files change together but have no import relationship.'
     );
   }
 
@@ -310,9 +303,7 @@ function generateRecommendations(data: {
   }
 
   if (data.directDependents.length > 5) {
-    recs.push(
-      `Suggested test priority: ${data.directDependents.slice(0, 3).join(', ')}`
-    );
+    recs.push(`Suggested test priority: ${data.directDependents.slice(0, 3).join(', ')}`);
   }
 
   if (recs.length === 0) {
@@ -330,20 +321,28 @@ function generateSummary(data: {
   indirectDependents: string[];
   hiddenDependencies: string[];
   complexity: number;
-  factors: { dependencyScore: number; couplingScore: number; complexityScore: number; churnScore: number };
+  factors: {
+    dependencyScore: number;
+    couplingScore: number;
+    complexityScore: number;
+    churnScore: number;
+  };
 }): string {
   const parts: string[] = [];
 
-  const riskEmoji = {
-    low: '🟢',
-    medium: '🟡',
-    high: '🟠',
-    critical: '🔴',
-  }[data.riskLevel] || '⚪';
+  const riskEmoji =
+    {
+      low: '🟢',
+      medium: '🟡',
+      high: '🟠',
+      critical: '🔴',
+    }[data.riskLevel] || '⚪';
 
   parts.push(`## Impact Analysis: ${data.filePath}`);
   parts.push('');
-  parts.push(`${riskEmoji} **Risk Score: ${data.riskScore}/100** (${data.riskLevel.toUpperCase()})`);
+  parts.push(
+    `${riskEmoji} **Risk Score: ${data.riskScore}/100** (${data.riskLevel.toUpperCase()})`
+  );
   parts.push('');
 
   // Breakdown
@@ -351,9 +350,15 @@ function generateSummary(data: {
   parts.push('');
   parts.push(`| Factor | Score | Description |`);
   parts.push(`|--------|-------|-------------|`);
-  parts.push(`| Dependencies | ${data.factors.dependencyScore}/100 | ${data.directDependents.length} direct, ${data.indirectDependents.length} indirect |`);
-  parts.push(`| Change Coupling | ${data.factors.couplingScore}/100 | ${data.hiddenDependencies.length} hidden dependencies |`);
-  parts.push(`| Complexity | ${data.factors.complexityScore}/100 | Max function complexity: ${data.complexity} |`);
+  parts.push(
+    `| Dependencies | ${data.factors.dependencyScore}/100 | ${data.directDependents.length} direct, ${data.indirectDependents.length} indirect |`
+  );
+  parts.push(
+    `| Change Coupling | ${data.factors.couplingScore}/100 | ${data.hiddenDependencies.length} hidden dependencies |`
+  );
+  parts.push(
+    `| Complexity | ${data.factors.complexityScore}/100 | Max function complexity: ${data.complexity} |`
+  );
   parts.push(`| Churn | ${data.factors.churnScore}/100 | Activity and contributor count |`);
   parts.push('');
 

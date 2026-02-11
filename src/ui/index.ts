@@ -4,51 +4,49 @@
  * Centralized exports for all terminal UI components.
  */
 
-// Color utilities
-export {
-  colors,
-  HEALTH_THRESHOLDS,
-  COMPLEXITY_THRESHOLDS,
-  getHealthColor,
-  getComplexityColor,
-  getHealthEmoji,
-  getGrade,
-  getColoredGrade,
-  getComplexityCategory,
-  getComplexityEmoji,
-  getRatioColor,
-  getInverseRatioColor,
-} from './colors.js';
-
-// Progress bar utilities
-export {
-  type ProgressBarOptions,
-  progressBar,
-  healthBar,
-  complexityMeter,
-  sparkline,
-  coloredSparkline,
-  compareBar,
-  stackedBar,
-  miniBar,
-  percentIndicator,
-} from './progress.js';
-
 // Box drawing utilities
 export {
   type BoxOptions,
-  type TableOptions,
   box,
-  headerBox,
-  section,
+  bulletList,
   divider,
+  headerBox,
+  indent,
   keyValue,
   keyValueList,
-  table,
-  panel,
-  indent,
-  bulletList,
   numberedList,
+  panel,
+  section,
+  type TableOptions,
+  table,
   tree,
   wrapText,
 } from './boxes.js';
+// Color utilities
+export {
+  COMPLEXITY_THRESHOLDS,
+  colors,
+  getColoredGrade,
+  getComplexityCategory,
+  getComplexityColor,
+  getComplexityEmoji,
+  getGrade,
+  getHealthColor,
+  getHealthEmoji,
+  getInverseRatioColor,
+  getRatioColor,
+  HEALTH_THRESHOLDS,
+} from './colors.js';
+// Progress bar utilities
+export {
+  coloredSparkline,
+  compareBar,
+  complexityMeter,
+  healthBar,
+  miniBar,
+  type ProgressBarOptions,
+  percentIndicator,
+  progressBar,
+  sparkline,
+  stackedBar,
+} from './progress.js';

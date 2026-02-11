@@ -5,11 +5,14 @@
  */
 
 import { z } from 'zod';
-import type { KnowledgeGraph, GraphNode, NodeType } from '../graph/types.js';
+import type { KnowledgeGraph, NodeType } from '../graph/types.js';
 
 export const schema = {
   query: z.string().describe('Search query (supports partial matches)'),
-  type: z.enum(['function', 'class', 'interface', 'type', 'variable', 'enum', 'all']).optional().describe('Filter by symbol type'),
+  type: z
+    .enum(['function', 'class', 'interface', 'type', 'variable', 'enum', 'all'])
+    .optional()
+    .describe('Filter by symbol type'),
   limit: z.number().optional().describe('Maximum number of results'),
   exportedOnly: z.boolean().optional().describe('Only show exported symbols'),
 };
@@ -128,7 +131,7 @@ function generateSummary(
   const parts: string[] = [];
 
   if (totalMatches === 0) {
-    parts.push(`No ${type === 'all' ? 'symbols' : type + 's'} found matching "${query}".`);
+    parts.push(`No ${type === 'all' ? 'symbols' : `${type}s`} found matching "${query}".`);
     parts.push('');
     parts.push('Try:');
     parts.push('- A shorter or different search term');
@@ -138,10 +141,12 @@ function generateSummary(
 
   // Header
   const typeLabel = type === 'all' ? 'symbol' : type;
-  parts.push(`Found **${totalMatches} ${typeLabel}${totalMatches > 1 ? 's' : ''}** matching "${query}".`);
+  parts.push(
+    `Found **${totalMatches} ${typeLabel}${totalMatches > 1 ? 's' : ''}** matching "${query}".`
+  );
 
   // Exact matches first
-  const exactMatches = results.filter(r => r.matchType === 'exact');
+  const exactMatches = results.filter((r) => r.matchType === 'exact');
   if (exactMatches.length > 0) {
     parts.push('\n**Exact matches:**');
     for (const r of exactMatches) {
@@ -151,7 +156,7 @@ function generateSummary(
   }
 
   // Other matches
-  const otherMatches = results.filter(r => r.matchType !== 'exact');
+  const otherMatches = results.filter((r) => r.matchType !== 'exact');
   if (otherMatches.length > 0) {
     parts.push('\n**Other matches:**');
     for (const r of otherMatches.slice(0, 10)) {

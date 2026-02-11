@@ -4,36 +4,33 @@
  * Track and analyze codebase health over time.
  */
 
-// Types
-export type {
-  HealthSnapshot,
-  HealthTrend,
-  TrendAnalysis,
-} from './types.js';
-
 // Snapshot creation
 export {
   createSnapshot,
   diffSnapshots,
   percentChange,
 } from './snapshot.js';
-
 // Storage
 export {
+  clearHistory,
   getHistoryDir,
-  saveSnapshot,
-  loadSnapshots,
-  loadSnapshotsInRange,
   getLatestSnapshot,
   getSnapshotById,
   getSnapshotCount,
-  clearHistory,
+  loadSnapshots,
+  loadSnapshotsInRange,
+  saveSnapshot,
 } from './storage.js';
-
 // Trend analysis
 export {
-  filterByPeriod,
-  calculateTrend,
   analyzeTrends,
+  calculateTrend,
+  filterByPeriod,
   getTimeSpan,
 } from './trends.js';
+// Types
+export type {
+  HealthSnapshot,
+  HealthTrend,
+  TrendAnalysis,
+} from './types.js';

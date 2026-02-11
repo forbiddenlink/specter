@@ -6,8 +6,8 @@
  * Speaks as the codebase, providing context about what the developer is touching.
  */
 
-import { readFileSync, existsSync } from 'fs';
-import { join } from 'path';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 interface HookInput {
   tool_name: string;
@@ -87,7 +87,7 @@ function analyzeFileRisk(graph: KnowledgeGraph, filePath: string, projectDir: st
   const warnings: string[] = [];
 
   // Normalize path (remove project dir prefix if present)
-  const relativePath = filePath.replace(projectDir + '/', '').replace(projectDir, '');
+  const relativePath = filePath.replace(`${projectDir}/`, '').replace(projectDir, '');
 
   // Find the file node
   const fileNode = graph.nodes[relativePath];
@@ -100,7 +100,7 @@ function analyzeFileRisk(graph: KnowledgeGraph, filePath: string, projectDir: st
   if (maxComplexity >= 15) {
     warnings.push(
       `⚠️ **High complexity file** (max: ${maxComplexity})\n` +
-      `This is one of my more tangled areas. Consider breaking changes into smaller pieces.`
+        `This is one of my more tangled areas. Consider breaking changes into smaller pieces.`
     );
   }
 
@@ -109,7 +109,7 @@ function analyzeFileRisk(graph: KnowledgeGraph, filePath: string, projectDir: st
   if (dependentCount >= 5) {
     warnings.push(
       `🔗 **${dependentCount} files depend on this**\n` +
-      `Changes here will ripple. Be careful with exports and interfaces.`
+        `Changes here will ripple. Be careful with exports and interfaces.`
     );
   }
 
@@ -118,7 +118,7 @@ function analyzeFileRisk(graph: KnowledgeGraph, filePath: string, projectDir: st
     const owner = fileNode.contributors[0];
     warnings.push(
       `👤 **Single owner: ${owner}**\n` +
-      `Only one person has touched this file. They may have context you don't.`
+        `Only one person has touched this file. They may have context you don't.`
     );
   }
 
@@ -130,7 +130,7 @@ function analyzeFileRisk(graph: KnowledgeGraph, filePath: string, projectDir: st
     if (daysSince > 180) {
       warnings.push(
         `💤 **Stale file** (${Math.floor(daysSince / 30)} months untouched)\n` +
-        `This code hasn't been modified in a while. The original context may be lost.`
+          `This code hasn't been modified in a while. The original context may be lost.`
       );
     }
   }
@@ -139,7 +139,7 @@ function analyzeFileRisk(graph: KnowledgeGraph, filePath: string, projectDir: st
   if (fileNode.modificationCount && fileNode.modificationCount > 30) {
     warnings.push(
       `🔥 **High churn file** (${fileNode.modificationCount} modifications)\n` +
-      `This file changes frequently. It may be fragile or poorly abstracted.`
+        `This file changes frequently. It may be fragile or poorly abstracted.`
     );
   }
 

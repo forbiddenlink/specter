@@ -5,9 +5,9 @@
  * structural information for the knowledge graph.
  */
 
-import { Project, SourceFile, Node, SyntaxKind, FunctionDeclaration, ClassDeclaration, MethodDeclaration, ArrowFunction, FunctionExpression } from 'ts-morph';
-import path from 'path';
-import type { GraphNode, FunctionNode, ClassNode, NodeType, FileNode } from '../graph/types.js';
+import path from 'node:path';
+import { type Node, Project, type SourceFile, SyntaxKind } from 'ts-morph';
+import type { ClassNode, FileNode, FunctionNode, GraphNode, NodeType } from '../graph/types.js';
 
 export interface ASTAnalysisResult {
   fileNode: FileNode;
@@ -34,12 +34,13 @@ function calculateComplexity(node: Node): number {
       case SyntaxKind.ConditionalType:
         complexity++;
         break;
-      case SyntaxKind.BinaryExpression:
+      case SyntaxKind.BinaryExpression: {
         const text = descendant.getText();
         if (text.includes('&&') || text.includes('||') || text.includes('??')) {
           complexity++;
         }
         break;
+      }
     }
   });
 
@@ -52,10 +53,14 @@ function calculateComplexity(node: Node): number {
 function getLanguage(filePath: string): 'typescript' | 'javascript' | 'jsx' | 'tsx' {
   const ext = path.extname(filePath).toLowerCase();
   switch (ext) {
-    case '.ts': return 'typescript';
-    case '.tsx': return 'tsx';
-    case '.jsx': return 'jsx';
-    default: return 'javascript';
+    case '.ts':
+      return 'typescript';
+    case '.tsx':
+      return 'tsx';
+    case '.jsx':
+      return 'jsx';
+    default:
+      return 'javascript';
   }
 }
 
@@ -106,11 +111,15 @@ export function analyzeSourceFile(sourceFile: SourceFile, rootDir: string): ASTA
       lineEnd: func.getEndLineNumber(),
       exported: isExported,
       complexity: calculateComplexity(func),
-      parameters: func.getParameters().map(p => p.getName()),
+      parameters: func.getParameters().map((p) => p.getName()),
       returnType: func.getReturnType()?.getText(),
       isAsync: func.isAsync(),
       isGenerator: func.isGenerator(),
-      documentation: func.getJsDocs().map(d => d.getDescription()).join('\n') || undefined,
+      documentation:
+        func
+          .getJsDocs()
+          .map((d) => d.getDescription())
+          .join('\n') || undefined,
     };
 
     symbolNodes.push(funcNode);
@@ -134,9 +143,13 @@ export function analyzeSourceFile(sourceFile: SourceFile, rootDir: string): ASTA
       complexity: calculateComplexity(cls),
       isAbstract: cls.isAbstract(),
       extends: cls.getExtends()?.getText(),
-      implements: cls.getImplements().map(i => i.getText()),
+      implements: cls.getImplements().map((i) => i.getText()),
       memberCount: cls.getMembers().length,
-      documentation: cls.getJsDocs().map(d => d.getDescription()).join('\n') || undefined,
+      documentation:
+        cls
+          .getJsDocs()
+          .map((d) => d.getDescription())
+          .join('\n') || undefined,
     };
 
     symbolNodes.push(classNode);
@@ -156,11 +169,15 @@ export function analyzeSourceFile(sourceFile: SourceFile, rootDir: string): ASTA
         lineEnd: method.getEndLineNumber(),
         exported: isExported,
         complexity: calculateComplexity(method),
-        parameters: method.getParameters().map(p => p.getName()),
+        parameters: method.getParameters().map((p) => p.getName()),
         returnType: method.getReturnType()?.getText(),
         isAsync: method.isAsync(),
         isGenerator: method.isGenerator(),
-        documentation: method.getJsDocs().map(d => d.getDescription()).join('\n') || undefined,
+        documentation:
+          method
+            .getJsDocs()
+            .map((d) => d.getDescription())
+            .join('\n') || undefined,
       };
 
       symbolNodes.push(methodNode);
@@ -181,7 +198,11 @@ export function analyzeSourceFile(sourceFile: SourceFile, rootDir: string): ASTA
       lineStart,
       lineEnd: iface.getEndLineNumber(),
       exported: iface.isExported(),
-      documentation: iface.getJsDocs().map(d => d.getDescription()).join('\n') || undefined,
+      documentation:
+        iface
+          .getJsDocs()
+          .map((d) => d.getDescription())
+          .join('\n') || undefined,
     };
 
     symbolNodes.push(interfaceNode);
@@ -201,7 +222,11 @@ export function analyzeSourceFile(sourceFile: SourceFile, rootDir: string): ASTA
       lineStart,
       lineEnd: typeAlias.getEndLineNumber(),
       exported: typeAlias.isExported(),
-      documentation: typeAlias.getJsDocs().map(d => d.getDescription()).join('\n') || undefined,
+      documentation:
+        typeAlias
+          .getJsDocs()
+          .map((d) => d.getDescription())
+          .join('\n') || undefined,
     };
 
     symbolNodes.push(typeNode);
@@ -221,7 +246,11 @@ export function analyzeSourceFile(sourceFile: SourceFile, rootDir: string): ASTA
       lineStart,
       lineEnd: enumDecl.getEndLineNumber(),
       exported: enumDecl.isExported(),
-      documentation: enumDecl.getJsDocs().map(d => d.getDescription()).join('\n') || undefined,
+      documentation:
+        enumDecl
+          .getJsDocs()
+          .map((d) => d.getDescription())
+          .join('\n') || undefined,
     };
 
     symbolNodes.push(enumNode);
@@ -251,7 +280,7 @@ export function analyzeSourceFile(sourceFile: SourceFile, rootDir: string): ASTA
 
   // Calculate aggregate file complexity
   const totalComplexity = symbolNodes
-    .filter(n => n.complexity !== undefined)
+    .filter((n) => n.complexity !== undefined)
     .reduce((sum, n) => sum + (n.complexity || 0), 0);
   fileNode.complexity = totalComplexity;
 
@@ -288,7 +317,11 @@ export function createProject(rootDir: string): Project {
 /**
  * Get all source files in a directory
  */
-export function getSourceFiles(project: Project, rootDir: string, patterns: string[] = ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx']): SourceFile[] {
+export function getSourceFiles(
+  project: Project,
+  rootDir: string,
+  patterns: string[] = ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx']
+): SourceFile[] {
   const excludePatterns = [
     '**/node_modules/**',
     '**/dist/**',
@@ -307,9 +340,9 @@ export function getSourceFiles(project: Project, rootDir: string, patterns: stri
   }
 
   // Remove excluded files
-  const sourceFiles = project.getSourceFiles().filter(sf => {
+  const sourceFiles = project.getSourceFiles().filter((sf) => {
     const filePath = sf.getFilePath();
-    return !excludePatterns.some(pattern => {
+    return !excludePatterns.some((pattern) => {
       const regex = new RegExp(pattern.replace(/\*\*/g, '.*').replace(/\*/g, '[^/]*'));
       return regex.test(filePath);
     });

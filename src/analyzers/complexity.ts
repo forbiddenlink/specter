@@ -5,7 +5,9 @@
  * across the codebase.
  */
 
-import type { GraphNode, ComplexityHotspot, KnowledgeGraph } from '../graph/types.js';
+import type { ComplexityThresholds } from '../config/index.js';
+import { DEFAULT_CONFIG } from '../config/index.js';
+import type { ComplexityHotspot, GraphNode, KnowledgeGraph } from '../graph/types.js';
 
 export interface ComplexityReport {
   averageComplexity: number;
@@ -13,42 +15,49 @@ export interface ComplexityReport {
   totalComplexity: number;
   hotspots: ComplexityHotspot[];
   distribution: {
-    low: number;      // 1-5
-    medium: number;   // 6-10
-    high: number;     // 11-20
+    low: number; // 1-5
+    medium: number; // 6-10
+    high: number; // 11-20
     veryHigh: number; // 21+
   };
 }
 
 /**
- * Complexity thresholds
+ * Default complexity thresholds (for backwards compatibility)
+ * @deprecated Use getConfig(rootDir).complexity instead
  */
-export const COMPLEXITY_THRESHOLDS = {
-  low: 5,
-  medium: 10,
-  high: 20,
-} as const;
+export const COMPLEXITY_THRESHOLDS = DEFAULT_CONFIG.complexity;
 
 /**
  * Get complexity category
  */
-export function getComplexityCategory(complexity: number): 'low' | 'medium' | 'high' | 'veryHigh' {
-  if (complexity <= COMPLEXITY_THRESHOLDS.low) return 'low';
-  if (complexity <= COMPLEXITY_THRESHOLDS.medium) return 'medium';
-  if (complexity <= COMPLEXITY_THRESHOLDS.high) return 'high';
+export function getComplexityCategory(
+  complexity: number,
+  thresholds: ComplexityThresholds = COMPLEXITY_THRESHOLDS
+): 'low' | 'medium' | 'high' | 'veryHigh' {
+  if (complexity <= thresholds.low) return 'low';
+  if (complexity <= thresholds.medium) return 'medium';
+  if (complexity <= thresholds.high) return 'high';
   return 'veryHigh';
 }
 
 /**
  * Get complexity emoji indicator
  */
-export function getComplexityEmoji(complexity: number): string {
-  const category = getComplexityCategory(complexity);
+export function getComplexityEmoji(
+  complexity: number,
+  thresholds: ComplexityThresholds = COMPLEXITY_THRESHOLDS
+): string {
+  const category = getComplexityCategory(complexity, thresholds);
   switch (category) {
-    case 'low': return '🟢';
-    case 'medium': return '🟡';
-    case 'high': return '🟠';
-    case 'veryHigh': return '🔴';
+    case 'low':
+      return '🟢';
+    case 'medium':
+      return '🟡';
+    case 'high':
+      return '🟠';
+    case 'veryHigh':
+      return '🔴';
   }
 }
 
@@ -61,9 +70,11 @@ export function findComplexityHotspots(
     limit?: number;
     threshold?: number;
     includeFiles?: boolean;
+    thresholds?: ComplexityThresholds;
   } = {}
 ): ComplexityHotspot[] {
-  const { limit = 10, threshold = COMPLEXITY_THRESHOLDS.medium, includeFiles = false } = options;
+  const thresholds = options.thresholds || COMPLEXITY_THRESHOLDS;
+  const { limit = 10, threshold = thresholds.medium, includeFiles = false } = options;
 
   const hotspots: ComplexityHotspot[] = [];
 
@@ -83,17 +94,19 @@ export function findComplexityHotspots(
     });
   }
 
-  return hotspots
-    .sort((a, b) => b.complexity - a.complexity)
-    .slice(0, limit);
+  return hotspots.sort((a, b) => b.complexity - a.complexity).slice(0, limit);
 }
 
 /**
  * Generate complexity report for a codebase
  */
-export function generateComplexityReport(graph: KnowledgeGraph): ComplexityReport {
-  const nodesWithComplexity = Object.values(graph.nodes)
-    .filter(n => n.type !== 'file' && n.complexity !== undefined);
+export function generateComplexityReport(
+  graph: KnowledgeGraph,
+  thresholds: ComplexityThresholds = COMPLEXITY_THRESHOLDS
+): ComplexityReport {
+  const nodesWithComplexity = Object.values(graph.nodes).filter(
+    (n) => n.type !== 'file' && n.complexity !== undefined
+  );
 
   if (nodesWithComplexity.length === 0) {
     return {
@@ -105,7 +118,7 @@ export function generateComplexityReport(graph: KnowledgeGraph): ComplexityRepor
     };
   }
 
-  const complexities = nodesWithComplexity.map(n => n.complexity!);
+  const complexities = nodesWithComplexity.map((n) => n.complexity!);
   const totalComplexity = complexities.reduce((sum, c) => sum + c, 0);
   const averageComplexity = totalComplexity / complexities.length;
   const maxComplexity = Math.max(...complexities);
@@ -118,11 +131,11 @@ export function generateComplexityReport(graph: KnowledgeGraph): ComplexityRepor
   };
 
   for (const complexity of complexities) {
-    const category = getComplexityCategory(complexity);
+    const category = getComplexityCategory(complexity, thresholds);
     distribution[category]++;
   }
 
-  const hotspots = findComplexityHotspots(graph, { limit: 20 });
+  const hotspots = findComplexityHotspots(graph, { limit: 20, thresholds });
 
   return {
     averageComplexity: Math.round(averageComplexity * 100) / 100,
@@ -201,7 +214,10 @@ export function getComplexityByDirectory(
     dirStats.set(dir, existing);
   }
 
-  const result = new Map<string, { totalComplexity: number; fileCount: number; avgComplexity: number }>();
+  const result = new Map<
+    string,
+    { totalComplexity: number; fileCount: number; avgComplexity: number }
+  >();
 
   for (const [dir, stats] of dirStats) {
     result.set(dir, {
@@ -216,7 +232,10 @@ export function getComplexityByDirectory(
 /**
  * Suggest refactoring targets based on complexity
  */
-export function suggestRefactoringTargets(graph: KnowledgeGraph): Array<{
+export function suggestRefactoringTargets(
+  graph: KnowledgeGraph,
+  thresholds: ComplexityThresholds = COMPLEXITY_THRESHOLDS
+): Array<{
   node: GraphNode;
   reason: string;
   priority: 'high' | 'medium' | 'low';
@@ -232,7 +251,7 @@ export function suggestRefactoringTargets(graph: KnowledgeGraph): Array<{
     if (!node.complexity) continue;
 
     // Very high complexity
-    if (node.complexity > COMPLEXITY_THRESHOLDS.high) {
+    if (node.complexity > thresholds.high) {
       suggestions.push({
         node,
         reason: `Cyclomatic complexity of ${node.complexity} is very high. Consider breaking into smaller functions.`,
@@ -240,7 +259,7 @@ export function suggestRefactoringTargets(graph: KnowledgeGraph): Array<{
       });
     }
     // High complexity
-    else if (node.complexity > COMPLEXITY_THRESHOLDS.medium) {
+    else if (node.complexity > thresholds.medium) {
       suggestions.push({
         node,
         reason: `Cyclomatic complexity of ${node.complexity} is above recommended threshold.`,
@@ -250,7 +269,7 @@ export function suggestRefactoringTargets(graph: KnowledgeGraph): Array<{
 
     // Long functions (rough heuristic: >50 lines with moderate complexity)
     const lineCount = node.lineEnd - node.lineStart;
-    if (lineCount > 50 && node.complexity > COMPLEXITY_THRESHOLDS.low) {
+    if (lineCount > 50 && node.complexity > thresholds.low) {
       suggestions.push({
         node,
         reason: `Function spans ${lineCount} lines. Consider extracting helper functions.`,

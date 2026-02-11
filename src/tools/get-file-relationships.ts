@@ -5,7 +5,7 @@
  */
 
 import { z } from 'zod';
-import type { KnowledgeGraph, FileRelationship, NodeType } from '../graph/types.js';
+import type { KnowledgeGraph, NodeType } from '../graph/types.js';
 
 export const schema = {
   filePath: z.string().describe('Path to the file to analyze (relative to project root)'),
@@ -52,34 +52,28 @@ export function execute(graph: KnowledgeGraph, input: Input): FileRelationshipsR
   }
 
   // Find imports (edges where this file is the source)
-  const importEdges = graph.edges.filter(
-    e => e.source === filePath && e.type === 'imports'
-  );
+  const importEdges = graph.edges.filter((e) => e.source === filePath && e.type === 'imports');
 
-  const imports = importEdges.map(e => ({
+  const imports = importEdges.map((e) => ({
     source: e.target,
     symbols: (e.metadata?.symbols as string[]) || [],
   }));
 
   // Find importedBy (edges where this file is the target)
-  const importedByEdges = graph.edges.filter(
-    e => e.target === filePath && e.type === 'imports'
-  );
+  const importedByEdges = graph.edges.filter((e) => e.target === filePath && e.type === 'imports');
 
-  const importedBy = importedByEdges.map(e => ({
+  const importedBy = importedByEdges.map((e) => ({
     filePath: e.source,
     symbols: (e.metadata?.symbols as string[]) || [],
   }));
 
   // Find exports (symbols contained in this file that are exported)
-  const containsEdges = graph.edges.filter(
-    e => e.source === filePath && e.type === 'contains'
-  );
+  const containsEdges = graph.edges.filter((e) => e.source === filePath && e.type === 'contains');
 
   const exports = containsEdges
-    .map(e => graph.nodes[e.target])
-    .filter(n => n && n.exported)
-    .map(n => ({
+    .map((e) => graph.nodes[e.target])
+    .filter((n) => n?.exported)
+    .map((n) => ({
       name: n.name,
       type: n.type,
       lineStart: n.lineStart,
@@ -122,7 +116,10 @@ function generateSummary(
     parts.push(`I depend on 1 other file: ${imports[0].source}`);
   } else {
     parts.push(`I depend on ${imports.length} other files.`);
-    const topImports = imports.slice(0, 3).map(i => i.source).join(', ');
+    const topImports = imports
+      .slice(0, 3)
+      .map((i) => i.source)
+      .join(', ');
     parts.push(`Key dependencies: ${topImports}`);
   }
 
@@ -140,8 +137,13 @@ function generateSummary(
 
   // Export summary
   if (exports.length > 0) {
-    const exportNames = exports.slice(0, 5).map(e => e.name).join(', ');
-    parts.push(`I export: ${exportNames}${exports.length > 5 ? ` and ${exports.length - 5} more` : ''}`);
+    const exportNames = exports
+      .slice(0, 5)
+      .map((e) => e.name)
+      .join(', ');
+    parts.push(
+      `I export: ${exportNames}${exports.length > 5 ? ` and ${exports.length - 5} more` : ''}`
+    );
   }
 
   // Coupling assessment

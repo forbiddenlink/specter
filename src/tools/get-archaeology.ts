@@ -8,13 +8,16 @@
  * This is storytelling, not just data - making history accessible.
  */
 
-import { z } from 'zod';
 import { simpleGit } from 'simple-git';
+import { z } from 'zod';
 import type { KnowledgeGraph } from '../graph/types.js';
 
 export const schema = {
   filePath: z.string().describe('Path to the file to analyze (relative to project root)'),
-  functionName: z.string().optional().describe('Specific function to analyze (searches commit messages)'),
+  functionName: z
+    .string()
+    .optional()
+    .describe('Specific function to analyze (searches commit messages)'),
 };
 
 export type Input = z.infer<z.ZodObject<typeof schema>>;
@@ -42,10 +45,7 @@ interface ArchaeologyResult {
   summary: string;
 }
 
-export async function execute(
-  graph: KnowledgeGraph,
-  input: Input
-): Promise<ArchaeologyResult> {
+export async function execute(graph: KnowledgeGraph, input: Input): Promise<ArchaeologyResult> {
   const { filePath, functionName } = input;
 
   // Check if file exists
@@ -93,7 +93,7 @@ export async function execute(
     // Analyze commit patterns
     const commits = [...log.all].reverse(); // Oldest first
     const firstCommit = commits[0];
-    const lastCommit = commits[commits.length - 1];
+    const _lastCommit = commits[commits.length - 1];
 
     // Calculate age
     const ageMs = Date.now() - new Date(firstCommit.date).getTime();
@@ -177,7 +177,8 @@ async function detectRewrites(
 ): Promise<string[]> {
   const rewrites: string[] = [];
 
-  for (const commit of commits.slice(1)) { // Skip first commit (creation)
+  for (const commit of commits.slice(1)) {
+    // Skip first commit (creation)
     try {
       // Get diff stats for this commit
       const diffStat = await git.raw([
@@ -201,9 +202,7 @@ async function detectRewrites(
           rewrites.push(commit.hash);
         }
       }
-    } catch {
-      continue;
-    }
+    } catch {}
   }
 
   return rewrites;
@@ -253,15 +252,15 @@ function buildEvolutionPhases(
   return phases;
 }
 
-function analyzeGrowthPattern(
-  commits: Array<{ hash: string; message: string }>
-): string {
+function analyzeGrowthPattern(commits: Array<{ hash: string; message: string }>): string {
   const patterns: string[] = [];
 
   // Check for common commit message patterns
-  const fixes = commits.filter(c => /fix|bug|issue|error/i.test(c.message)).length;
-  const features = commits.filter(c => /add|feat|new|implement/i.test(c.message)).length;
-  const refactors = commits.filter(c => /refactor|clean|improve|simplify/i.test(c.message)).length;
+  const fixes = commits.filter((c) => /fix|bug|issue|error/i.test(c.message)).length;
+  const features = commits.filter((c) => /add|feat|new|implement/i.test(c.message)).length;
+  const refactors = commits.filter((c) =>
+    /refactor|clean|improve|simplify/i.test(c.message)
+  ).length;
 
   const total = commits.length;
 
@@ -289,40 +288,40 @@ function detectPatterns(
   const patterns: string[] = [];
 
   // Check for repeated fix attempts
-  const messages = commits.map(c => c.message.toLowerCase());
+  const messages = commits.map((c) => c.message.toLowerCase());
 
-  const fixAttempts = messages.filter(m => /fix|bug|issue/.test(m));
+  const fixAttempts = messages.filter((m) => /fix|bug|issue/.test(m));
   if (fixAttempts.length > 5) {
     patterns.push(`This file has had ${fixAttempts.length} bug fixes. It may be fragile.`);
   }
 
   // Check for reverts
-  const reverts = messages.filter(m => /revert/.test(m));
+  const reverts = messages.filter((m) => /revert/.test(m));
   if (reverts.length > 0) {
     patterns.push(`${reverts.length} changes were reverted. Some approaches didn't work.`);
   }
 
   // Check for TODO/HACK mentions
-  const hacks = messages.filter(m => /hack|workaround|temporary|todo/.test(m));
+  const hacks = messages.filter((m) => /hack|workaround|temporary|todo/.test(m));
   if (hacks.length > 0) {
     patterns.push(`${hacks.length} commits mention workarounds or TODOs.`);
   }
 
   // Check for performance work
-  const perf = messages.filter(m => /perf|optim|speed|slow|fast/.test(m));
+  const perf = messages.filter((m) => /perf|optim|speed|slow|fast/.test(m));
   if (perf.length > 2) {
     patterns.push('Performance has been actively tuned here.');
   }
 
   // Check for security mentions
-  const security = messages.filter(m => /security|vuln|xss|inject|auth/.test(m));
+  const security = messages.filter((m) => /security|vuln|xss|inject|auth/.test(m));
   if (security.length > 0) {
     patterns.push(`Security-related changes detected (${security.length} commits).`);
   }
 
   // If searching for a specific function
   if (functionName) {
-    const mentions = commits.filter(c =>
+    const mentions = commits.filter((c) =>
       c.message.toLowerCase().includes(functionName.toLowerCase())
     );
     if (mentions.length > 0) {
@@ -333,9 +332,7 @@ function detectPatterns(
   return patterns;
 }
 
-function extractLessons(
-  commits: Array<{ hash: string; message: string }>
-): string[] {
+function extractLessons(commits: Array<{ hash: string; message: string }>): string[] {
   const lessons: string[] = [];
 
   // Look for commits that explain "why" not just "what"
@@ -377,10 +374,14 @@ function generateSummary(data: {
   // Origin story
   parts.push(`### Origin Story`);
   parts.push('');
-  parts.push(`I was born **${data.age} ago** and have lived through **${data.commits.length} changes**.`);
+  parts.push(
+    `I was born **${data.age} ago** and have lived through **${data.commits.length} changes**.`
+  );
 
   if (data.totalRewrites > 0) {
-    parts.push(`I've been significantly rewritten **${data.totalRewrites} time${data.totalRewrites > 1 ? 's' : ''}**.`);
+    parts.push(
+      `I've been significantly rewritten **${data.totalRewrites} time${data.totalRewrites > 1 ? 's' : ''}**.`
+    );
   }
   parts.push('');
 
@@ -389,8 +390,8 @@ function generateSummary(data: {
     parts.push(`### My Evolution`);
     parts.push('');
     for (const phase of data.evolutionPhases) {
-      const emoji = phase.version === 1 ? '🌱' :
-                    phase.description.includes('rewrite') ? '🔄' : '📈';
+      const emoji =
+        phase.version === 1 ? '🌱' : phase.description.includes('rewrite') ? '🔄' : '📈';
       parts.push(`${emoji} **v${phase.version}** (${phase.period}) — ${phase.description}`);
       parts.push(`   by ${phase.author}: "${phase.keyChanges[0]}"`);
     }
@@ -406,7 +407,7 @@ function generateSummary(data: {
   if (data.volatilityScore > 2) {
     parts.push('*I change frequently — handle with care.*');
   } else if (data.volatilityScore < 0.5) {
-    parts.push('*I\'m quite stable — changes here are infrequent.*');
+    parts.push("*I'm quite stable — changes here are infrequent.*");
   }
   parts.push('');
 
@@ -436,9 +437,7 @@ function generateSummary(data: {
   for (const commit of data.commits) {
     contributors.set(commit.author_name, (contributors.get(commit.author_name) || 0) + 1);
   }
-  const topContribs = [...contributors.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3);
+  const topContribs = [...contributors.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3);
 
   parts.push('### My Authors');
   parts.push('');

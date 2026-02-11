@@ -5,12 +5,5 @@
   "author": "Liz Stein",
   "repository": "https://github.com/forbiddenlink/specter",
   "license": "MIT",
-  "keywords": [
-    "codebase",
-    "knowledge-graph",
-    "ast",
-    "code-analysis",
-    "mcp",
-    "github-copilot-cli"
-  ]
+  "keywords": ["codebase", "knowledge-graph", "ast", "code-analysis", "mcp", "github-copilot-cli"]
 }

@@ -9,8 +9,8 @@
  */
 
 import { z } from 'zod';
-import type { KnowledgeGraph, BusFactorAnalysis, KnowledgeRisk } from '../graph/types.js';
 import { analyzeKnowledgeDistribution } from '../analyzers/knowledge.js';
+import type { BusFactorAnalysis, KnowledgeGraph, KnowledgeRisk } from '../graph/types.js';
 
 export const schema = {
   directory: z.string().optional().describe('Limit analysis to a specific directory'),
@@ -45,19 +45,16 @@ export interface BusFactorResult {
   summary: string;
 }
 
-export async function execute(
-  graph: KnowledgeGraph,
-  input: Input
-): Promise<BusFactorResult> {
+export async function execute(graph: KnowledgeGraph, input: Input): Promise<BusFactorResult> {
   const { directory, limit = 15 } = input;
 
   // Get all file paths from graph
   let filePaths = Object.values(graph.nodes)
-    .filter(n => n.type === 'file')
-    .map(n => n.filePath);
+    .filter((n) => n.type === 'file')
+    .map((n) => n.filePath);
 
   if (directory) {
-    filePaths = filePaths.filter(f => f.startsWith(directory));
+    filePaths = filePaths.filter((f) => f.startsWith(directory));
   }
 
   if (filePaths.length === 0) {
@@ -83,19 +80,17 @@ export async function execute(
   }
 
   // Format critical areas
-  const criticalAreas = analysis.criticalAreas
-    .slice(0, limit)
-    .map(area => ({
-      path: area.path,
-      owner: area.primaryOwner,
-      ownershipPct: area.ownershipPercentage,
-      busFactor: area.busFactor,
-      daysSinceChange: area.daysSinceLastChange,
-      verdict: getVerdict(area),
-    }));
+  const criticalAreas = analysis.criticalAreas.slice(0, limit).map((area) => ({
+    path: area.path,
+    owner: area.primaryOwner,
+    ownershipPct: area.ownershipPercentage,
+    busFactor: area.busFactor,
+    daysSinceChange: area.daysSinceLastChange,
+    verdict: getVerdict(area),
+  }));
 
   // Format top owners
-  const topOwners = analysis.ownershipDistribution.slice(0, 5).map(o => ({
+  const topOwners = analysis.ownershipDistribution.slice(0, 5).map((o) => ({
     name: o.contributor,
     filesOwned: o.filesOwned,
     percentage: o.percentage,
@@ -147,9 +142,14 @@ function generateSummary(
   parts.push('');
 
   // Overall assessment
-  const emoji = analysis.overallBusFactor < 1.5 ? '🔴' :
-                analysis.overallBusFactor < 2.5 ? '🟠' :
-                analysis.overallBusFactor < 3.5 ? '🟡' : '🟢';
+  const emoji =
+    analysis.overallBusFactor < 1.5
+      ? '🔴'
+      : analysis.overallBusFactor < 2.5
+        ? '🟠'
+        : analysis.overallBusFactor < 3.5
+          ? '🟡'
+          : '🟢';
 
   parts.push(`${emoji} **Overall Bus Factor: ${analysis.overallBusFactor}**`);
   parts.push('');
@@ -179,11 +179,11 @@ function generateSummary(
     parts.push('### Knowledge Concentration Risks');
     parts.push('');
 
-    const critical = criticalAreas.filter(a =>
-      analysis.criticalAreas.find(ca => ca.path === a.path)?.riskLevel === 'critical'
+    const critical = criticalAreas.filter(
+      (a) => analysis.criticalAreas.find((ca) => ca.path === a.path)?.riskLevel === 'critical'
     );
-    const high = criticalAreas.filter(a =>
-      analysis.criticalAreas.find(ca => ca.path === a.path)?.riskLevel === 'high'
+    const high = criticalAreas.filter(
+      (a) => analysis.criticalAreas.find((ca) => ca.path === a.path)?.riskLevel === 'high'
     );
 
     if (critical.length > 0) {

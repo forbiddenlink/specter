@@ -5,9 +5,9 @@
  */
 
 import { simpleGit } from 'simple-git';
+import { COMPLEXITY_THRESHOLDS, getComplexityCategory } from '../analyzers/complexity.js';
 import type { KnowledgeGraph } from '../graph/types.js';
 import type { HealthSnapshot } from './types.js';
-import { getComplexityCategory, COMPLEXITY_THRESHOLDS } from '../analyzers/complexity.js';
 
 /**
  * Create a snapshot from current graph state
@@ -24,22 +24,20 @@ export async function createSnapshot(graph: KnowledgeGraph): Promise<HealthSnaps
   }
 
   // Calculate metrics from graph
-  const nodesWithComplexity = Object.values(graph.nodes)
-    .filter(n => n.type !== 'file' && n.complexity !== undefined);
+  const nodesWithComplexity = Object.values(graph.nodes).filter(
+    (n) => n.type !== 'file' && n.complexity !== undefined
+  );
 
-  const complexities = nodesWithComplexity.map(n => n.complexity!);
-  const avgComplexity = complexities.length > 0
-    ? complexities.reduce((sum, c) => sum + c, 0) / complexities.length
-    : 0;
-  const maxComplexity = complexities.length > 0
-    ? Math.max(...complexities)
-    : 0;
+  const complexities = nodesWithComplexity.map((n) => n.complexity!);
+  const avgComplexity =
+    complexities.length > 0 ? complexities.reduce((sum, c) => sum + c, 0) / complexities.length : 0;
+  const maxComplexity = complexities.length > 0 ? Math.max(...complexities) : 0;
 
   // Count complexity distribution
   const distribution = {
-    low: 0,      // 1-5
-    medium: 0,   // 6-10
-    high: 0,     // 11-20
+    low: 0, // 1-5
+    medium: 0, // 6-10
+    high: 0, // 11-20
     veryHigh: 0, // 21+
   };
 
@@ -49,13 +47,13 @@ export async function createSnapshot(graph: KnowledgeGraph): Promise<HealthSnaps
   }
 
   // Count hotspots (complexity > 15)
-  const hotspotCount = complexities.filter(c => c > COMPLEXITY_THRESHOLDS.high - 5).length;
+  const hotspotCount = complexities.filter((c) => c > COMPLEXITY_THRESHOLDS.high - 5).length;
 
   // Calculate health score (0-100)
   // Formula: Start at 100, subtract based on complexity and hotspots
   let healthScore = 100;
   healthScore -= avgComplexity * 3; // Subtract 3 points per avg complexity
-  healthScore -= hotspotCount * 2;  // Subtract 2 points per hotspot
+  healthScore -= hotspotCount * 2; // Subtract 2 points per hotspot
   healthScore -= distribution.veryHigh * 5; // Penalize very high complexity functions
   healthScore = Math.max(0, Math.min(100, Math.round(healthScore)));
 

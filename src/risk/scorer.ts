@@ -4,14 +4,14 @@
  * Calculates risk scores for changes based on multiple factors.
  */
 
-import type { KnowledgeGraph, GraphNode } from '../graph/types.js';
-import type { DiffFile, RiskScore, RiskFactor } from './types.js';
+import type { GraphNode, KnowledgeGraph } from '../graph/types.js';
 import {
-  getStagedChanges,
+  analyzeDiffSize,
   getBranchChanges,
   getCommitChanges,
-  analyzeDiffSize,
+  getStagedChanges,
 } from './diff-analyzer.js';
+import type { DiffFile, RiskFactor, RiskScore } from './types.js';
 
 // Weight factors (sum to 1.0)
 const WEIGHTS = {
@@ -19,8 +19,8 @@ const WEIGHTS = {
   linesChanged: 0.15,
   complexityTouched: 0.25,
   dependentImpact: 0.25,
-  busFactorRisk: 0.10,
-  testCoverage: 0.10,
+  busFactorRisk: 0.1,
+  testCoverage: 0.1,
 };
 
 /**
@@ -53,9 +53,7 @@ function calculateFilesRisk(files: DiffFile[]): RiskFactor {
     score,
     weight: WEIGHTS.filesChanged,
     details: `${count} files: ${details}`,
-    items: count > 5
-      ? files.slice(0, 5).map(f => f.filePath)
-      : files.map(f => f.filePath),
+    items: count > 5 ? files.slice(0, 5).map((f) => f.filePath) : files.map((f) => f.filePath),
   };
 }
 
@@ -92,7 +90,9 @@ function calculateLinesRisk(files: DiffFile[]): RiskFactor {
   const items: string[] = [];
   items.push(`+${totalAdditions} / -${totalDeletions} lines`);
   if (largestFile) {
-    items.push(`Largest: ${largestFile.filePath} (+${largestFile.additions}/-${largestFile.deletions})`);
+    items.push(
+      `Largest: ${largestFile.filePath} (+${largestFile.additions}/-${largestFile.deletions})`
+    );
   }
 
   return {
@@ -180,7 +180,7 @@ function calculateComplexityRisk(files: DiffFile[], graph: KnowledgeGraph): Risk
     score,
     weight: WEIGHTS.complexityTouched,
     details: `Max complexity: ${maxComplexity}. ${details}`,
-    items: complexFiles.slice(0, 5).map(f => `${f.path} (C:${f.complexity})`),
+    items: complexFiles.slice(0, 5).map((f) => `${f.path} (C:${f.complexity})`),
   };
 }
 
@@ -188,7 +188,7 @@ function calculateComplexityRisk(files: DiffFile[], graph: KnowledgeGraph): Risk
  * Calculate risk for dependent files (ripple effect)
  */
 function calculateDependentRisk(files: DiffFile[], graph: KnowledgeGraph): RiskFactor {
-  const changedFilePaths = new Set(files.map(f => f.filePath));
+  const changedFilePaths = new Set(files.map((f) => f.filePath));
   const dependentFiles = new Set<string>();
 
   // For each changed file, find what imports it
@@ -330,17 +330,14 @@ function calculateTestCoverageRisk(files: DiffFile[]): RiskFactor {
 
   // Check which source files have corresponding test modifications
   for (const srcFile of sourceFiles) {
-    const baseName = srcFile
-      .replace(/\.(ts|tsx|js|jsx)$/, '')
-      .replace(/^src\//, '');
+    const baseName = srcFile.replace(/\.(ts|tsx|js|jsx)$/, '').replace(/^src\//, '');
 
-    const hasTestChange = testFiles.some(testFile => {
+    const hasTestChange = testFiles.some((testFile) => {
       const testBase = testFile
         .toLowerCase()
         .replace(/\.(test|spec)\.(ts|tsx|js|jsx)$/, '')
         .replace(/^(test|tests|__tests__)\//, '');
-      return testBase.includes(baseName.toLowerCase()) ||
-             baseName.toLowerCase().includes(testBase);
+      return testBase.includes(baseName.toLowerCase()) || baseName.toLowerCase().includes(testBase);
     });
 
     if (!hasTestChange) {
@@ -390,10 +387,7 @@ function calculateTestCoverageRisk(files: DiffFile[]): RiskFactor {
 /**
  * Generate recommendations based on risk factors
  */
-function generateRecommendations(
-  factors: RiskScore['factors'],
-  files: DiffFile[]
-): string[] {
+function generateRecommendations(factors: RiskScore['factors'], _files: DiffFile[]): string[] {
   const recs: string[] = [];
 
   if (factors.filesChanged.score >= 60) {
@@ -443,17 +437,20 @@ function generateSummary(
   } else if (level === 'medium') {
     parts.push(`This change is moderate risk (${overall}/100). I'd appreciate a careful review.`);
   } else if (level === 'high') {
-    parts.push(`Warning: This is a high-risk change (${overall}/100). Please review carefully before committing.`);
+    parts.push(
+      `Warning: This is a high-risk change (${overall}/100). Please review carefully before committing.`
+    );
   } else {
-    parts.push(`CRITICAL: This change has very high risk (${overall}/100). I strongly recommend splitting it up or getting multiple reviewers.`);
+    parts.push(
+      `CRITICAL: This change has very high risk (${overall}/100). I strongly recommend splitting it up or getting multiple reviewers.`
+    );
   }
 
   // Add insight about the highest risk factor
-  const sortedFactors = Object.entries(factors)
-    .sort(([, a], [, b]) => b.score - a.score);
+  const sortedFactors = Object.entries(factors).sort(([, a], [, b]) => b.score - a.score);
 
   if (sortedFactors.length > 0) {
-    const [factorName, factor] = sortedFactors[0];
+    const [_factorName, factor] = sortedFactors[0];
     if (factor.score >= 50) {
       parts.push(`Main concern: ${factor.name.toLowerCase()} - ${factor.details.toLowerCase()}`);
     }
@@ -531,10 +528,7 @@ export async function calculateRiskScore(
 
   // Determine level
   const level: RiskScore['level'] =
-    overall <= 25 ? 'low' :
-    overall <= 50 ? 'medium' :
-    overall <= 75 ? 'high' :
-    'critical';
+    overall <= 25 ? 'low' : overall <= 50 ? 'medium' : overall <= 75 ? 'high' : 'critical';
 
   // Generate recommendations
   const recommendations = generateRecommendations(factors, files);

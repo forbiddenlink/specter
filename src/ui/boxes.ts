@@ -5,7 +5,6 @@
  * for structured output display.
  */
 
-import chalk from 'chalk';
 import { colors } from './colors.js';
 
 /**
@@ -47,24 +46,56 @@ export interface TableOptions {
  */
 const borderChars = {
   single: {
-    tl: '\u250C', tr: '\u2510', bl: '\u2514', br: '\u2518',
-    h: '\u2500', v: '\u2502',
-    lt: '\u251C', rt: '\u2524', mt: '\u252C', mb: '\u2534', cross: '\u253C',
+    tl: '\u250C',
+    tr: '\u2510',
+    bl: '\u2514',
+    br: '\u2518',
+    h: '\u2500',
+    v: '\u2502',
+    lt: '\u251C',
+    rt: '\u2524',
+    mt: '\u252C',
+    mb: '\u2534',
+    cross: '\u253C',
   },
   double: {
-    tl: '\u2554', tr: '\u2557', bl: '\u255A', br: '\u255D',
-    h: '\u2550', v: '\u2551',
-    lt: '\u2560', rt: '\u2563', mt: '\u2566', mb: '\u2569', cross: '\u256C',
+    tl: '\u2554',
+    tr: '\u2557',
+    bl: '\u255A',
+    br: '\u255D',
+    h: '\u2550',
+    v: '\u2551',
+    lt: '\u2560',
+    rt: '\u2563',
+    mt: '\u2566',
+    mb: '\u2569',
+    cross: '\u256C',
   },
   rounded: {
-    tl: '\u256D', tr: '\u256E', bl: '\u2570', br: '\u256F',
-    h: '\u2500', v: '\u2502',
-    lt: '\u251C', rt: '\u2524', mt: '\u252C', mb: '\u2534', cross: '\u253C',
+    tl: '\u256D',
+    tr: '\u256E',
+    bl: '\u2570',
+    br: '\u256F',
+    h: '\u2500',
+    v: '\u2502',
+    lt: '\u251C',
+    rt: '\u2524',
+    mt: '\u252C',
+    mb: '\u2534',
+    cross: '\u253C',
   },
   heavy: {
-    tl: '\u250F', tr: '\u2513', bl: '\u2517', br: '\u251B',
-    h: '\u2501', v: '\u2503',
-    lt: '\u2523', rt: '\u252B', mt: '\u2533', mb: '\u253B', cross: '\u254B',
+    tl: '\u250F',
+    tr: '\u2513',
+    bl: '\u2517',
+    br: '\u251B',
+    h: '\u2501',
+    v: '\u2503',
+    lt: '\u2523',
+    rt: '\u252B',
+    mt: '\u2533',
+    mb: '\u253B',
+    cross: '\u254B',
   },
 };
 
@@ -86,7 +117,11 @@ function visibleLength(str: string): number {
 /**
  * Pad a string to a specific visible width
  */
-function padToWidth(str: string, width: number, align: 'left' | 'right' | 'center' = 'left'): string {
+function padToWidth(
+  str: string,
+  width: number,
+  align: 'left' | 'right' | 'center' = 'left'
+): string {
   const visible = visibleLength(str);
   const padding = Math.max(0, width - visible);
 
@@ -143,7 +178,8 @@ export function box(content: string | string[], options: BoxOptions = {}): strin
   // Content lines
   const horizontalPadding = ' '.repeat(padding);
   for (const line of lines) {
-    const paddedContent = horizontalPadding + padToWidth(line, innerWidth - padding * 2) + horizontalPadding;
+    const paddedContent =
+      horizontalPadding + padToWidth(line, innerWidth - padding * 2) + horizontalPadding;
     result.push(borderColor(chars.v) + paddedContent + borderColor(chars.v));
   }
 
@@ -256,31 +292,22 @@ export function keyValueList(
  * @param options - Table options
  * @returns Formatted table string
  */
-export function table(
-  rows: (string | number)[][],
-  options: TableOptions = {}
-): string {
-  const {
-    headers,
-    align = [],
-    minWidths = [],
-    border = false,
-    borderStyle = 'single',
-  } = options;
+export function table(rows: (string | number)[][], options: TableOptions = {}): string {
+  const { headers, align = [], minWidths = [], border = false, borderStyle = 'single' } = options;
 
   if (rows.length === 0 && !headers) return '';
 
   // Convert all values to strings
-  const stringRows = rows.map(row => row.map(cell => String(cell)));
+  const stringRows = rows.map((row) => row.map((cell) => String(cell)));
   const allRows = headers ? [headers, ...stringRows] : stringRows;
 
   // Calculate column widths
-  const colCount = Math.max(...allRows.map(r => r.length));
+  const colCount = Math.max(...allRows.map((r) => r.length));
   const colWidths: number[] = [];
 
   for (let col = 0; col < colCount; col++) {
     const maxWidth = Math.max(
-      ...allRows.map(row => visibleLength(row[col] || '')),
+      ...allRows.map((row) => visibleLength(row[col] || '')),
       minWidths[col] || 0
     );
     colWidths.push(maxWidth);
@@ -296,7 +323,7 @@ export function table(
 
     if (border) {
       const chars = borderChars[borderStyle];
-      return chars.v + ' ' + cells.join(' ' + chars.v + ' ') + ' ' + chars.v;
+      return `${chars.v} ${cells.join(` ${chars.v} `)} ${chars.v}`;
     }
 
     return cells.join('  ');
@@ -306,7 +333,8 @@ export function table(
 
   if (border) {
     const chars = borderChars[borderStyle];
-    const topBorder = chars.tl + colWidths.map(w => chars.h.repeat(w + 2)).join(chars.mt) + chars.tr;
+    const topBorder =
+      chars.tl + colWidths.map((w) => chars.h.repeat(w + 2)).join(chars.mt) + chars.tr;
     result.push(topBorder);
   }
 
@@ -315,10 +343,11 @@ export function table(
 
     if (border) {
       const chars = borderChars[borderStyle];
-      const separator = chars.lt + colWidths.map(w => chars.h.repeat(w + 2)).join(chars.cross) + chars.rt;
+      const separator =
+        chars.lt + colWidths.map((w) => chars.h.repeat(w + 2)).join(chars.cross) + chars.rt;
       result.push(separator);
     } else {
-      result.push(colWidths.map(w => '\u2500'.repeat(w)).join('  '));
+      result.push(colWidths.map((w) => '\u2500'.repeat(w)).join('  '));
     }
   }
 
@@ -328,7 +357,8 @@ export function table(
 
   if (border) {
     const chars = borderChars[borderStyle];
-    const bottomBorder = chars.bl + colWidths.map(w => chars.h.repeat(w + 2)).join(chars.mb) + chars.br;
+    const bottomBorder =
+      chars.bl + colWidths.map((w) => chars.h.repeat(w + 2)).join(chars.mb) + chars.br;
     result.push(bottomBorder);
   }
 
@@ -354,7 +384,7 @@ export function panel(
     }
     const sectionContent = Array.isArray(sec.content) ? sec.content : sec.content.split('\n');
     allContent.push(colors.accent(`\u25B6 ${sec.title}`));
-    allContent.push(...sectionContent.map(line => `  ${line}`));
+    allContent.push(...sectionContent.map((line) => `  ${line}`));
   });
 
   return box(allContent, { ...options, borderStyle: options.borderStyle || 'rounded' });
@@ -368,10 +398,14 @@ export function panel(
  * @param indent - Indent string (default: '  ')
  * @returns Indented content
  */
-export function indent(content: string | string[], level: number = 1, indentStr: string = '  '): string {
+export function indent(
+  content: string | string[],
+  level: number = 1,
+  indentStr: string = '  '
+): string {
   const lines = Array.isArray(content) ? content : content.split('\n');
   const prefix = indentStr.repeat(level);
-  return lines.map(line => prefix + line).join('\n');
+  return lines.map((line) => prefix + line).join('\n');
 }
 
 /**
@@ -388,7 +422,7 @@ export function bulletList(
   color?: (s: string) => string
 ): string {
   const coloredBullet = color ? color(bullet) : bullet;
-  return items.map(item => `${coloredBullet} ${item}`).join('\n');
+  return items.map((item) => `${coloredBullet} ${item}`).join('\n');
 }
 
 /**
@@ -405,7 +439,7 @@ export function numberedList(items: string[], startAt: number = 1): string {
   return items
     .map((item, i) => {
       const num = String(startAt + i).padStart(numWidth);
-      return `${colors.muted(num + '.')} ${item}`;
+      return `${colors.muted(`${num}.`)} ${item}`;
     })
     .join('\n');
 }
@@ -428,7 +462,7 @@ export function tree(
     const connector = isLast ? '\u2514\u2500' : '\u251C\u2500';
     const childPrefix = isLast ? '  ' : '\u2502 ';
 
-    result.push(prefix + colors.muted(connector) + ' ' + item.label);
+    result.push(`${prefix + colors.muted(connector)} ${item.label}`);
 
     if (item.children && item.children.length > 0) {
       result.push(tree(item.children as typeof items, prefix + childPrefix));

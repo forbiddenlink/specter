@@ -7,8 +7,8 @@
  */
 
 import { z } from 'zod';
-import type { KnowledgeGraph, ChangeCouplingResult } from '../graph/types.js';
 import { analyzeChangeCoupling } from '../analyzers/git.js';
+import type { KnowledgeGraph } from '../graph/types.js';
 
 export const schema = {
   filePath: z.string().describe('Path to the file to analyze (relative to project root)'),
@@ -67,28 +67,25 @@ export async function execute(
   }
 
   // Analyze change coupling
-  const result = await analyzeChangeCoupling(
-    graph.metadata.rootDir,
-    filePath,
-    { minCouplingStrength: minStrength, importEdges }
-  );
+  const result = await analyzeChangeCoupling(graph.metadata.rootDir, filePath, {
+    minCouplingStrength: minStrength,
+    importEdges,
+  });
 
   // Format results
-  const coupledFiles = result.coupledFiles
-    .slice(0, maxResults)
-    .map(c => ({
-      file: c.file2,
-      strength: c.couplingStrength,
-      strengthLabel: getStrengthLabel(c.couplingStrength),
-      sharedCommits: c.sharedCommits,
-      hasImportRelationship: c.hasImportRelationship,
-      verdict: getVerdict(c.couplingStrength, c.hasImportRelationship),
-    }));
+  const coupledFiles = result.coupledFiles.slice(0, maxResults).map((c) => ({
+    file: c.file2,
+    strength: c.couplingStrength,
+    strengthLabel: getStrengthLabel(c.couplingStrength),
+    sharedCommits: c.sharedCommits,
+    hasImportRelationship: c.hasImportRelationship,
+    verdict: getVerdict(c.couplingStrength, c.hasImportRelationship),
+  }));
 
   // Identify hidden dependencies (high coupling, no import)
   const hiddenDependencies = result.coupledFiles
-    .filter(c => c.couplingStrength >= 0.5 && !c.hasImportRelationship)
-    .map(c => c.file2);
+    .filter((c) => c.couplingStrength >= 0.5 && !c.hasImportRelationship)
+    .map((c) => c.file2);
 
   // Generate summary
   const summary = generateSummary(filePath, coupledFiles, hiddenDependencies, result.insights);
@@ -128,7 +125,12 @@ function getVerdict(strength: number, hasImport: boolean): string {
 
 function generateSummary(
   filePath: string,
-  coupled: Array<{ file: string; strength: number; strengthLabel: string; hasImportRelationship: boolean }>,
+  coupled: Array<{
+    file: string;
+    strength: number;
+    strengthLabel: string;
+    hasImportRelationship: boolean;
+  }>,
   hidden: string[],
   insights: string[]
 ): string {
@@ -138,11 +140,13 @@ function generateSummary(
   parts.push('');
 
   if (coupled.length === 0) {
-    parts.push('This file changes independently - I found no significant coupling with other files.');
+    parts.push(
+      'This file changes independently - I found no significant coupling with other files.'
+    );
     parts.push('');
     parts.push('This could mean:');
     parts.push('- The file is well-isolated (good!)');
-    parts.push('- Or it hasn\'t been modified much yet');
+    parts.push("- Or it hasn't been modified much yet");
     return parts.join('\n');
   }
 

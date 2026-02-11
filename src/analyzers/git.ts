@@ -5,9 +5,9 @@
  * modification patterns, contributors, and file churn data.
  */
 
-import { simpleGit, SimpleGit, LogResult, DefaultLogFields } from 'simple-git';
-import path from 'path';
-import type { GitFileHistory, ChangeCoupling, ChangeCouplingResult } from '../graph/types.js';
+import path from 'node:path';
+import { type SimpleGit, simpleGit } from 'simple-git';
+import type { ChangeCoupling, ChangeCouplingResult, GitFileHistory } from '../graph/types.js';
 
 export interface GitAnalysisResult {
   isGitRepo: boolean;
@@ -59,12 +59,15 @@ export async function analyzeFileHistory(
     }
 
     // Group commits by author
-    const contributorMap = new Map<string, {
-      name: string;
-      email: string;
-      commits: number;
-      lastCommit: string;
-    }>();
+    const contributorMap = new Map<
+      string,
+      {
+        name: string;
+        email: string;
+        commits: number;
+        lastCommit: string;
+      }
+    >();
 
     for (const commit of log.all) {
       const key = commit.author_email;
@@ -85,10 +88,9 @@ export async function analyzeFileHistory(
       }
     }
 
-    const contributors = [...contributorMap.values()]
-      .sort((a, b) => b.commits - a.commits);
+    const contributors = [...contributorMap.values()].sort((a, b) => b.commits - a.commits);
 
-    const recentCommits = log.all.slice(0, 10).map(c => ({
+    const recentCommits = log.all.slice(0, 10).map((c) => ({
       hash: c.hash.substring(0, 7),
       message: c.message.split('\n')[0].substring(0, 80),
       author: c.author_name,
@@ -103,7 +105,7 @@ export async function analyzeFileHistory(
       contributors,
       recentCommits,
     };
-  } catch (error) {
+  } catch (_error) {
     // File might not be tracked or other git error
     return null;
   }
@@ -260,10 +262,13 @@ export async function analyzeChangeCoupling(
     }
 
     // For each commit, get all files that changed
-    const coChangeCount = new Map<string, {
-      count: number;
-      commits: Array<{ hash: string; message: string; date: string }>;
-    }>();
+    const coChangeCount = new Map<
+      string,
+      {
+        count: number;
+        commits: Array<{ hash: string; message: string; date: string }>;
+      }
+    >();
 
     for (const commit of targetLog.all) {
       try {
@@ -279,7 +284,7 @@ export async function analyzeChangeCoupling(
         const changedFiles = diffResult
           .trim()
           .split('\n')
-          .filter(f => f && f !== targetFile);
+          .filter((f) => f && f !== targetFile);
 
         for (const file of changedFiles) {
           // Skip non-source files
@@ -298,18 +303,17 @@ export async function analyzeChangeCoupling(
           } else {
             coChangeCount.set(file, {
               count: 1,
-              commits: [{
-                hash: commit.hash.substring(0, 7),
-                message: commit.message.split('\n')[0].substring(0, 60),
-                date: commit.date,
-              }],
+              commits: [
+                {
+                  hash: commit.hash.substring(0, 7),
+                  message: commit.message.split('\n')[0].substring(0, 60),
+                  date: commit.date,
+                },
+              ],
             });
           }
         }
-      } catch {
-        // Skip commits that fail (e.g., root commits)
-        continue;
-      }
+      } catch {}
     }
 
     // Calculate coupling strength and filter
@@ -321,8 +325,8 @@ export async function analyzeChangeCoupling(
 
       if (couplingStrength >= minCouplingStrength) {
         // Check if there's an import relationship
-        const hasImport = importEdges.has(`${targetFile}->${file}`) ||
-                         importEdges.has(`${file}->${targetFile}`);
+        const hasImport =
+          importEdges.has(`${targetFile}->${file}`) || importEdges.has(`${file}->${targetFile}`);
 
         // Get the other file's commit count for context
         let totalCommitsFile2 = data.count;
@@ -357,7 +361,9 @@ export async function analyzeChangeCoupling(
     return {
       targetFile,
       coupledFiles: [],
-      insights: [`Error analyzing coupling: ${error instanceof Error ? error.message : 'Unknown error'}`],
+      insights: [
+        `Error analyzing coupling: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      ],
     };
   }
 }
@@ -365,7 +371,7 @@ export async function analyzeChangeCoupling(
 /**
  * Generate human-readable insights about change coupling
  */
-function generateCouplingInsights(targetFile: string, couplings: ChangeCoupling[]): string[] {
+function generateCouplingInsights(_targetFile: string, couplings: ChangeCoupling[]): string[] {
   const insights: string[] = [];
 
   if (couplings.length === 0) {
@@ -374,24 +380,24 @@ function generateCouplingInsights(targetFile: string, couplings: ChangeCoupling[
   }
 
   // Hidden dependencies (high coupling but no import)
-  const hidden = couplings.filter(c => !c.hasImportRelationship && c.couplingStrength >= 0.5);
+  const hidden = couplings.filter((c) => !c.hasImportRelationship && c.couplingStrength >= 0.5);
   if (hidden.length > 0) {
     insights.push(
-      `Found ${hidden.length} hidden dependency: ${hidden.map(h => h.file2).join(', ')} ` +
-      `always changes with this file but has no import relationship.`
+      `Found ${hidden.length} hidden dependency: ${hidden.map((h) => h.file2).join(', ')} ` +
+        `always changes with this file but has no import relationship.`
     );
   }
 
   // Very strong coupling
-  const strong = couplings.filter(c => c.couplingStrength >= 0.7);
+  const strong = couplings.filter((c) => c.couplingStrength >= 0.7);
   if (strong.length > 0) {
     for (const c of strong.slice(0, 2)) {
       const pct = Math.round(c.couplingStrength * 100);
       insights.push(
         `${c.file2} changes together ${pct}% of the time (${c.sharedCommits} shared commits). ` +
-        (c.hasImportRelationship
-          ? 'They have a direct dependency.'
-          : 'Consider if these should be merged or if there\'s a missing abstraction.')
+          (c.hasImportRelationship
+            ? 'They have a direct dependency.'
+            : "Consider if these should be merged or if there's a missing abstraction.")
       );
     }
   }
@@ -400,7 +406,7 @@ function generateCouplingInsights(targetFile: string, couplings: ChangeCoupling[
   if (couplings.length >= 5) {
     insights.push(
       `This file is part of a change cluster with ${couplings.length} files. ` +
-      'Changes here tend to ripple. Consider refactoring to reduce coupling.'
+        'Changes here tend to ripple. Consider refactoring to reduce coupling.'
     );
   }
 

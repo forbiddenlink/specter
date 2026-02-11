@@ -6,7 +6,7 @@
  */
 
 import chalk from 'chalk';
-import { getHealthColor, getComplexityColor, colors } from './colors.js';
+import { colors, getComplexityColor, getHealthColor } from './colors.js';
 
 /**
  * Options for customizing progress bar appearance
@@ -31,7 +31,16 @@ export interface ProgressBarOptions {
 /**
  * Sparkline characters for trend visualization
  */
-const SPARKLINE_CHARS = ['\u2581', '\u2582', '\u2583', '\u2584', '\u2585', '\u2586', '\u2587', '\u2588'];
+const SPARKLINE_CHARS = [
+  '\u2581',
+  '\u2582',
+  '\u2583',
+  '\u2584',
+  '\u2585',
+  '\u2586',
+  '\u2587',
+  '\u2588',
+];
 
 /**
  * Create a basic progress bar
@@ -135,7 +144,7 @@ export function sparkline(values: number[]): string {
   const range = max - min || 1; // Avoid division by zero
 
   return values
-    .map(v => {
+    .map((v) => {
       const normalized = (v - min) / range;
       const index = Math.round(normalized * (SPARKLINE_CHARS.length - 1));
       return SPARKLINE_CHARS[index];

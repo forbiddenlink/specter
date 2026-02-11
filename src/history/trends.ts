@@ -4,8 +4,8 @@
  * Analyzes snapshots to identify patterns and trends.
  */
 
-import type { HealthSnapshot, HealthTrend, TrendAnalysis } from './types.js';
 import { diffSnapshots, percentChange } from './snapshot.js';
+import type { HealthSnapshot, HealthTrend, TrendAnalysis } from './types.js';
 
 /**
  * Get snapshots from a specific period
@@ -23,7 +23,7 @@ export function filterByPeriod(
 
   const cutoff = now - periodMs[period];
 
-  return snapshots.filter(s => new Date(s.timestamp).getTime() >= cutoff);
+  return snapshots.filter((s) => new Date(s.timestamp).getTime() >= cutoff);
 }
 
 /**
@@ -34,13 +34,11 @@ export function calculateTrend(
   period: 'day' | 'week' | 'month' | 'all'
 ): HealthTrend {
   // Filter snapshots for the period (unless 'all')
-  const periodSnapshots = period === 'all'
-    ? snapshots
-    : filterByPeriod(snapshots, period);
+  const periodSnapshots = period === 'all' ? snapshots : filterByPeriod(snapshots, period);
 
   // Sort by timestamp, oldest first
-  const sorted = [...periodSnapshots].sort((a, b) =>
-    new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+  const sorted = [...periodSnapshots].sort(
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
   );
 
   if (sorted.length === 0) {
@@ -97,8 +95,8 @@ export function calculateTrend(
  */
 export function analyzeTrends(snapshots: HealthSnapshot[]): TrendAnalysis {
   // Sort by timestamp, newest first
-  const sorted = [...snapshots].sort((a, b) =>
-    new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  const sorted = [...snapshots].sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   );
 
   const current = sorted[0] || null;
@@ -150,7 +148,9 @@ function generateInsights(older: HealthSnapshot, newer: HealthSnapshot): string[
   if (healthChange && healthChange.change !== 0) {
     const direction = healthChange.change > 0 ? 'improved' : 'declined';
     const absChange = Math.abs(healthChange.change);
-    insights.push(`My health score ${direction} by ${absChange} points (${healthChange.before} -> ${healthChange.after}).`);
+    insights.push(
+      `My health score ${direction} by ${absChange} points (${healthChange.before} -> ${healthChange.after}).`
+    );
   }
 
   // Complexity change
@@ -158,7 +158,9 @@ function generateInsights(older: HealthSnapshot, newer: HealthSnapshot): string[
   if (complexityChange && Math.abs(complexityChange.change) >= 0.5) {
     const direction = complexityChange.change < 0 ? 'down' : 'up';
     const pct = Math.abs(percentChange(complexityChange.before, complexityChange.after));
-    insights.push(`My average complexity is ${direction} ${pct}% (${complexityChange.before.toFixed(1)} -> ${complexityChange.after.toFixed(1)}).`);
+    insights.push(
+      `My average complexity is ${direction} ${pct}% (${complexityChange.before.toFixed(1)} -> ${complexityChange.after.toFixed(1)}).`
+    );
   }
 
   // File count change
@@ -181,9 +183,13 @@ function generateInsights(older: HealthSnapshot, newer: HealthSnapshot): string[
   const hotspotChange = diff.metricChanges.hotspotCount;
   if (hotspotChange && hotspotChange.change !== 0) {
     if (hotspotChange.change < 0) {
-      insights.push(`I cleaned up ${Math.abs(hotspotChange.change)} complexity hotspot${Math.abs(hotspotChange.change) !== 1 ? 's' : ''}!`);
+      insights.push(
+        `I cleaned up ${Math.abs(hotspotChange.change)} complexity hotspot${Math.abs(hotspotChange.change) !== 1 ? 's' : ''}!`
+      );
     } else {
-      insights.push(`I developed ${hotspotChange.change} new complexity hotspot${hotspotChange.change !== 1 ? 's' : ''}.`);
+      insights.push(
+        `I developed ${hotspotChange.change} new complexity hotspot${hotspotChange.change !== 1 ? 's' : ''}.`
+      );
     }
   }
 
@@ -191,9 +197,13 @@ function generateInsights(older: HealthSnapshot, newer: HealthSnapshot): string[
   const veryHighChange = diff.distributionChanges.veryHigh;
   if (veryHighChange && veryHighChange.change !== 0) {
     if (veryHighChange.change < 0) {
-      insights.push(`${Math.abs(veryHighChange.change)} very-high-complexity function${Math.abs(veryHighChange.change) !== 1 ? 's were' : ' was'} refactored.`);
+      insights.push(
+        `${Math.abs(veryHighChange.change)} very-high-complexity function${Math.abs(veryHighChange.change) !== 1 ? 's were' : ' was'} refactored.`
+      );
     } else {
-      insights.push(`${veryHighChange.change} function${veryHighChange.change !== 1 ? 's' : ''} crossed into very-high complexity territory.`);
+      insights.push(
+        `${veryHighChange.change} function${veryHighChange.change !== 1 ? 's' : ''} crossed into very-high complexity territory.`
+      );
     }
   }
 
@@ -236,7 +246,9 @@ function generateSummary(
     if (weekTrend.direction === 'improving') {
       parts.push(`This week I've been getting healthier - up ${weekTrend.changePercent}%.`);
     } else if (weekTrend.direction === 'declining') {
-      parts.push(`This week has been rough - my health is down ${Math.abs(weekTrend.changePercent)}%.`);
+      parts.push(
+        `This week has been rough - my health is down ${Math.abs(weekTrend.changePercent)}%.`
+      );
     } else if (weekTrend.snapshots.length >= 2) {
       parts.push(`My health has been stable this week.`);
     }
@@ -254,7 +266,9 @@ function generateSummary(
 
   // Specific metrics
   if (current.metrics.hotspotCount > 0) {
-    parts.push(`I have ${current.metrics.hotspotCount} complexity hotspot${current.metrics.hotspotCount !== 1 ? 's' : ''} that could use attention.`);
+    parts.push(
+      `I have ${current.metrics.hotspotCount} complexity hotspot${current.metrics.hotspotCount !== 1 ? 's' : ''} that could use attention.`
+    );
   } else {
     parts.push(`I'm happy to report no major complexity hotspots.`);
   }
@@ -280,8 +294,8 @@ export function getTimeSpan(snapshots: HealthSnapshot[]): string {
   if (snapshots.length === 0) return 'no history';
   if (snapshots.length === 1) return '1 snapshot';
 
-  const sorted = [...snapshots].sort((a, b) =>
-    new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+  const sorted = [...snapshots].sort(
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
   );
 
   const oldest = new Date(sorted[0].timestamp);

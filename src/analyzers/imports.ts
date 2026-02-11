@@ -5,9 +5,9 @@
  * dependency edges in the knowledge graph.
  */
 
-import { SourceFile, ImportDeclaration, ExportDeclaration } from 'ts-morph';
-import path from 'path';
-import type { GraphEdge, FileRelationship } from '../graph/types.js';
+import path from 'node:path';
+import type { SourceFile } from 'ts-morph';
+import type { FileRelationship, GraphEdge } from '../graph/types.js';
 
 export interface ImportInfo {
   sourcePath: string;
@@ -35,10 +35,19 @@ function resolveImportPath(importPath: string, sourceDir: string, rootDir: strin
   }
 
   // Resolve relative path
-  let resolved = path.resolve(sourceDir, importPath);
+  const resolved = path.resolve(sourceDir, importPath);
 
   // Try common extensions if not specified
-  const extensions = ['.ts', '.tsx', '.js', '.jsx', '/index.ts', '/index.tsx', '/index.js', '/index.jsx'];
+  const extensions = [
+    '.ts',
+    '.tsx',
+    '.js',
+    '.jsx',
+    '/index.ts',
+    '/index.tsx',
+    '/index.js',
+    '/index.jsx',
+  ];
 
   if (!path.extname(resolved)) {
     for (const ext of extensions) {
@@ -104,7 +113,7 @@ export function analyzeImports(sourceFile: SourceFile, rootDir: string): ImportI
 /**
  * Analyze exports from a source file
  */
-export function analyzeExports(sourceFile: SourceFile, rootDir: string): ExportInfo[] {
+export function analyzeExports(sourceFile: SourceFile, _rootDir: string): ExportInfo[] {
   const exports: ExportInfo[] = [];
 
   // Named exports
@@ -125,7 +134,7 @@ export function analyzeExports(sourceFile: SourceFile, rootDir: string): ExportI
 
   // Export assignments (export default)
   const exportAssignments = sourceFile.getExportAssignments();
-  for (const assignment of exportAssignments) {
+  for (const _assignment of exportAssignments) {
     exports.push({
       name: 'default',
       isDefault: true,
@@ -135,7 +144,7 @@ export function analyzeExports(sourceFile: SourceFile, rootDir: string): ExportI
 
   // Exported declarations
   const exportedDeclarations = sourceFile.getExportedDeclarations();
-  for (const [name, declarations] of exportedDeclarations) {
+  for (const [name, _declarations] of exportedDeclarations) {
     if (name !== 'default') {
       exports.push({
         name,
@@ -230,13 +239,13 @@ export function calculateCouplingScore(
   // Shared dependencies (both import same files)
   const depsA = dependencies.get(fileA) || new Set();
   const depsB = dependencies.get(fileB) || new Set();
-  const sharedDeps = [...depsA].filter(d => depsB.has(d));
+  const sharedDeps = [...depsA].filter((d) => depsB.has(d));
   score += Math.min(0.2, sharedDeps.length * 0.05);
 
   // Shared importers (both imported by same files)
   const importersA = reverseDeps.get(fileA) || new Set();
   const importersB = reverseDeps.get(fileB) || new Set();
-  const sharedImporters = [...importersA].filter(i => importersB.has(i));
+  const sharedImporters = [...importersA].filter((i) => importersB.has(i));
   score += Math.min(0.2, sharedImporters.length * 0.05);
 
   return Math.min(1, score);
@@ -253,30 +262,29 @@ export function getFileRelationships(
 ): FileRelationship {
   // Get imports for this file
   const fileImports = imports
-    .filter(i => i.sourcePath === filePath)
-    .map(i => ({
+    .filter((i) => i.sourcePath === filePath)
+    .map((i) => ({
       source: i.targetPath,
       symbols: i.symbols,
       isDefault: i.isDefault,
     }));
 
   // Get who imports this file
-  const importedBy = [...(reverseDeps.get(filePath) || [])]
-    .map(importer => {
-      const relevantImports = imports.filter(
-        i => i.sourcePath === importer && i.targetPath === filePath
-      );
-      return {
-        filePath: importer,
-        symbols: relevantImports.flatMap(i => i.symbols),
-      };
-    });
+  const importedBy = [...(reverseDeps.get(filePath) || [])].map((importer) => {
+    const relevantImports = imports.filter(
+      (i) => i.sourcePath === importer && i.targetPath === filePath
+    );
+    return {
+      filePath: importer,
+      symbols: relevantImports.flatMap((i) => i.symbols),
+    };
+  });
 
   return {
     filePath,
     imports: fileImports,
     importedBy,
-    exports: exports.map(e => ({
+    exports: exports.map((e) => ({
       name: e.name,
       type: 'variable' as const, // Will be refined with AST data
       isDefault: e.isDefault,

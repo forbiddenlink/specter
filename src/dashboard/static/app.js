@@ -10,10 +10,10 @@ let currentLayout = 'cose';
 
 // Color by complexity
 function getComplexityColor(complexity) {
-  if (complexity <= 5) return '#22c55e';   // green
-  if (complexity <= 10) return '#f59e0b';  // yellow
-  if (complexity <= 20) return '#f97316';  // orange
-  return '#ef4444';                         // red
+  if (complexity <= 5) return '#22c55e'; // green
+  if (complexity <= 10) return '#f59e0b'; // yellow
+  if (complexity <= 20) return '#f97316'; // orange
+  return '#ef4444'; // red
 }
 
 // Get complexity level name
@@ -27,11 +27,16 @@ function getComplexityLevel(complexity) {
 // Get node shape by type
 function getNodeShape(type) {
   switch (type) {
-    case 'file': return 'round-rectangle';
-    case 'class': return 'diamond';
-    case 'interface': return 'hexagon';
-    case 'function': return 'ellipse';
-    default: return 'ellipse';
+    case 'file':
+      return 'round-rectangle';
+    case 'class':
+      return 'diamond';
+    case 'interface':
+      return 'hexagon';
+    case 'function':
+      return 'ellipse';
+    default:
+      return 'ellipse';
   }
 }
 
@@ -40,7 +45,8 @@ async function initGraph() {
   try {
     const response = await fetch('/api/graph');
     if (!response.ok) {
-      document.getElementById('cy').innerHTML = '<div class="error">No graph found. Run `specter scan` first.</div>';
+      document.getElementById('cy').innerHTML =
+        '<div class="error">No graph found. Run `specter scan` first.</div>';
       return;
     }
     const data = await response.json();
@@ -52,27 +58,27 @@ async function initGraph() {
         {
           selector: 'node',
           style: {
-            'background-color': ele => getComplexityColor(ele.data('complexity')),
-            'label': 'data(label)',
+            'background-color': (ele) => getComplexityColor(ele.data('complexity')),
+            label: 'data(label)',
             'font-size': '9px',
             'text-valign': 'bottom',
             'text-halign': 'center',
             'text-margin-y': '6px',
-            'color': '#a0a0b0',
+            color: '#a0a0b0',
             'text-outline-color': '#0f0f1a',
             'text-outline-width': '2px',
-            'width': ele => {
+            width: (ele) => {
               const c = ele.data('complexity');
               return Math.max(15, Math.min(50, 12 + c * 1.5));
             },
-            'height': ele => {
+            height: (ele) => {
               const c = ele.data('complexity');
               return Math.max(15, Math.min(50, 12 + c * 1.5));
             },
-            'shape': ele => getNodeShape(ele.data('type')),
+            shape: (ele) => getNodeShape(ele.data('type')),
             'border-width': 1,
             'border-color': '#2a2a40',
-          }
+          },
         },
         {
           selector: 'node[type="file"]',
@@ -80,26 +86,26 @@ async function initGraph() {
             'background-opacity': 0.8,
             'font-size': '10px',
             'font-weight': 'bold',
-          }
+          },
         },
         {
           selector: 'edge',
           style: {
-            'width': 1,
+            width: 1,
             'line-color': '#3a3a50',
             'curve-style': 'bezier',
             'target-arrow-shape': 'triangle',
             'target-arrow-color': '#3a3a50',
             'arrow-scale': 0.7,
-            'opacity': 0.5
-          }
+            opacity: 0.5,
+          },
         },
         {
           selector: 'edge[type="imports"]',
           style: {
             'line-color': '#8b5cf6',
             'target-arrow-color': '#8b5cf6',
-          }
+          },
         },
         {
           selector: 'edge[type="calls"]',
@@ -107,14 +113,14 @@ async function initGraph() {
             'line-color': '#06b6d4',
             'target-arrow-color': '#06b6d4',
             'line-style': 'dashed',
-          }
+          },
         },
         {
           selector: 'edge[type="extends"]',
           style: {
             'line-color': '#ec4899',
             'target-arrow-color': '#ec4899',
-          }
+          },
         },
         {
           selector: 'node.highlighted',
@@ -122,27 +128,27 @@ async function initGraph() {
             'border-width': 3,
             'border-color': '#8b5cf6',
             'z-index': 999,
-          }
+          },
         },
         {
           selector: 'node.faded',
           style: {
-            'opacity': 0.2,
-          }
+            opacity: 0.2,
+          },
         },
         {
           selector: 'edge.faded',
           style: {
-            'opacity': 0.1,
-          }
+            opacity: 0.1,
+          },
         },
         {
           selector: 'node.selected',
           style: {
             'border-width': 3,
             'border-color': '#ec4899',
-          }
-        }
+          },
+        },
       ],
       layout: {
         name: 'cose',
@@ -157,7 +163,7 @@ async function initGraph() {
     });
 
     // Node click handler
-    cy.on('tap', 'node', function(evt) {
+    cy.on('tap', 'node', (evt) => {
       const node = evt.target;
       showNodeDetails(node.data(), node);
 
@@ -167,15 +173,16 @@ async function initGraph() {
     });
 
     // Background click clears selection
-    cy.on('tap', function(evt) {
+    cy.on('tap', (evt) => {
       if (evt.target === cy) {
         cy.nodes().removeClass('selected');
-        document.getElementById('details-content').innerHTML = '<p class="hint">Click a node to see details</p>';
+        document.getElementById('details-content').innerHTML =
+          '<p class="hint">Click a node to see details</p>';
       }
     });
 
     // Hover effects
-    cy.on('mouseover', 'node', function(evt) {
+    cy.on('mouseover', 'node', (evt) => {
       const node = evt.target;
       node.addClass('highlighted');
 
@@ -184,12 +191,11 @@ async function initGraph() {
       connected.style('opacity', 0.8);
     });
 
-    cy.on('mouseout', 'node', function(evt) {
+    cy.on('mouseout', 'node', (evt) => {
       const node = evt.target;
       node.removeClass('highlighted');
       cy.edges().style('opacity', 0.5);
     });
-
   } catch (error) {
     console.error('Failed to load graph:', error);
     document.getElementById('cy').innerHTML = '<div class="error">Failed to load graph data.</div>';
@@ -200,29 +206,41 @@ async function initGraph() {
 function showNodeDetails(data, node) {
   const level = getComplexityLevel(data.complexity);
   const connections = node.connectedEdges();
-  const incoming = connections.filter(e => e.target().id() === node.id());
-  const outgoing = connections.filter(e => e.source().id() === node.id());
+  const incoming = connections.filter((e) => e.target().id() === node.id());
+  const outgoing = connections.filter((e) => e.source().id() === node.id());
 
   let connectionsHtml = '';
   if (incoming.length > 0 || outgoing.length > 0) {
     connectionsHtml = '<div class="connections-list">';
 
     if (incoming.length > 0) {
-      connectionsHtml += '<h3>Incoming (' + incoming.length + ')</h3>';
-      incoming.forEach(e => {
+      connectionsHtml += `<h3>Incoming (${incoming.length})</h3>`;
+      incoming.forEach((e) => {
         const source = e.source().data();
-        connectionsHtml += '<div class="connection-item" data-id="' + source.id + '">' +
-          '<span style="color: #8b5cf6">' + e.data('type') + '</span> from ' + source.label +
+        connectionsHtml +=
+          '<div class="connection-item" data-id="' +
+          source.id +
+          '">' +
+          '<span style="color: #8b5cf6">' +
+          e.data('type') +
+          '</span> from ' +
+          source.label +
           '</div>';
       });
     }
 
     if (outgoing.length > 0) {
-      connectionsHtml += '<h3>Outgoing (' + outgoing.length + ')</h3>';
-      outgoing.forEach(e => {
+      connectionsHtml += `<h3>Outgoing (${outgoing.length})</h3>`;
+      outgoing.forEach((e) => {
         const target = e.target().data();
-        connectionsHtml += '<div class="connection-item" data-id="' + target.id + '">' +
-          '<span style="color: #8b5cf6">' + e.data('type') + '</span> to ' + target.label +
+        connectionsHtml +=
+          '<div class="connection-item" data-id="' +
+          target.id +
+          '">' +
+          '<span style="color: #8b5cf6">' +
+          e.data('type') +
+          '</span> to ' +
+          target.label +
           '</div>';
       });
     }
@@ -233,37 +251,56 @@ function showNodeDetails(data, node) {
   const panel = document.getElementById('details-content');
   panel.innerHTML =
     '<div class="detail-item">' +
-      '<span class="label">Name</span>' +
-      '<span class="value">' + data.label + '</span>' +
+    '<span class="label">Name</span>' +
+    '<span class="value">' +
+    data.label +
+    '</span>' +
     '</div>' +
     '<div class="detail-item">' +
-      '<span class="label">Type</span>' +
-      '<span class="value">' + data.type + '</span>' +
+    '<span class="label">Type</span>' +
+    '<span class="value">' +
+    data.type +
+    '</span>' +
     '</div>' +
     '<div class="detail-item">' +
-      '<span class="label">File</span>' +
-      '<span class="value">' + data.filePath + '</span>' +
+    '<span class="label">File</span>' +
+    '<span class="value">' +
+    data.filePath +
+    '</span>' +
     '</div>' +
     '<div class="detail-item">' +
-      '<span class="label">Complexity</span>' +
-      '<span class="value ' + level + '">' + data.complexity + ' (' + level + ')</span>' +
+    '<span class="label">Complexity</span>' +
+    '<span class="value ' +
+    level +
+    '">' +
+    data.complexity +
+    ' (' +
+    level +
+    ')</span>' +
     '</div>' +
     '<div class="detail-item">' +
-      '<span class="label">Lines</span>' +
-      '<span class="value">' + data.lineStart + ' - ' + data.lineEnd + '</span>' +
+    '<span class="label">Lines</span>' +
+    '<span class="value">' +
+    data.lineStart +
+    ' - ' +
+    data.lineEnd +
+    '</span>' +
     '</div>' +
     connectionsHtml;
 
   // Add click handlers to connection items
-  panel.querySelectorAll('.connection-item').forEach(item => {
+  panel.querySelectorAll('.connection-item').forEach((item) => {
     item.addEventListener('click', () => {
       const id = item.dataset.id;
       const targetNode = cy.getElementById(id);
       if (targetNode.length > 0) {
-        cy.animate({
-          center: { eles: targetNode },
-          zoom: 1.5
-        }, { duration: 300 });
+        cy.animate(
+          {
+            center: { eles: targetNode },
+            zoom: 1.5,
+          },
+          { duration: 300 }
+        );
         showNodeDetails(targetNode.data(), targetNode);
         cy.nodes().removeClass('selected');
         targetNode.addClass('selected');
@@ -277,32 +314,42 @@ async function loadSummary() {
   try {
     const response = await fetch('/api/summary');
     if (!response.ok) {
-      document.getElementById('summary-content').innerHTML = '<div class="error">Failed to load summary</div>';
+      document.getElementById('summary-content').innerHTML =
+        '<div class="error">Failed to load summary</div>';
       return;
     }
     const data = await response.json();
     document.getElementById('summary-content').innerHTML =
       '<div class="stat-grid">' +
-        '<div class="stat">' +
-          '<span class="stat-value">' + data.stats.files + '</span>' +
-          '<span class="stat-label">Files</span>' +
-        '</div>' +
-        '<div class="stat">' +
-          '<span class="stat-value">' + data.stats.lines.toLocaleString() + '</span>' +
-          '<span class="stat-label">Lines</span>' +
-        '</div>' +
-        '<div class="stat">' +
-          '<span class="stat-value">' + data.stats.functions + '</span>' +
-          '<span class="stat-label">Functions</span>' +
-        '</div>' +
-        '<div class="stat">' +
-          '<span class="stat-value">' + data.stats.classes + '</span>' +
-          '<span class="stat-label">Classes</span>' +
-        '</div>' +
+      '<div class="stat">' +
+      '<span class="stat-value">' +
+      data.stats.files +
+      '</span>' +
+      '<span class="stat-label">Files</span>' +
+      '</div>' +
+      '<div class="stat">' +
+      '<span class="stat-value">' +
+      data.stats.lines.toLocaleString() +
+      '</span>' +
+      '<span class="stat-label">Lines</span>' +
+      '</div>' +
+      '<div class="stat">' +
+      '<span class="stat-value">' +
+      data.stats.functions +
+      '</span>' +
+      '<span class="stat-label">Functions</span>' +
+      '</div>' +
+      '<div class="stat">' +
+      '<span class="stat-value">' +
+      data.stats.classes +
+      '</span>' +
+      '<span class="stat-label">Classes</span>' +
+      '</div>' +
       '</div>';
   } catch (error) {
     console.error('Failed to load summary:', error);
-    document.getElementById('summary-content').innerHTML = '<div class="error">Failed to load summary</div>';
+    document.getElementById('summary-content').innerHTML =
+      '<div class="error">Failed to load summary</div>';
   }
 }
 
@@ -315,10 +362,10 @@ async function loadHealth() {
 
     const badge = document.getElementById('health-badge');
     badge.querySelector('.grade').textContent = data.grade;
-    badge.querySelector('.score').textContent = data.score + '/100';
+    badge.querySelector('.score').textContent = `${data.score}/100`;
 
     // Set grade class for coloring
-    badge.className = 'health-badge grade-' + data.grade.toLowerCase();
+    badge.className = `health-badge grade-${data.grade.toLowerCase()}`;
   } catch (error) {
     console.error('Failed to load health:', error);
   }
@@ -329,7 +376,8 @@ async function loadHotspots() {
   try {
     const response = await fetch('/api/hotspots');
     if (!response.ok) {
-      document.getElementById('hotspots-list').innerHTML = '<div class="error">Failed to load hotspots</div>';
+      document.getElementById('hotspots-list').innerHTML =
+        '<div class="error">Failed to load hotspots</div>';
       return;
     }
     const data = await response.json();
@@ -340,16 +388,35 @@ async function loadHotspots() {
       return;
     }
 
-    list.innerHTML = data.hotspots.slice(0, 8).map(h => {
-      const level = getComplexityLevel(h.complexity);
-      return '<div class="hotspot-item" data-file="' + h.filePath + '" data-name="' + h.name + '">' +
-        '<span class="hotspot-name" title="' + h.name + ' (' + h.filePath + ')">' + h.name + '</span>' +
-        '<span class="hotspot-complexity ' + level + '">' + h.complexity + '</span>' +
-      '</div>';
-    }).join('');
+    list.innerHTML = data.hotspots
+      .slice(0, 8)
+      .map((h) => {
+        const level = getComplexityLevel(h.complexity);
+        return (
+          '<div class="hotspot-item" data-file="' +
+          h.filePath +
+          '" data-name="' +
+          h.name +
+          '">' +
+          '<span class="hotspot-name" title="' +
+          h.name +
+          ' (' +
+          h.filePath +
+          ')">' +
+          h.name +
+          '</span>' +
+          '<span class="hotspot-complexity ' +
+          level +
+          '">' +
+          h.complexity +
+          '</span>' +
+          '</div>'
+        );
+      })
+      .join('');
 
     // Add click handlers
-    list.querySelectorAll('.hotspot-item').forEach(item => {
+    list.querySelectorAll('.hotspot-item').forEach((item) => {
       item.addEventListener('click', () => {
         const name = item.dataset.name;
         highlightNode(name);
@@ -357,7 +424,8 @@ async function loadHotspots() {
     });
   } catch (error) {
     console.error('Failed to load hotspots:', error);
-    document.getElementById('hotspots-list').innerHTML = '<div class="error">Failed to load hotspots</div>';
+    document.getElementById('hotspots-list').innerHTML =
+      '<div class="error">Failed to load hotspots</div>';
   }
 }
 
@@ -365,12 +433,15 @@ async function loadHotspots() {
 function highlightNode(name) {
   if (!cy) return;
 
-  const node = cy.nodes().filter(n => n.data('label') === name);
+  const node = cy.nodes().filter((n) => n.data('label') === name);
   if (node.length > 0) {
-    cy.animate({
-      center: { eles: node },
-      zoom: 1.5
-    }, { duration: 300 });
+    cy.animate(
+      {
+        center: { eles: node },
+        zoom: 1.5,
+      },
+      { duration: 300 }
+    );
 
     cy.nodes().removeClass('selected');
     node.addClass('selected');
@@ -394,13 +465,17 @@ async function loadTrends() {
 
     // Get snapshots for sparkline
     const allTrend = data.trends.all;
-    if (allTrend && allTrend.snapshots && allTrend.snapshots.length >= 2) {
-      const scores = allTrend.snapshots.map(s => s.metrics.healthScore);
+    if (allTrend?.snapshots && allTrend.snapshots.length >= 2) {
+      const scores = allTrend.snapshots.map((s) => s.metrics.healthScore);
       drawSparkline(scores);
 
-      const direction = allTrend.direction === 'improving' ? 'trending up' :
-                       allTrend.direction === 'declining' ? 'trending down' : 'stable';
-      info.textContent = allTrend.snapshots.length + ' snapshots | ' + direction;
+      const direction =
+        allTrend.direction === 'improving'
+          ? 'trending up'
+          : allTrend.direction === 'declining'
+            ? 'trending down'
+            : 'stable';
+      info.textContent = `${allTrend.snapshots.length} snapshots | ${direction}`;
     } else {
       info.textContent = 'Need more scans for trend data';
     }
@@ -436,7 +511,7 @@ function drawSparkline(scores) {
 
   const points = scores.map((score, i) => ({
     x: padding + (i / (scores.length - 1)) * (width - padding * 2),
-    y: height - padding - ((score - min) / range) * (height - padding * 2)
+    y: height - padding - ((score - min) / range) * (height - padding * 2),
   }));
 
   // Draw gradient fill
@@ -446,7 +521,7 @@ function drawSparkline(scores) {
 
   ctx.beginPath();
   ctx.moveTo(points[0].x, height - padding);
-  points.forEach(p => ctx.lineTo(p.x, p.y));
+  points.forEach((p) => ctx.lineTo(p.x, p.y));
   ctx.lineTo(points[points.length - 1].x, height - padding);
   ctx.closePath();
   ctx.fillStyle = gradient;
@@ -476,7 +551,7 @@ function setupSearch() {
   const searchInput = document.getElementById('search');
   let debounceTimer;
 
-  searchInput.addEventListener('input', function(e) {
+  searchInput.addEventListener('input', (e) => {
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
       const query = e.target.value.toLowerCase().trim();
@@ -488,7 +563,7 @@ function setupSearch() {
 // Filter by type
 function setupFilter() {
   const filterSelect = document.getElementById('filter-type');
-  filterSelect.addEventListener('change', function(e) {
+  filterSelect.addEventListener('change', (e) => {
     const query = document.getElementById('search').value.toLowerCase().trim();
     filterNodes(query, e.target.value);
   });
@@ -498,7 +573,7 @@ function setupFilter() {
 function filterNodes(query, type) {
   if (!cy) return;
 
-  cy.nodes().forEach(node => {
+  cy.nodes().forEach((node) => {
     const label = node.data('label').toLowerCase();
     const filePath = node.data('filePath').toLowerCase();
     const nodeType = node.data('type');
@@ -514,7 +589,7 @@ function filterNodes(query, type) {
   });
 
   // Fade edges connected to faded nodes
-  cy.edges().forEach(edge => {
+  cy.edges().forEach((edge) => {
     const source = edge.source();
     const target = edge.target();
     if (source.hasClass('faded') || target.hasClass('faded')) {
@@ -537,9 +612,12 @@ function setupResetView() {
     cy.nodes().removeClass('faded selected');
     cy.edges().removeClass('faded');
 
-    cy.animate({
-      fit: { eles: cy.elements(), padding: 50 }
-    }, { duration: 300 });
+    cy.animate(
+      {
+        fit: { eles: cy.elements(), padding: 50 },
+      },
+      { duration: 300 }
+    );
   });
 }
 
@@ -548,8 +626,8 @@ function setupToggleLayout() {
   document.getElementById('toggle-layout').addEventListener('click', () => {
     if (!cy) return;
 
-    currentLayout = currentLayout === 'cose' ? 'circle' :
-                   currentLayout === 'circle' ? 'grid' : 'cose';
+    currentLayout =
+      currentLayout === 'cose' ? 'circle' : currentLayout === 'circle' ? 'grid' : 'cose';
 
     const layoutOptions = {
       cose: {
@@ -568,7 +646,7 @@ function setupToggleLayout() {
         name: 'grid',
         animate: true,
         animationDuration: 500,
-      }
+      },
     };
 
     cy.layout(layoutOptions[currentLayout]).run();
@@ -578,13 +656,7 @@ function setupToggleLayout() {
 // Initialize everything
 async function init() {
   try {
-    await Promise.all([
-      initGraph(),
-      loadSummary(),
-      loadHealth(),
-      loadHotspots(),
-      loadTrends()
-    ]);
+    await Promise.all([initGraph(), loadSummary(), loadHealth(), loadHotspots(), loadTrends()]);
 
     setupSearch();
     setupFilter();

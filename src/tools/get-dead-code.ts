@@ -60,8 +60,8 @@ export function execute(graph: KnowledgeGraph, input: Input): DeadCodeResult {
     if (directory && !node.filePath.startsWith(directory)) continue;
 
     // Check if this export is used
-    const isUsed = importedSymbols.has(node.name) ||
-      importedSymbols.has('default') && node.name === 'default';
+    const isUsed =
+      importedSymbols.has(node.name) || (importedSymbols.has('default') && node.name === 'default');
 
     if (!isUsed) {
       deadCode.push({
@@ -104,9 +104,13 @@ function generateSummary(items: DeadCodeItem[], totalCount: number, directory?: 
 
   // Header
   if (directory) {
-    parts.push(`Found **${totalCount} unused export${totalCount > 1 ? 's'  : ''}** in \`${directory}/\`.`);
+    parts.push(
+      `Found **${totalCount} unused export${totalCount > 1 ? 's' : ''}** in \`${directory}/\`.`
+    );
   } else {
-    parts.push(`Found **${totalCount} unused export${totalCount > 1 ? 's' : ''}** across the codebase.`);
+    parts.push(
+      `Found **${totalCount} unused export${totalCount > 1 ? 's' : ''}** across the codebase.`
+    );
   }
 
   // Group by file

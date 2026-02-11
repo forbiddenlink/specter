@@ -6,13 +6,16 @@
  */
 
 import { z } from 'zod';
-import type { KnowledgeGraph, CodebaseStats, GraphNode } from '../graph/types.js';
 import { getComplexityEmoji } from '../analyzers/complexity.js';
+import type { CodebaseStats, KnowledgeGraph } from '../graph/types.js';
 import { formatSummary } from '../personality/formatter.js';
 import type { PersonalityMode } from '../personality/types.js';
 
 export const schema = {
-  personality: z.enum(['mentor', 'critic', 'historian', 'cheerleader', 'minimalist', 'default']).optional().describe('Output personality mode'),
+  personality: z
+    .enum(['mentor', 'critic', 'historian', 'cheerleader', 'minimalist', 'default'])
+    .optional()
+    .describe('Output personality mode'),
 };
 
 export type Input = z.infer<z.ZodObject<typeof schema>>;
@@ -35,7 +38,10 @@ export interface CodebaseSummaryResult {
   personality: string;
 }
 
-export function execute(graph: KnowledgeGraph, input?: { personality?: PersonalityMode }): CodebaseSummaryResult {
+export function execute(
+  graph: KnowledgeGraph,
+  input?: { personality?: PersonalityMode }
+): CodebaseSummaryResult {
   // Count by type
   let functions = 0;
   let classes = 0;
@@ -63,16 +69,16 @@ export function execute(graph: KnowledgeGraph, input?: { personality?: Personali
     // Check for dead code (exported but never imported)
     if (node.exported && node.type !== 'file') {
       const hasImporter = graph.edges.some(
-        e => e.type === 'imports' && (e.metadata?.symbols as string[])?.includes(node.name)
+        (e) => e.type === 'imports' && (e.metadata?.symbols as string[])?.includes(node.name)
       );
       if (!hasImporter) deadCodeCount++;
     }
   }
 
   const avgComplexity = complexityCount > 0 ? totalComplexity / complexityCount : 0;
-  const hotspotCount = Object.values(graph.nodes)
-    .filter(n => n.type !== 'file' && n.complexity && n.complexity > 10)
-    .length;
+  const hotspotCount = Object.values(graph.nodes).filter(
+    (n) => n.type !== 'file' && n.complexity && n.complexity > 10
+  ).length;
 
   const stats: CodebaseStats = {
     files: graph.metadata.fileCount,
@@ -115,12 +121,20 @@ export function execute(graph: KnowledgeGraph, input?: { personality?: Personali
   // Use formatSummary for non-default personality modes
   let personalityText: string;
   if (personalityMode !== 'default') {
-    const healthScore = Math.max(0, 100 - (stats.avgComplexity * 5));
-    personalityText = formatSummary({
-      stats: { files: stats.files, lines: stats.lines, functions: stats.functions, classes: stats.classes },
-      healthScore: Math.round(healthScore),
-      complexityIssues: stats.hotspotCount,
-    }, personalityMode);
+    const healthScore = Math.max(0, 100 - stats.avgComplexity * 5);
+    personalityText = formatSummary(
+      {
+        stats: {
+          files: stats.files,
+          lines: stats.lines,
+          functions: stats.functions,
+          classes: stats.classes,
+        },
+        healthScore: Math.round(healthScore),
+        complexityIssues: stats.hotspotCount,
+      },
+      personalityMode
+    );
   } else {
     personalityText = generatePersonality(stats, topDirectories, behavioralInsights);
   }
@@ -136,10 +150,13 @@ export function execute(graph: KnowledgeGraph, input?: { personality?: Personali
 }
 
 function analyzeBehavior(graph: KnowledgeGraph): BehavioralInsights {
-  const fileNodes = Object.values(graph.nodes).filter(n => n.type === 'file');
+  const fileNodes = Object.values(graph.nodes).filter((n) => n.type === 'file');
 
   // Track activity by directory
-  const dirActivity = new Map<string, { totalMods: number; recentMods: number; contributors: Set<string> }>();
+  const dirActivity = new Map<
+    string,
+    { totalMods: number; recentMods: number; contributors: Set<string> }
+  >();
   const allContributors = new Set<string>();
   let totalDaysSinceChange = 0;
   let filesWithDates = 0;
@@ -226,7 +243,8 @@ function analyzeBehavior(graph: KnowledgeGraph): BehavioralInsights {
     knowledgeRisk = 'medium';
   }
 
-  const avgDaysSinceChange = filesWithDates > 0 ? Math.round(totalDaysSinceChange / filesWithDates) : 0;
+  const avgDaysSinceChange =
+    filesWithDates > 0 ? Math.round(totalDaysSinceChange / filesWithDates) : 0;
 
   return {
     mostActiveArea,
@@ -247,7 +265,9 @@ function generateSummary(
 
   // Size summary
   parts.push(`## Overview`);
-  parts.push(`I consist of **${stats.files} files** with **${stats.lines.toLocaleString()} lines** of code.`);
+  parts.push(
+    `I consist of **${stats.files} files** with **${stats.lines.toLocaleString()} lines** of code.`
+  );
 
   // Language breakdown
   const langList = Object.entries(languages)
@@ -273,7 +293,9 @@ function generateSummary(
   if (topDirectories.length > 0) {
     parts.push(`\n## Top Directories`);
     for (const dir of topDirectories.slice(0, 3)) {
-      parts.push(`- \`${dir.path}/\` — ${dir.fileCount} files, ${dir.lineCount.toLocaleString()} lines`);
+      parts.push(
+        `- \`${dir.path}/\` — ${dir.fileCount} files, ${dir.lineCount.toLocaleString()} lines`
+      );
     }
   }
 
@@ -307,7 +329,7 @@ function generatePersonality(
   if (stats.avgComplexity <= 3) {
     parts.push("My code is clean and simple — you've taken good care of me.");
   } else if (stats.avgComplexity <= 7) {
-    parts.push("My complexity is reasonable, though a few areas could use some love.");
+    parts.push('My complexity is reasonable, though a few areas could use some love.');
   } else if (stats.avgComplexity <= 12) {
     parts.push("I'll be honest, I'm getting a bit tangled in places.");
   } else {
@@ -327,35 +349,47 @@ function generatePersonality(
 
   // Behavioral insights - staleness
   if (behavior.stalestArea) {
-    parts.push(`Meanwhile, \`${behavior.stalestArea}/\` hasn't been touched in a while — it might be getting dusty.`);
+    parts.push(
+      `Meanwhile, \`${behavior.stalestArea}/\` hasn't been touched in a while — it might be getting dusty.`
+    );
   }
 
   // Knowledge concentration warning
   if (behavior.knowledgeRisk === 'high') {
     if (behavior.primaryContributor) {
-      parts.push(`⚠️ Heads up: ${behavior.primaryContributor} has written most of my code. If they leave, that knowledge could be lost.`);
+      parts.push(
+        `⚠️ Heads up: ${behavior.primaryContributor} has written most of my code. If they leave, that knowledge could be lost.`
+      );
     } else {
       parts.push(`⚠️ I'm a solo project — all the knowledge lives in one head.`);
     }
   } else if (behavior.knowledgeRisk === 'medium') {
-    parts.push(`My knowledge is concentrated in just ${behavior.contributorCount} people — consider cross-training.`);
+    parts.push(
+      `My knowledge is concentrated in just ${behavior.contributorCount} people — consider cross-training.`
+    );
   }
 
   // Freshness
   if (behavior.avgDaysSinceChange > 180) {
-    parts.push(`On average, my files haven't been touched in ${Math.floor(behavior.avgDaysSinceChange / 30)} months. I'm feeling a bit neglected.`);
+    parts.push(
+      `On average, my files haven't been touched in ${Math.floor(behavior.avgDaysSinceChange / 30)} months. I'm feeling a bit neglected.`
+    );
   } else if (behavior.avgDaysSinceChange < 14) {
     parts.push(`I'm being actively developed — files are changing frequently.`);
   }
 
   // Dead code
   if (stats.deadCodeCount > 5) {
-    parts.push(`I'm carrying some dead weight — ${stats.deadCodeCount} exports that nobody uses anymore.`);
+    parts.push(
+      `I'm carrying some dead weight — ${stats.deadCodeCount} exports that nobody uses anymore.`
+    );
   }
 
   // Hotspots
   if (stats.hotspotCount > 0) {
-    parts.push(`I have ${stats.hotspotCount} complexity hotspot${stats.hotspotCount > 1 ? 's' : ''} that keep me up at night.`);
+    parts.push(
+      `I have ${stats.hotspotCount} complexity hotspot${stats.hotspotCount > 1 ? 's' : ''} that keep me up at night.`
+    );
   }
 
   return parts.join(' ');

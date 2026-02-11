@@ -4,6 +4,9 @@ node_modules/
 # Build output
 dist/
 
+# Generated documentation
+docs/
+
 # Specter knowledge graph cache
 .specter/
 
@@ -19,3 +22,9 @@ dist/
 
 # Development thoughts/planning
 thoughts/
+
+# Test coverage reports
+coverage/
+
+# User-specific configuration (use specter.config.example.json as template)
+specter.config.json

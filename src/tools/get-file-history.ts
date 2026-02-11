@@ -5,7 +5,7 @@
  */
 
 import { z } from 'zod';
-import type { KnowledgeGraph, GitFileHistory } from '../graph/types.js';
+import type { KnowledgeGraph } from '../graph/types.js';
 
 export const schema = {
   filePath: z.string().describe('Path to the file to analyze (relative to project root)'),
@@ -99,7 +99,11 @@ export function execute(graph: KnowledgeGraph, input: Input): FileHistoryResult 
   };
 }
 
-function calculateChurnScore(commits: number, contributors: number, daysSinceModified: number): number {
+function calculateChurnScore(
+  commits: number,
+  contributors: number,
+  daysSinceModified: number
+): number {
   // Factors: commit frequency, contributor count, recency
   const commitFactor = Math.min(commits / 50, 1) * 0.4;
   const contributorFactor = Math.min(contributors / 5, 1) * 0.3;
@@ -134,7 +138,9 @@ function generateSummary(
   } else if (data.daysSinceModified < 180) {
     parts.push(`Last touched **${Math.floor(data.daysSinceModified / 30)} months ago**.`);
   } else {
-    parts.push(`Last touched **${Math.floor(data.daysSinceModified / 30)} months ago** — I might be getting stale.`);
+    parts.push(
+      `Last touched **${Math.floor(data.daysSinceModified / 30)} months ago** — I might be getting stale.`
+    );
   }
 
   // Modification frequency
@@ -145,14 +151,18 @@ function generateSummary(
   } else if (data.modificationCount <= 50) {
     parts.push(`Been modified ${data.modificationCount} times — I see a lot of action.`);
   } else {
-    parts.push(`Been modified **${data.modificationCount} times** — I'm a hot file, frequently changed.`);
+    parts.push(
+      `Been modified **${data.modificationCount} times** — I'm a hot file, frequently changed.`
+    );
   }
 
   // Contributors
   if (data.contributors.length === 1) {
     parts.push(`Written by a single author: ${data.contributors[0]}.`);
   } else if (data.contributors.length <= 3) {
-    parts.push(`${data.contributors.length} people have worked on me: ${data.contributors.join(', ')}.`);
+    parts.push(
+      `${data.contributors.length} people have worked on me: ${data.contributors.join(', ')}.`
+    );
   } else {
     parts.push(`${data.contributors.length} contributors have touched me — I've had many hands.`);
     parts.push(`Key contributors: ${data.contributors.slice(0, 3).join(', ')}.`);
@@ -160,11 +170,15 @@ function generateSummary(
 
   // Churn assessment
   if (data.churnScore > 0.7) {
-    parts.push(`\n⚠️ **High churn file** — changes here frequently cause ripple effects. Review carefully.`);
+    parts.push(
+      `\n⚠️ **High churn file** — changes here frequently cause ripple effects. Review carefully.`
+    );
   } else if (data.churnScore > 0.4) {
     parts.push(`\nModerate activity level — this file sees regular updates.`);
   } else if (data.churnScore < 0.1 && data.daysSinceModified > 90) {
-    parts.push(`\n💤 This file hasn't been touched in a while. It may be stable, or it may be forgotten.`);
+    parts.push(
+      `\n💤 This file hasn't been touched in a while. It may be stable, or it may be forgotten.`
+    );
   }
 
   return parts.join('\n');

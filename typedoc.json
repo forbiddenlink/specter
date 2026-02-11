@@ -1,0 +1,19 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["src"],
+  "entryPointStrategy": "expand",
+  "out": "docs",
+  "name": "Specter MCP API Documentation",
+  "readme": "README.md",
+  "includeVersion": true,
+  "exclude": ["**/node_modules/**", "**/*.test.ts", "**/*.spec.ts", "**/tests/**"],
+  "excludePrivate": true,
+  "excludeProtected": false,
+  "excludeExternals": true,
+  "plugin": [],
+  "navigationLinks": {
+    "GitHub": "https://github.com/forbiddenlink/specter"
+  },
+  "skipErrorChecking": true,
+  "tsconfig": "tsconfig.json"
+}

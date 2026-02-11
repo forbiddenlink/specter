@@ -5,7 +5,7 @@
  * Shows directory structure, file counts, and key metrics.
  */
 
-import type { KnowledgeGraph, GraphNode } from '../graph/types.js';
+import type { KnowledgeGraph } from '../graph/types.js';
 
 export interface Input {
   style?: 'tree' | 'boxes' | 'compact';
@@ -40,7 +40,6 @@ export function execute(graph: KnowledgeGraph, input: Input): ArchitectureResult
     case 'compact':
       diagram = generateCompactDiagram(root, graph);
       break;
-    case 'boxes':
     default:
       diagram = generateBoxDiagram(root, graph, maxDepth);
   }
@@ -62,7 +61,7 @@ function buildDirTree(graph: KnowledgeGraph): DirStats {
 
   for (const node of Object.values(graph.nodes)) {
     if (node.type === 'file') {
-      const parts = node.filePath.split('/').filter(p => p && p !== '.');
+      const parts = node.filePath.split('/').filter((p) => p && p !== '.');
       let current = root;
 
       // Navigate/create path
@@ -89,7 +88,7 @@ function buildDirTree(graph: KnowledgeGraph): DirStats {
       }
     } else {
       // Count symbols
-      const parts = node.filePath.split('/').filter(p => p && p !== '.');
+      const parts = node.filePath.split('/').filter((p) => p && p !== '.');
       let current = root;
       for (let i = 0; i < parts.length - 1; i++) {
         const part = parts[i];
@@ -122,16 +121,23 @@ function aggregateStats(dir: DirStats): void {
   }
 }
 
-function generateBoxDiagram(root: DirStats, graph: KnowledgeGraph, maxDepth: number): string {
+function generateBoxDiagram(root: DirStats, graph: KnowledgeGraph, _maxDepth: number): string {
   const lines: string[] = [];
   const name = graph.metadata.rootDir.split('/').pop() || 'project';
 
   // Header box
   lines.push('');
-  lines.push('┌' + '─'.repeat(50) + '┐');
-  lines.push('│' + centerText(`👻 ${name.toUpperCase()}`, 50) + '│');
-  lines.push('│' + centerText(`${graph.metadata.fileCount} files | ${graph.metadata.totalLines.toLocaleString()} lines`, 50) + '│');
-  lines.push('└' + '─'.repeat(50) + '┘');
+  lines.push(`┌${'─'.repeat(50)}┐`);
+  lines.push(`│${centerText(`👻 ${name.toUpperCase()}`, 50)}│`);
+  lines.push(
+    '│' +
+      centerText(
+        `${graph.metadata.fileCount} files | ${graph.metadata.totalLines.toLocaleString()} lines`,
+        50
+      ) +
+      '│'
+  );
+  lines.push(`└${'─'.repeat(50)}┘`);
   lines.push(centerText('│', 52));
 
   // Get top-level directories
@@ -145,11 +151,13 @@ function generateBoxDiagram(root: DirStats, graph: KnowledgeGraph, maxDepth: num
   }
 
   // Draw connections
-  const connectorLine = topDirs.map((_, i) => {
-    if (i === 0) return '┌';
-    if (i === topDirs.length - 1) return '┐';
-    return '┬';
-  }).join('────────');
+  const connectorLine = topDirs
+    .map((_, i) => {
+      if (i === 0) return '┌';
+      if (i === topDirs.length - 1) return '┐';
+      return '┬';
+    })
+    .join('────────');
 
   lines.push(centerText(connectorLine, 52));
 
@@ -162,17 +170,17 @@ function generateBoxDiagram(root: DirStats, graph: KnowledgeGraph, maxDepth: num
     const emoji = getDirectoryEmoji(name);
     const complexity = stats.maxComplexity > 15 ? '🔥' : stats.maxComplexity > 10 ? '⚠️' : '✓';
     return [
-      '┌' + '─'.repeat(8) + '┐',
-      '│' + centerText(emoji + name.slice(0, 4), 8) + '│',
-      '│' + centerText(`${stats.files}f`, 8) + '│',
-      '│' + centerText(complexity, 8) + '│',
-      '└' + '─'.repeat(8) + '┘',
+      `┌${'─'.repeat(8)}┐`,
+      `│${centerText(emoji + name.slice(0, 4), 8)}│`,
+      `│${centerText(`${stats.files}f`, 8)}│`,
+      `│${centerText(complexity, 8)}│`,
+      `└${'─'.repeat(8)}┘`,
     ];
   });
 
   // Transpose and join boxes horizontally
   for (let row = 0; row < 5; row++) {
-    const line = boxes.map(box => box[row]).join('  ');
+    const line = boxes.map((box) => box[row]).join('  ');
     lines.push(centerText(line, 52));
   }
 
@@ -188,11 +196,12 @@ function generateTreeDiagram(root: DirStats, graph: KnowledgeGraph, maxDepth: nu
   const name = graph.metadata.rootDir.split('/').pop() || 'project';
 
   lines.push(`${name}/`);
-  lines.push(`├── ${graph.metadata.fileCount} files, ${graph.metadata.totalLines.toLocaleString()} lines`);
+  lines.push(
+    `├── ${graph.metadata.fileCount} files, ${graph.metadata.totalLines.toLocaleString()} lines`
+  );
   lines.push('│');
 
-  const dirs = Array.from(root.children.entries())
-    .sort((a, b) => b[1].files - a[1].files);
+  const dirs = Array.from(root.children.entries()).sort((a, b) => b[1].files - a[1].files);
 
   dirs.forEach(([dirName, stats], index) => {
     const isLast = index === dirs.length - 1;
@@ -202,7 +211,9 @@ function generateTreeDiagram(root: DirStats, graph: KnowledgeGraph, maxDepth: nu
     const emoji = getDirectoryEmoji(dirName);
     const complexity = stats.maxComplexity > 15 ? ' 🔥' : stats.maxComplexity > 10 ? ' ⚠️' : '';
 
-    lines.push(`${prefix}${emoji} ${dirName}/ (${stats.files} files, ${stats.lines} lines)${complexity}`);
+    lines.push(
+      `${prefix}${emoji} ${dirName}/ (${stats.files} files, ${stats.lines} lines)${complexity}`
+    );
 
     // Show children up to maxDepth
     if (maxDepth > 1) {
@@ -229,7 +240,9 @@ function generateCompactDiagram(root: DirStats, graph: KnowledgeGraph): string {
   const lines: string[] = [];
   const name = graph.metadata.rootDir.split('/').pop() || 'project';
 
-  lines.push(`📁 ${name}: ${graph.metadata.fileCount} files, ${graph.metadata.totalLines.toLocaleString()} LOC`);
+  lines.push(
+    `📁 ${name}: ${graph.metadata.fileCount} files, ${graph.metadata.totalLines.toLocaleString()} LOC`
+  );
   lines.push('');
 
   const dirs = Array.from(root.children.entries())
@@ -242,7 +255,9 @@ function generateCompactDiagram(root: DirStats, graph: KnowledgeGraph): string {
     const bar = '█'.repeat(Math.ceil(stats.files / 2));
     const emoji = getDirectoryEmoji(dirName);
     const complexity = stats.maxComplexity > 15 ? '🔥' : stats.maxComplexity > 10 ? '⚠️' : '  ';
-    lines.push(`${emoji} ${dirName.padEnd(maxNameLen)} ${bar.padEnd(20)} ${String(stats.files).padStart(3)}f ${complexity}`);
+    lines.push(
+      `${emoji} ${dirName.padEnd(maxNameLen)} ${bar.padEnd(20)} ${String(stats.files).padStart(3)}f ${complexity}`
+    );
   }
 
   return lines.join('\n');
@@ -267,7 +282,12 @@ function generateSummary(graph: KnowledgeGraph, root: DirStats): string {
     parts.push('## Key Areas\n');
     for (const [dirName, stats] of topDirs) {
       const role = guessDirectoryRole(dirName);
-      const health = stats.maxComplexity > 15 ? '(needs attention)' : stats.maxComplexity > 10 ? '(moderate complexity)' : '(healthy)';
+      const health =
+        stats.maxComplexity > 15
+          ? '(needs attention)'
+          : stats.maxComplexity > 10
+            ? '(moderate complexity)'
+            : '(healthy)';
       parts.push(`- **${dirName}/** - ${role} (${stats.files} files) ${health}`);
     }
   }
