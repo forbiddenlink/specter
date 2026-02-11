@@ -1,11 +1,21 @@
 /**
  * Personality Formatter
  *
- * Transforms output based on personality mode.
+ * Transforms output based on personality mode and mood.
  */
 
-import type { PersonalityMode } from './types.js';
+import { applyMood, getMood, type Mood } from './mood.js';
 import { getPersonality } from './modes.js';
+import type { PersonalityMode } from './types.js';
+
+/**
+ * Options for formatting with mood
+ */
+export interface MoodFormatterOptions {
+  personality?: PersonalityMode;
+  healthScore?: number;
+  mood?: Mood;
+}
 
 // Get a random phrase from an array
 function pick<T>(arr: T[]): T {
@@ -61,7 +71,7 @@ export function formatSummary(
 
   let summary = '';
   if (p.phrases.greeting) {
-    summary = p.phrases.greeting + '\n\n';
+    summary = `${p.phrases.greeting}\n\n`;
   }
 
   // Stats section
@@ -69,7 +79,7 @@ export function formatSummary(
   summary += `I contain ${data.stats.functions} functions and ${data.stats.classes} classes.\n\n`;
 
   // Health comment
-  summary += formatHealthComment(data.healthScore, personality) + '\n';
+  summary += `${formatHealthComment(data.healthScore, personality)}\n`;
 
   // Complexity issues
   if (data.complexityIssues > 0) {
@@ -89,10 +99,30 @@ export function formatSummary(
   // Closing
   const closing = pick(p.phrases.closing);
   if (closing) {
-    summary += '\n\n' + closing;
+    summary += `\n\n${closing}`;
   }
 
   return summary;
+}
+
+// Format a summary with personality and mood
+export function formatSummaryWithMood(
+  data: {
+    stats: { files: number; lines: number; functions: number; classes: number };
+    healthScore: number;
+    complexityIssues: number;
+  },
+  options: MoodFormatterOptions = {}
+): string {
+  const personality = options.personality || 'default';
+  const healthScore = options.healthScore ?? data.healthScore;
+  const mood = options.mood || getMood(healthScore);
+
+  // Get base summary
+  const baseSummary = formatSummary(data, personality);
+
+  // Apply mood on top
+  return applyMood(baseSummary, mood, personality);
 }
 
 // Format a trend comment
@@ -109,15 +139,21 @@ export function formatTrendComment(
 
   if (direction === 'improving') {
     if (p.name === 'cheerleader') return `Woohoo! I'm ${changePercent.toFixed(1)}% healthier!`;
-    if (p.name === 'historian') return `My health has improved by ${changePercent.toFixed(1)}% - progress being made.`;
+    if (p.name === 'historian')
+      return `My health has improved by ${changePercent.toFixed(1)}% - progress being made.`;
     if (p.name === 'critic') return `Improvement of ${changePercent.toFixed(1)}%. Acceptable.`;
-    if (p.name === 'mentor') return `Notice how our health improved by ${changePercent.toFixed(1)}% - consistent effort pays off.`;
+    if (p.name === 'mentor')
+      return `Notice how our health improved by ${changePercent.toFixed(1)}% - consistent effort pays off.`;
     return pick(p.phrases.positive);
   } else if (direction === 'declining') {
-    if (p.name === 'cheerleader') return `We dipped ${Math.abs(changePercent).toFixed(1)}%, but we'll bounce back!`;
-    if (p.name === 'critic') return `Declined by ${Math.abs(changePercent).toFixed(1)}%. This is concerning.`;
-    if (p.name === 'historian') return `History shows a decline of ${Math.abs(changePercent).toFixed(1)}% - we should examine why.`;
-    if (p.name === 'mentor') return `We've declined ${Math.abs(changePercent).toFixed(1)}% - let's understand what happened.`;
+    if (p.name === 'cheerleader')
+      return `We dipped ${Math.abs(changePercent).toFixed(1)}%, but we'll bounce back!`;
+    if (p.name === 'critic')
+      return `Declined by ${Math.abs(changePercent).toFixed(1)}%. This is concerning.`;
+    if (p.name === 'historian')
+      return `History shows a decline of ${Math.abs(changePercent).toFixed(1)}% - we should examine why.`;
+    if (p.name === 'mentor')
+      return `We've declined ${Math.abs(changePercent).toFixed(1)}% - let's understand what happened.`;
     return pick(p.phrases.negative);
   } else {
     if (p.name === 'cheerleader') return `Holding steady! Consistency is great!`;
@@ -144,39 +180,44 @@ export function formatRiskComment(
     if (p.name === 'cheerleader') return `This change looks totally safe! Go for it!`;
     if (p.name === 'critic') return `Acceptable risk level. Proceed.`;
     if (p.name === 'historian') return `Based on past patterns, this change carries minimal risk.`;
-    if (p.name === 'mentor') return `This is a low-risk change - a good opportunity to learn without consequences.`;
+    if (p.name === 'mentor')
+      return `This is a low-risk change - a good opportunity to learn without consequences.`;
     return `This change looks safe to me. Low risk (${score}/100).`;
   } else if (level === 'medium') {
     if (p.name === 'cheerleader') return `Some things to watch, but you've got this!`;
     if (p.name === 'critic') return `Medium risk. Review before merging.`;
-    if (p.name === 'historian') return `Changes of this scope have sometimes caused issues historically.`;
-    if (p.name === 'mentor') return `Medium risk - a good opportunity to exercise caution and review thoroughly.`;
+    if (p.name === 'historian')
+      return `Changes of this scope have sometimes caused issues historically.`;
+    if (p.name === 'mentor')
+      return `Medium risk - a good opportunity to exercise caution and review thoroughly.`;
     return `Moderate risk (${score}/100). Worth reviewing carefully.`;
   } else if (level === 'high') {
     if (p.name === 'cheerleader') return `Big changes ahead! Let's make sure we're ready!`;
     if (p.name === 'critic') return `HIGH RISK. Multiple reviewers required.`;
-    if (p.name === 'historian') return `Changes of this magnitude have historically needed extra attention.`;
+    if (p.name === 'historian')
+      return `Changes of this magnitude have historically needed extra attention.`;
     if (p.name === 'mentor') return `High risk change - let's walk through what could go wrong.`;
     return `High risk (${score}/100). Consider splitting this change.`;
   } else {
-    if (p.name === 'cheerleader') return `Big changes ahead! Let's be extra careful and make this awesome!`;
-    if (p.name === 'critic') return `CRITICAL: Risk score ${score}/100. Do not proceed without thorough review.`;
-    if (p.name === 'historian') return `This level of change has historically been problematic. Proceed with extreme caution.`;
-    if (p.name === 'mentor') return `Critical risk - let's understand all the implications before proceeding.`;
+    if (p.name === 'cheerleader')
+      return `Big changes ahead! Let's be extra careful and make this awesome!`;
+    if (p.name === 'critic')
+      return `CRITICAL: Risk score ${score}/100. Do not proceed without thorough review.`;
+    if (p.name === 'historian')
+      return `This level of change has historically been problematic. Proceed with extreme caution.`;
+    if (p.name === 'mentor')
+      return `Critical risk - let's understand all the implications before proceeding.`;
     return `CRITICAL: Very high risk (${score}/100). Please split this up or get multiple reviewers.`;
   }
 }
 
 // Apply personality to any output text
-export function applyPersonality(
-  text: string,
-  personality: PersonalityMode = 'default'
-): string {
+export function applyPersonality(text: string, personality: PersonalityMode = 'default'): string {
   if (personality === 'minimalist') {
     // Strip to essentials - remove emojis, shorten
     return text
-      .replace(/[^\x00-\x7F]+/g, '')  // Remove non-ASCII (emojis)
-      .replace(/\.\s+/g, '. ')         // Compress whitespace
+      .replace(/[^\x00-\x7F]+/g, '') // Remove non-ASCII (emojis)
+      .replace(/\.\s+/g, '. ') // Compress whitespace
       .trim();
   }
 
@@ -184,3 +225,36 @@ export function applyPersonality(
   // For now, return as-is
   return text;
 }
+
+// Apply personality and mood to any output text
+export function applyPersonalityWithMood(
+  text: string,
+  options: MoodFormatterOptions = {}
+): string {
+  const personality = options.personality || 'default';
+
+  // First apply personality
+  let result = applyPersonality(text, personality);
+
+  // Then apply mood if health score is provided
+  if (options.healthScore !== undefined || options.mood) {
+    const mood = options.mood || getMood(options.healthScore ?? 75);
+    result = applyMood(result, mood, personality);
+  }
+
+  return result;
+}
+
+// Format any message with mood based on health score
+export function formatWithMood(
+  message: string,
+  healthScore: number,
+  personality: PersonalityMode = 'default'
+): string {
+  const mood = getMood(healthScore);
+  return applyMood(message, mood, personality);
+}
+
+// Re-export mood functions for convenience
+export { applyMood, getMood, getMoodDescription, getMoodIntensity, listMoods } from './mood.js';
+export type { Mood } from './mood.js';

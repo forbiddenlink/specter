@@ -1,16 +1,30 @@
 /**
  * Personality Module
  *
- * Provides personality modes for the codebase voice.
+ * Provides personality modes and mood system for the codebase voice.
  */
 
-export type { PersonalityMode, PersonalityConfig, FormatterOptions } from './types.js';
-export { personalities, getPersonality, listPersonalities } from './modes.js';
 export {
-  formatHealthComment,
-  formatComplexityComment,
-  formatSummary,
-  formatTrendComment,
-  formatRiskComment,
+  applyMood,
   applyPersonality,
+  applyPersonalityWithMood,
+  formatComplexityComment,
+  formatHealthComment,
+  formatRiskComment,
+  formatSummary,
+  formatSummaryWithMood,
+  formatTrendComment,
+  formatWithMood,
+  getMood,
+  getMoodDescription,
+  getMoodIntensity,
+  listMoods,
+  type Mood,
+  type MoodFormatterOptions,
 } from './formatter.js';
+export { getPersonality, listPersonalities, personalities } from './modes.js';
+export {
+  formatMoodStatus,
+  getMoodPhrase,
+} from './mood.js';
+export type { FormatterOptions, PersonalityConfig, PersonalityMode } from './types.js';
