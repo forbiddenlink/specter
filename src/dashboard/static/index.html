@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Specter Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="header-left">
+        <h1>Specter</h1>
+        <span class="tagline">Give your codebase a voice</span>
+      </div>
+      <div class="health-badge" id="health-badge">
+        <span class="grade">--</span>
+        <span class="score">--</span>
+      </div>
+    </header>
+
+    <main class="main">
+      <aside class="sidebar">
+        <section class="panel" id="summary-panel">
+          <h2>Summary</h2>
+          <div id="summary-content" class="panel-content">
+            <div class="loading">Loading...</div>
+          </div>
+        </section>
+
+        <section class="panel" id="trends-panel">
+          <h2>Health Trend</h2>
+          <div class="panel-content">
+            <canvas id="trends-chart" height="80"></canvas>
+            <div id="trends-info" class="trends-info"></div>
+          </div>
+        </section>
+
+        <section class="panel" id="hotspots-panel">
+          <h2>Complexity Hotspots</h2>
+          <div id="hotspots-list" class="panel-content">
+            <div class="loading">Loading...</div>
+          </div>
+        </section>
+      </aside>
+
+      <div class="graph-container">
+        <div class="graph-controls">
+          <input type="text" id="search" placeholder="Search nodes...">
+          <select id="filter-type">
+            <option value="all">All Types</option>
+            <option value="file">Files</option>
+            <option value="function">Functions</option>
+            <option value="class">Classes</option>
+            <option value="interface">Interfaces</option>
+          </select>
+          <button id="reset-view" class="btn">Reset View</button>
+          <button id="toggle-layout" class="btn">Toggle Layout</button>
+        </div>
+        <div id="cy"></div>
+        <div class="graph-legend">
+          <span class="legend-item"><span class="dot green"></span> Low (1-5)</span>
+          <span class="legend-item"><span class="dot yellow"></span> Medium (6-10)</span>
+          <span class="legend-item"><span class="dot orange"></span> High (11-20)</span>
+          <span class="legend-item"><span class="dot red"></span> Critical (21+)</span>
+        </div>
+      </div>
+
+      <aside class="details-panel" id="details-panel">
+        <h2>Node Details</h2>
+        <div id="details-content" class="panel-content">
+          <p class="hint">Click a node to see details</p>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
