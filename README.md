@@ -7,6 +7,7 @@
   <a href="https://github.com/forbiddenlink/specter/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/@purplegumdropz/specter.svg" alt="License"></a>
   <a href="https://github.com/forbiddenlink/specter"><img src="https://img.shields.io/github/stars/forbiddenlink/specter?style=social" alt="GitHub stars"></a>
   <a href="https://securityscorecards.dev/viewer/?uri=github.com/forbiddenlink/specter"><img src="https://api.securityscorecards.dev/projects/github.com/forbiddenlink/specter/badge" alt="OpenSSF Scorecard"></a>
+  <a href="https://www.npmjs.com/package/@purplegumdropz/specter"><img src="https://img.shields.io/npm/dm/@purplegumdropz/specter" alt="npm downloads"></a>
 </p>
 
 <p align="center">
@@ -39,6 +40,24 @@ $ specter health
    are under control, though src/legacy/parser.ts keeps me up
    at night..."
 ```
+
+---
+
+## 🤖 GitHub Copilot CLI Integration
+
+Specter works seamlessly with GitHub Copilot CLI as an MCP server:
+
+```bash
+# Add Specter to your Copilot CLI
+copilot mcp add specter -- npx @purplegumdropz/specter-mcp
+
+# Then use natural language
+copilot -p "Use specter to find complexity hotspots in my codebase"
+copilot -p "Use specter to roast my code"
+copilot -p "Use specter to show my DORA metrics"
+```
+
+**Also works with Claude Code and any MCP-compatible tool.**
 
 ---
 
