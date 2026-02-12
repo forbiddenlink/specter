@@ -1253,7 +1253,7 @@ Interactive features:
 |---------|-------------|-------------|
 | `init` | Interactive project setup | `--yes`, `--no-hooks`, `--no-scan` |
 | `init-hooks` | Install git hooks | `--husky`, `--simple`, `--pre-commit` |
-| `scan` | Build knowledge graph | `--dir`, `--no-git`, `--force`, `--quiet` |
+| `scan` | Build knowledge graph | `--dir`, `--no-git`, `--force`, `--quiet`, `--verbose` |
 | `clean` | Remove cached graph | `--dir` |
 
 ### Analysis Commands

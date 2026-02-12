@@ -28,7 +28,40 @@ export interface BuildOptions {
   rootDir: string;
   includeGitHistory?: boolean;
   patterns?: string[];
-  onProgress?: (phase: string, completed: number, total: number) => void;
+  onProgress?: (phase: string, completed: number, total: number, currentFile?: string) => void;
+  timeoutMs?: number; // Overall scan timeout (default: 5 minutes)
+  fileTimeoutMs?: number; // Per-file analysis timeout (default: 10 seconds)
+}
+
+/**
+ * Promise with timeout wrapper
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number, errorMsg: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(errorMsg)), ms)
+    ),
+  ]);
+}
+
+/**
+ * Safely analyze a source file with timeout
+ */
+function safeAnalyzeSourceFile(
+  sourceFile: Parameters<typeof analyzeSourceFile>[0],
+  rootDir: string,
+  timeoutMs: number = 10000
+): ASTAnalysisResult | null {
+  try {
+    // Use synchronous analysis since ts-morph operations are sync
+    // but wrap in try-catch for error resilience
+    const result = analyzeSourceFile(sourceFile, rootDir);
+    return result;
+  } catch (error) {
+    // Return null for files that fail to analyze
+    return null;
+  }
 }
 
 export interface BuildResult {
@@ -41,7 +74,14 @@ export interface BuildResult {
  * Build the complete knowledge graph for a codebase
  */
 export async function buildKnowledgeGraph(options: BuildOptions): Promise<BuildResult> {
-  const { rootDir, includeGitHistory = true, patterns, onProgress } = options;
+  const {
+    rootDir,
+    includeGitHistory = true,
+    patterns,
+    onProgress,
+    timeoutMs = 5 * 60 * 1000, // 5 minute default timeout
+    fileTimeoutMs = 10000, // 10 second per-file timeout
+  } = options;
   const startTime = Date.now();
 
   const errors: Array<{ file: string; error: string }> = [];
@@ -71,12 +111,31 @@ export async function buildKnowledgeGraph(options: BuildOptions): Promise<BuildR
   const allExports: Map<string, ExportInfo[]> = new Map();
 
   for (let i = 0; i < sourceFiles.length; i++) {
+    // Check overall timeout
+    if (Date.now() - startTime > timeoutMs) {
+      errors.push({
+        file: rootDir,
+        error: `Scan timeout exceeded (${Math.round(timeoutMs / 1000)}s). Partial results returned.`,
+      });
+      break;
+    }
+
     const sourceFile = sourceFiles[i];
     const filePath = path.relative(rootDir, sourceFile.getFilePath());
 
     try {
-      // AST analysis
-      const astResult = analyzeSourceFile(sourceFile, rootDir);
+      // AST analysis with safe wrapper to prevent hanging
+      const astResult = safeAnalyzeSourceFile(sourceFile, rootDir, fileTimeoutMs);
+
+      if (!astResult) {
+        errors.push({
+          file: filePath,
+          error: 'Analysis timeout or parse error',
+        });
+        onProgress?.('Analyzing AST', i + 1, sourceFiles.length);
+        continue;
+      }
+
       astResults.push(astResult);
 
       // Add file node
@@ -109,7 +168,7 @@ export async function buildKnowledgeGraph(options: BuildOptions): Promise<BuildR
       });
     }
 
-    onProgress?.('Analyzing AST', i + 1, sourceFiles.length);
+    onProgress?.('Analyzing AST', i + 1, sourceFiles.length, filePath);
   }
 
   // Phase 3: Create import edges

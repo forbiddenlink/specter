@@ -21,10 +21,16 @@ export interface GitAnalysisResult {
 }
 
 /**
- * Initialize git client for a directory
+ * Initialize git client for a directory with timeout configuration
+ * to prevent hanging on repos with extensive history
  */
 export function createGitClient(rootDir: string): SimpleGit {
-  return simpleGit(rootDir);
+  return simpleGit(rootDir, {
+    timeout: {
+      block: 30000, // 30 second timeout per git operation
+    },
+    maxConcurrentProcesses: 6, // Limit concurrent git processes
+  });
 }
 
 /**

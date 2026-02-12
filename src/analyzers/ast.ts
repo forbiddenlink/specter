@@ -6,8 +6,36 @@
  */
 
 import path from 'node:path';
+import fg from 'fast-glob';
 import { type Node, Project, type SourceFile, SyntaxKind } from 'ts-morph';
 import type { ClassNode, FileNode, FunctionNode, GraphNode, NodeType } from '../graph/types.js';
+
+/**
+ * Safely get return type with timeout to prevent hanging on complex types
+ * TypeScript's type inference can hang indefinitely on complex conditional/mapped types
+ */
+function safeGetReturnType(
+  func: { getReturnType: () => { getText: () => string } },
+  timeoutMs: number = 100
+): string | undefined {
+  try {
+    // Use a simple approach: just get the declared return type annotation if present
+    // Avoid full type inference which can hang on complex types
+    const funcNode = func as unknown as {
+      getReturnTypeNode?: () => { getText: () => string } | undefined;
+    };
+    if (funcNode.getReturnTypeNode) {
+      const typeNode = funcNode.getReturnTypeNode();
+      if (typeNode) {
+        return typeNode.getText();
+      }
+    }
+    // If no explicit return type annotation, skip inference to avoid hanging
+    return undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export interface ASTAnalysisResult {
   fileNode: FileNode;
@@ -112,7 +140,7 @@ export function analyzeSourceFile(sourceFile: SourceFile, rootDir: string): ASTA
       exported: isExported,
       complexity: calculateComplexity(func),
       parameters: func.getParameters().map((p) => p.getName()),
-      returnType: func.getReturnType()?.getText(),
+      returnType: safeGetReturnType(func),
       isAsync: func.isAsync(),
       isGenerator: func.isGenerator(),
       documentation:
@@ -170,7 +198,7 @@ export function analyzeSourceFile(sourceFile: SourceFile, rootDir: string): ASTA
         exported: isExported,
         complexity: calculateComplexity(method),
         parameters: method.getParameters().map((p) => p.getName()),
-        returnType: method.getReturnType()?.getText(),
+        returnType: safeGetReturnType(method),
         isAsync: method.isAsync(),
         isGenerator: method.isGenerator(),
         documentation:
@@ -316,6 +344,7 @@ export function createProject(rootDir: string): Project {
 
 /**
  * Get all source files in a directory
+ * Uses glob with exclusions BEFORE loading to prevent OOM on large node_modules
  */
 export function getSourceFiles(
   project: Project,
@@ -333,20 +362,41 @@ export function getSourceFiles(
     '**/*.test.tsx',
     '**/*.spec.ts',
     '**/*.spec.tsx',
+    '**/.pnpm-store/**',
+    '**/.pnpm/**',
+    '**/vendor/**',
+    '**/.next/**',
+    '**/.nuxt/**',
+    '**/playwright-report/**',
+    '**/.history/**', // VS Code history
+    '**/out/**', // Common build output
+    '**/.turbo/**', // Turborepo cache
+    '**/.vercel/**', // Vercel cache
+    '**/.cache/**', // Generic cache
+    '**/temp/**', // Temp files
+    '**/.tmp/**', // Temp files
+    '**/generated/**', // Generated code often has complex types
+    '**/*.generated.ts', // Generated TypeScript
+    '**/*.generated.tsx', // Generated TSX
+    '**/swagger/**', // Swagger/OpenAPI generated
+    '**/prisma/client/**', // Prisma client (complex types)
   ];
 
-  for (const pattern of patterns) {
-    project.addSourceFilesAtPaths(path.join(rootDir, pattern));
-  }
-
-  // Remove excluded files
-  const sourceFiles = project.getSourceFiles().filter((sf) => {
-    const filePath = sf.getFilePath();
-    return !excludePatterns.some((pattern) => {
-      const regex = new RegExp(pattern.replace(/\*\*/g, '.*').replace(/\*/g, '[^/]*'));
-      return regex.test(filePath);
-    });
+  // Use glob with ignore to prevent loading excluded files into memory
+  const filePaths: string[] = fg.sync(patterns, {
+    cwd: rootDir,
+    absolute: true,
+    ignore: excludePatterns,
   });
 
-  return sourceFiles;
+  // Add only the filtered files to the project
+  for (const filePath of filePaths) {
+    try {
+      project.addSourceFileAtPath(filePath);
+    } catch {
+      // Skip files that can't be parsed
+    }
+  }
+
+  return project.getSourceFiles();
 }

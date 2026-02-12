@@ -189,6 +189,7 @@ program
   .option('--no-git', 'Skip git history analysis')
   .option('-f, --force', 'Force rescan even if graph exists')
   .option('-q, --quiet', 'Minimal output')
+  .option('-v, --verbose', 'Show detailed progress (file names being analyzed)')
   .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
@@ -227,7 +228,7 @@ program
       const result = await buildKnowledgeGraph({
         rootDir,
         includeGitHistory: options.git !== false,
-        onProgress: (phase, completed, total) => {
+        onProgress: (phase, completed, total, currentFile) => {
           if (phase === 'Analyzing AST' && total > 1) {
             // Create a progress bar
             const barWidth = 25;
@@ -237,7 +238,11 @@ program
             const bar = chalk.green('█'.repeat(filled)) + chalk.dim('░'.repeat(empty));
             const percent = Math.round(progress * 100);
 
-            spinner.text = `Learning about myself... ${bar} ${percent}% (${completed}/${total})`;
+            if (options.verbose && currentFile) {
+              spinner.text = `Learning... ${bar} ${percent}% - ${currentFile}`;
+            } else {
+              spinner.text = `Learning about myself... ${bar} ${percent}% (${completed}/${total})`;
+            }
           } else if (phase === 'Building import graph') {
             spinner.text = '🔗 Mapping my connections...';
           } else if (phase === 'Analyzing git history') {
