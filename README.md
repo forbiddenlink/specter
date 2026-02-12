@@ -907,6 +907,49 @@ specter cycles --exit-code                 # Fail if cycles found
 specter precommit --exit-code              # Fail if high-risk
 ```
 
+### JSON Output for CI/CD Pipelines
+
+All data commands support `--json` for machine-readable output:
+
+```bash
+specter health --json          # JSON health metrics
+specter risk --json            # JSON risk analysis
+specter hotspots --json        # JSON hotspot data
+specter dora --json            # JSON DORA metrics
+specter bus-factor --json      # JSON bus factor risks
+```
+
+Example output:
+
+```json
+{
+  "command": "health",
+  "timestamp": "2026-02-12T10:30:00.000Z",
+  "success": true,
+  "data": {
+    "healthScore": 78,
+    "totalFiles": 142,
+    "complexityDistribution": {...}
+  },
+  "meta": {
+    "personality": "default"
+  }
+}
+```
+
+Use in CI pipelines to extract metrics:
+
+```bash
+# Get health score as exit code
+HEALTH=$(specter health --json | jq '.data.healthScore')
+if [ "$HEALTH" -lt 70 ]; then exit 1; fi
+
+# Post metrics to dashboard
+specter dora --json | curl -X POST -d @- https://metrics.example.com/dora
+```
+
+**47 commands** support `--json` (all except interactive: `init`, `init-hooks`, `dashboard`)
+
 ---
 
 ## MCP Server

@@ -109,6 +109,7 @@ import {
   listAvailablePersonalities,
   INIT_PERSONALITIES,
 } from './init.js';
+import { outputJson, outputJsonError } from './json-output.js';
 
 const program = new Command();
 
@@ -169,10 +170,11 @@ program
   .option('--no-git', 'Skip git history analysis')
   .option('-f, --force', 'Force rescan even if graph exists')
   .option('-q, --quiet', 'Minimal output')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
     const projectName = path.basename(rootDir);
-    const quiet = options.quiet;
+    const quiet = options.quiet || options.json;
 
     // Cool intro banner
     if (!quiet) {
@@ -236,6 +238,18 @@ program
 
       // Print summary with personality
       const stats = getGraphStats(result.graph);
+      const healthScore = Math.max(0, 100 - stats.avgComplexity * 5);
+
+      // JSON output for CI/CD
+      if (options.json) {
+        outputJson('scan', {
+          projectName,
+          ...stats,
+          healthScore: Math.round(healthScore),
+          errors: result.errors.map((e) => ({ file: e.file, error: e.error })),
+        });
+        return;
+      }
 
       if (!quiet) {
         console.log();
@@ -273,7 +287,6 @@ program
         console.log(chalk.bold('├─────────────────────────────────────────────┤'));
 
         // Complexity personality
-        const healthScore = Math.max(0, 100 - stats.avgComplexity * 5);
         const mood = healthScore >= 80 ? '😊' : healthScore >= 60 ? '😐' : '😰';
         console.log(
           chalk.bold('│') +
@@ -333,18 +346,36 @@ program
   .command('status')
   .description('Show the current graph status')
   .option('-d, --dir <path>', 'Directory to check', '.')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
     const exists = await graphExists(rootDir);
 
     if (!exists) {
+      if (options.json) {
+        outputJson('status', { exists: false, stale: false });
+        return;
+      }
       console.log(chalk.yellow('No graph found. Run `specter scan` first.'));
       return;
     }
 
     const metadata = await loadMetadata(rootDir);
     const isStale = await isGraphStale(rootDir);
+
+    if (options.json) {
+      outputJson('status', {
+        exists: true,
+        stale: isStale,
+        scannedAt: metadata?.scannedAt || null,
+        fileCount: metadata?.fileCount || 0,
+        totalLines: metadata?.totalLines || 0,
+        nodeCount: metadata?.nodeCount || 0,
+        edgeCount: metadata?.edgeCount || 0,
+      });
+      return;
+    }
 
     console.log();
     console.log(chalk.bold('👻 Specter Status'));
@@ -379,6 +410,7 @@ program
   .option('--threshold <n>', 'Health score threshold for --exit-code (default: 50)', '50')
   .option('--png <file>', 'Export as PNG image for sharing')
   .option('--qr', 'Add QR code linking to repo (with --png)')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
     const limit = parseInt(options.limit, 10);
@@ -389,11 +421,38 @@ program
     const graph = await loadGraph(rootDir);
 
     if (!graph) {
+      if (options.json) {
+        outputJsonError('health', 'No graph found. Run `specter scan` first.');
+      }
       console.log(chalk.yellow('No graph found. Run `specter scan` first.'));
       return;
     }
 
     const report = generateComplexityReport(graph);
+    const healthScore = Math.max(0, 100 - report.averageComplexity * 5);
+
+    // JSON output for CI/CD
+    if (options.json) {
+      outputJson('health', {
+        healthScore: Math.round(healthScore),
+        averageComplexity: report.averageComplexity,
+        maxComplexity: report.maxComplexity,
+        distribution: report.distribution,
+        hotspots: report.hotspots.slice(0, limit).map((h) => ({
+          filePath: h.filePath,
+          name: h.name,
+          type: h.type,
+          complexity: h.complexity,
+          lineStart: h.lineStart,
+          lineEnd: h.lineEnd,
+        })),
+        totalHotspots: report.hotspots.length,
+      }, { personality, threshold });
+      if (exitCode && healthScore < threshold) {
+        process.exit(1);
+      }
+      return;
+    }
 
     // Helper for progress bars
     const progressBar = (
@@ -416,7 +475,6 @@ program
     const barWidth = 20;
 
     // Overall score
-    const healthScore = Math.max(0, 100 - report.averageComplexity * 5);
     const scoreColor =
       healthScore >= 80 ? chalk.green : healthScore >= 60 ? chalk.yellow : chalk.red;
     const scoreEmoji = healthScore >= 80 ? '🟢' : healthScore >= 60 ? '🟡' : '🔴';
@@ -568,6 +626,7 @@ program
     'Output personality: mentor, critic, historian, cheerleader, minimalist',
     'default'
   )
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
     const period = options.period as 'day' | 'week' | 'month' | 'all';
@@ -576,6 +635,9 @@ program
     const graph = await loadGraph(rootDir);
 
     if (!graph) {
+      if (options.json) {
+        outputJsonError('trends', 'No graph found. Run `specter scan` first.');
+      }
       console.log(chalk.yellow('No graph found. Run `specter scan` first.'));
       return;
     }
@@ -584,6 +646,10 @@ program
     const snapshotCount = snapshots.length;
 
     if (snapshotCount === 0) {
+      if (options.json) {
+        outputJson('trends', { snapshots: [], analysis: null }, { period });
+        return;
+      }
       console.log(
         chalk.yellow(
           'No health history yet. Run `specter scan` a few times to build up trend data.'
@@ -594,6 +660,28 @@ program
 
     const analysis = analyzeTrends(snapshots);
     const timeSpan = getTimeSpan(snapshots);
+
+    // JSON output for CI/CD
+    if (options.json) {
+      const selectedTrend = analysis.trends[period];
+      outputJson('trends', {
+        current: analysis.current?.metrics || null,
+        snapshotCount,
+        timeSpan,
+        period,
+        trend: selectedTrend ? {
+          direction: selectedTrend.direction,
+          changePercent: selectedTrend.changePercent,
+          insights: selectedTrend.insights,
+        } : null,
+        snapshots: snapshots.map((s) => ({
+          timestamp: s.timestamp,
+          commitHash: s.commitHash,
+          metrics: s.metrics,
+        })),
+      }, { personality, period });
+      return;
+    }
 
     const W = 60; // inner width
 
@@ -765,17 +853,21 @@ program
     'Output personality: mentor, critic, historian, cheerleader, minimalist',
     'default'
   )
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
     const personality = options.personality as PersonalityMode;
 
     const graph = await loadGraph(rootDir);
     if (!graph) {
+      if (options.json) {
+        outputJsonError('risk', 'No graph found. Run `specter scan` first.');
+      }
       console.log(chalk.yellow('No graph found. Run `specter scan` first.'));
       return;
     }
 
-    const spinner = createSpinner('Analyzing risk...').start();
+    const spinner = options.json ? null : createSpinner('Analyzing risk...').start();
 
     try {
       // Dynamic import to avoid loading risk code unless needed
@@ -787,7 +879,19 @@ program
         commit: options.commit,
       });
 
-      spinner.stop();
+      spinner?.stop();
+
+      // JSON output for CI/CD
+      if (options.json) {
+        outputJson('risk', {
+          overall: risk.overall,
+          level: risk.level,
+          factors: risk.factors,
+          recommendations: risk.recommendations,
+          summary: risk.summary,
+        }, { personality });
+        return;
+      }
 
       // Display risk score with visual
       const levelColor =
@@ -912,7 +1016,10 @@ program
       }
       console.log();
     } catch (error) {
-      spinner.fail('Risk analysis failed');
+      spinner?.fail('Risk analysis failed');
+      if (options.json) {
+        outputJsonError('risk', error instanceof Error ? error.message : String(error));
+      }
       console.error(chalk.red(error instanceof Error ? error.message : String(error)));
     }
   });
@@ -925,12 +1032,16 @@ program
   .description('Show codebase vital signs')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
   .option('--live', 'Live updating mode')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
     const graph = await loadGraph(rootDir);
 
     if (!graph) {
+      if (options.json) {
+        outputJsonError('vitals', 'No graph found. Run `specter scan` first.');
+      }
       console.log(chalk.yellow('No graph found. Run `specter scan` first.'));
       return;
     }
@@ -974,6 +1085,29 @@ program
 
     // Load snapshots for heartbeat sparkline
     const snapshots = await loadSnapshots(rootDir);
+
+    // JSON output for CI/CD
+    if (options.json) {
+      outputJson('vitals', {
+        healthScore: Math.round(healthScore),
+        pulseStatus,
+        avgComplexity,
+        busFactor: busFactorValue,
+        deadExports,
+        coverageEstimate: Math.round(coverageEstimate),
+        stats: {
+          fileCount: stats.fileCount,
+          totalLines: stats.totalLines,
+          nodeCount: stats.nodeCount,
+          edgeCount: stats.edgeCount,
+        },
+        recentSnapshots: snapshots.slice(0, 5).map((s) => ({
+          timestamp: s.timestamp,
+          healthScore: s.metrics.healthScore,
+        })),
+      });
+      return;
+    }
     const heartbeatData = snapshots
       .slice(0, 30)
       .reverse()
@@ -1170,6 +1304,7 @@ program
   .option('-d, --dir <path>', 'Directory to analyze', '.')
   .option('--png <file>', 'Export as PNG image for sharing')
   .option('--qr', 'Add QR code linking to repo (with --png)')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
     const projectName = path.basename(rootDir);
@@ -1177,6 +1312,9 @@ program
     const graph = await loadGraph(rootDir);
 
     if (!graph) {
+      if (options.json) {
+        outputJsonError('tinder', 'No graph found. Run `specter scan` first.');
+      }
       console.log(chalk.yellow('No graph found. Run `specter scan` first.'));
       return;
     }
@@ -1336,6 +1474,26 @@ program
       starters.push('"Want to see my import graph?"');
     }
 
+    // JSON output for CI/CD
+    if (options.json) {
+      outputJson('tinder', {
+        projectName,
+        healthScore: Math.round(healthScore),
+        primaryLanguage: primaryLang,
+        languagePercent: langPercent,
+        fileCount: stats.fileCount,
+        functionCount,
+        hotspotCount,
+        busFactor: busFactorValue,
+        circularDependencies: circularCount,
+        greenFlags,
+        redFlags,
+        bio: generateBio(),
+        conversationStarters: starters,
+      });
+      return;
+    }
+
     // Build the display
     const W = 45;
 
@@ -1451,10 +1609,15 @@ program
   .command('clean')
   .description('Remove the cached knowledge graph')
   .option('-d, --dir <path>', 'Directory to clean', '.')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
     await deleteGraph(rootDir);
+    if (options.json) {
+      outputJson('clean', { cleaned: true, directory: rootDir });
+      return;
+    }
     console.log(chalk.green('\u2713 Graph cache removed.'));
   });
 
@@ -1467,12 +1630,16 @@ program
   .option('-d, --dir <path>', 'Directory to analyze', '.')
   .option('--png <file>', 'Export as PNG image for sharing')
   .option('--qr', 'Add QR code linking to repo (with --png)')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
     const graph = await loadGraph(rootDir);
 
     if (!graph) {
+      if (options.json) {
+        outputJsonError('roast', 'No graph found. Run `specter scan` first.');
+      }
       console.log(chalk.yellow('No graph found. Run `specter scan` first.'));
       return;
     }
@@ -1487,6 +1654,23 @@ program
     const busFactor = await getBusFactor(graph, { limit: 10 });
 
     const stats = graph.metadata;
+
+    // JSON output for CI/CD
+    if (options.json) {
+      outputJson('roast', {
+        fileCount: stats.fileCount,
+        totalLines: stats.totalLines,
+        hotspots: report.hotspots.slice(0, 5).map((h) => ({
+          filePath: h.filePath,
+          name: h.name,
+          complexity: h.complexity,
+        })),
+        deadCode: deadCode.items?.slice(0, 10) || [],
+        busFactor: busFactor.criticalAreas?.slice(0, 5) || [],
+        averageComplexity: report.averageComplexity,
+      });
+      return;
+    }
 
     // Build output as array of lines
     const lines: string[] = [];
@@ -1620,12 +1804,16 @@ program
   .command('confess <file>')
   .description('Have a file confess its sins')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (file: string, options) => {
     const rootDir = path.resolve(options.dir);
 
     const graph = await loadGraph(rootDir);
 
     if (!graph) {
+      if (options.json) {
+        outputJsonError('confess', 'No graph found. Run `specter scan` first.');
+      }
       console.log(chalk.yellow('No graph found. Run `specter scan` first.'));
       return;
     }
@@ -1707,6 +1895,22 @@ program
       (k.includes('.test.') || k.includes('.spec.') || k.includes('__tests__')) &&
       k.includes(fileNode.name.replace(/\.[^.]+$/, ''))
     );
+
+    // JSON output for CI/CD
+    if (options.json) {
+      outputJson('confess', {
+        file: filePath,
+        complexity,
+        functionCount,
+        exportCount,
+        importedByCount,
+        unusedExports: unusedExports.map((e) => e.name),
+        daysSinceChange,
+        commitCount,
+        hasTests,
+      });
+      return;
+    }
 
     // Display the confession
     const fileName = filePath.split('/').pop() || filePath;
@@ -1855,12 +2059,16 @@ program
   .option('-d, --dir <path>', 'Directory to analyze', '.')
   .option('--png <file>', 'Export as PNG image for sharing')
   .option('--qr', 'Add QR code linking to repo (with --png)')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
     const graph = await loadGraph(rootDir);
 
     if (!graph) {
+      if (options.json) {
+        outputJsonError('achievements', 'No graph found. Run `specter scan` first.');
+      }
       console.log(chalk.yellow('No graph found. Run `specter scan` first.'));
       return;
     }
@@ -1879,6 +2087,19 @@ program
     );
 
     const { unlocked, locked } = checkAchievements(graph, stats);
+
+    // JSON output for CI/CD
+    if (options.json) {
+      outputJson('achievements', {
+        totalAchievements: achievements.length,
+        unlockedCount: unlocked.length,
+        lockedCount: locked.length,
+        unlocked: unlocked.map((a) => ({ id: a.id, name: a.name, description: a.description })),
+        locked: locked.map((a) => ({ id: a.id, name: a.name, description: a.description })),
+        stats,
+      });
+      return;
+    }
 
     // PNG export
     if (options.png) {
@@ -1964,17 +2185,28 @@ program
   .command('horoscope')
   .description('Get your codebase horoscope')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
     const graph = await loadGraph(rootDir);
 
     if (!graph) {
+      if (options.json) {
+        outputJsonError('horoscope', 'No graph found. Run `specter scan` first.');
+      }
       console.log(chalk.yellow('No graph found. Run `specter scan` first.'));
       return;
     }
 
     const reading = generateHoroscope(graph);
+
+    // JSON output for CI/CD
+    if (options.json) {
+      outputJson('horoscope', reading);
+      return;
+    }
+
     const output = formatHoroscope(reading);
 
     console.log();
@@ -2005,21 +2237,31 @@ program
   .command('origin')
   .description('Discover the origin story of your codebase')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
-    const spinner = createSpinner('Consulting the ancient git logs...');
-    spinner.start();
+    const spinner = options.json ? null : createSpinner('Consulting the ancient git logs...');
+    spinner?.start();
 
     const graph = await loadGraph(rootDir);
 
     if (!graph) {
-      spinner.fail('No graph found. Run `specter scan` first.');
+      spinner?.fail('No graph found. Run `specter scan` first.');
+      if (options.json) {
+        outputJsonError('origin', 'No graph found. Run `specter scan` first.');
+      }
       return;
     }
 
     const originData = await gatherOriginData(graph, rootDir);
-    spinner.stop();
+    spinner?.stop();
+
+    // JSON output for CI/CD
+    if (options.json) {
+      outputJson('origin', originData);
+      return;
+    }
 
     const story = generateOriginStory(originData);
 
@@ -2059,6 +2301,7 @@ program
   .option('--month <n>', 'Month number (1-12) when period is month')
   .option('--png <file>', 'Export as PNG image for sharing')
   .option('--qr', 'Add QR code linking to repo (with --png)')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
     const year = options.year ? parseInt(options.year, 10) : undefined;
@@ -2069,18 +2312,27 @@ program
     const periodLabel = period === 'year' ? 'year' :
                         period === 'quarter' ? `Q${periodNum || Math.ceil((new Date().getMonth() + 1) / 3)}` :
                         period === 'month' ? 'month' : 'week';
-    const spinner = createSpinner(`Unwrapping your ${periodLabel}...`);
-    spinner.start();
+    const spinner = options.json ? null : createSpinner(`Unwrapping your ${periodLabel}...`);
+    spinner?.start();
 
     const graph = await loadGraph(rootDir);
 
     if (!graph) {
-      spinner.fail('No graph found. Run `specter scan` first.');
+      spinner?.fail('No graph found. Run `specter scan` first.');
+      if (options.json) {
+        outputJsonError('wrapped', 'No graph found. Run `specter scan` first.');
+      }
       return;
     }
 
     const wrappedData = await gatherWrappedData(graph, rootDir, { year, period, periodNum });
-    spinner.stop();
+    spinner?.stop();
+
+    // JSON output for CI/CD
+    if (options.json) {
+      outputJson('wrapped', wrappedData, { year, period, periodNum });
+      return;
+    }
 
     const output = formatWrapped(wrappedData);
 
@@ -2144,16 +2396,23 @@ program
   .option('-l, --limit <n>', 'Maximum spirits to summon', '5')
   .option('-c, --contents', 'Show last contents of deleted files')
   .option('--list', 'List recently deleted files')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (query, options) => {
     const rootDir = path.resolve(options.dir);
     const limit = parseInt(options.limit, 10) || 5;
 
     if (options.list) {
-      const spinner = createSpinner('Searching the void for lost souls...');
-      spinner.start();
+      const spinner = options.json ? null : createSpinner('Searching the void for lost souls...');
+      spinner?.start();
 
       const spirits = await listRecentlyDeleted(rootDir, 20);
-      spinner.stop();
+      spinner?.stop();
+
+      // JSON output for list
+      if (options.json) {
+        outputJson('seance', { mode: 'list', spirits });
+        return;
+      }
 
       console.log();
       console.log(chalk.dim.magenta('  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░'));
@@ -2182,19 +2441,28 @@ program
     }
 
     if (!query) {
+      if (options.json) {
+        outputJsonError('seance', 'Please provide a file name to search for, or use --list to see recently deleted files.');
+      }
       console.log(chalk.yellow('Please provide a file name to search for, or use --list to see recently deleted files.'));
       console.log(chalk.dim('Example: specter seance utils.ts'));
       return;
     }
 
-    const spinner = createSpinner('Conducting séance...');
-    spinner.start();
+    const spinner = options.json ? null : createSpinner('Conducting séance...');
+    spinner?.start();
 
     const result = await summonSpirits(rootDir, query, {
       limit,
       showContents: options.contents,
     });
-    spinner.stop();
+    spinner?.stop();
+
+    // JSON output for query
+    if (options.json) {
+      outputJson('seance', { mode: 'query', searchQuery: query, ...result });
+      return;
+    }
 
     const output = formatSeance(result);
 
@@ -2231,22 +2499,32 @@ program
   .description('Get a tarot reading for your codebase')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
   .option('-s, --single', 'Draw a single card instead of three')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
-    const spinner = createSpinner('Shuffling the deck...');
-    spinner.start();
+    const spinner = options.json ? null : createSpinner('Shuffling the deck...');
+    spinner?.start();
 
     const graph = await loadGraph(rootDir);
 
     if (!graph) {
-      spinner.fail('No graph found. Run `specter scan` first.');
+      spinner?.fail('No graph found. Run `specter scan` first.');
+      if (options.json) {
+        outputJsonError('fortune', 'No graph found. Run `specter scan` first.');
+      }
       return;
     }
 
     const spread = options.single ? 'single' : 'three-card';
     const reading = generateReading(graph, spread);
-    spinner.stop();
+    spinner?.stop();
+
+    // JSON output for CI/CD
+    if (options.json) {
+      outputJson('fortune', reading);
+      return;
+    }
 
     const output = formatReading(reading);
 
@@ -2288,21 +2566,31 @@ program
   .option('-b, --badge', 'Output compact badge format')
   .option('--png <file>', 'Export as PNG image for sharing')
   .option('--qr', 'Add QR code linking to repo (with --png)')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
-    const spinner = createSpinner('Sequencing codebase genome...');
-    spinner.start();
+    const spinner = options.json ? null : createSpinner('Sequencing codebase genome...');
+    spinner?.start();
 
     const graph = await loadGraph(rootDir);
 
     if (!graph) {
-      spinner.fail('No graph found. Run `specter scan` first.');
+      spinner?.fail('No graph found. Run `specter scan` first.');
+      if (options.json) {
+        outputJsonError('dna', 'No graph found. Run `specter scan` first.');
+      }
       return;
     }
 
     const profile = generateDNA(graph);
-    spinner.stop();
+    spinner?.stop();
+
+    // JSON output for CI/CD
+    if (options.json) {
+      outputJson('dna', profile);
+      return;
+    }
 
     const output = options.badge ? generateBadge(profile) : formatDNA(profile);
 
@@ -2354,21 +2642,31 @@ program
   .command('tour')
   .description('Get an interactive walkthrough of the codebase')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
-    const spinner = createSpinner('Preparing your tour...');
-    spinner.start();
+    const spinner = options.json ? null : createSpinner('Preparing your tour...');
+    spinner?.start();
 
     const graph = await loadGraph(rootDir);
 
     if (!graph) {
-      spinner.fail('No graph found. Run `specter scan` first.');
+      spinner?.fail('No graph found. Run `specter scan` first.');
+      if (options.json) {
+        outputJsonError('tour', 'No graph found. Run `specter scan` first.');
+      }
       return;
     }
 
     const tour = generateTour(graph);
-    spinner.stop();
+    spinner?.stop();
+
+    // JSON output for CI/CD
+    if (options.json) {
+      outputJson('tour', tour);
+      return;
+    }
 
     const output = formatTour(tour);
 
@@ -2405,21 +2703,31 @@ program
   .command('who <file>')
   .description('Find out who knows the most about a file')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (file, options) => {
     const rootDir = path.resolve(options.dir);
 
-    const spinner = createSpinner('Finding experts...');
-    spinner.start();
+    const spinner = options.json ? null : createSpinner('Finding experts...');
+    spinner?.start();
 
     const graph = await loadGraph(rootDir);
 
     if (!graph) {
-      spinner.fail('No graph found. Run `specter scan` first.');
+      spinner?.fail('No graph found. Run `specter scan` first.');
+      if (options.json) {
+        outputJsonError('who', 'No graph found. Run `specter scan` first.');
+      }
       return;
     }
 
     const result = await findExperts(rootDir, file, graph);
-    spinner.stop();
+    spinner?.stop();
+
+    // JSON output for CI/CD
+    if (options.json) {
+      outputJson('who', result);
+      return;
+    }
 
     const output = formatWho(result);
 
@@ -2461,21 +2769,31 @@ program
   .command('why <file>')
   .description('Explain why a file exists based on history, comments, and patterns')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (file, options) => {
     const rootDir = path.resolve(options.dir);
 
-    const spinner = createSpinner('Analyzing file purpose...');
-    spinner.start();
+    const spinner = options.json ? null : createSpinner('Analyzing file purpose...');
+    spinner?.start();
 
     const graph = await loadGraph(rootDir);
 
     if (!graph) {
-      spinner.fail('No graph found. Run `specter scan` first.');
+      spinner?.fail('No graph found. Run `specter scan` first.');
+      if (options.json) {
+        outputJsonError('why', 'No graph found. Run `specter scan` first.');
+      }
       return;
     }
 
     const result = await explainWhy(rootDir, file, graph);
-    spinner.stop();
+    spinner?.stop();
+
+    // JSON output for CI/CD
+    if (options.json) {
+      outputJson('why', result);
+      return;
+    }
 
     const output = formatWhy(result);
 
@@ -2512,21 +2830,31 @@ program
   .command('safe')
   .description('Find safe zones for new contributors')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
-    const spinner = createSpinner('Mapping safe zones...');
-    spinner.start();
+    const spinner = options.json ? null : createSpinner('Mapping safe zones...');
+    spinner?.start();
 
     const graph = await loadGraph(rootDir);
 
     if (!graph) {
-      spinner.fail('No graph found. Run `specter scan` first.');
+      spinner?.fail('No graph found. Run `specter scan` first.');
+      if (options.json) {
+        outputJsonError('safe', 'No graph found. Run `specter scan` first.');
+      }
       return;
     }
 
     const zones = analyzeZones(graph);
-    spinner.stop();
+    spinner?.stop();
+
+    // JSON output for CI/CD
+    if (options.json) {
+      outputJson('safe', { safeZones: zones.safeZones, summary: zones.summary });
+      return;
+    }
 
     const output = formatSafeZones(zones);
 
@@ -2553,21 +2881,31 @@ program
   .command('danger')
   .description('Find danger zones requiring caution')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
-    const spinner = createSpinner('Mapping danger zones...');
-    spinner.start();
+    const spinner = options.json ? null : createSpinner('Mapping danger zones...');
+    spinner?.start();
 
     const graph = await loadGraph(rootDir);
 
     if (!graph) {
-      spinner.fail('No graph found. Run `specter scan` first.');
+      spinner?.fail('No graph found. Run `specter scan` first.');
+      if (options.json) {
+        outputJsonError('danger', 'No graph found. Run `specter scan` first.');
+      }
       return;
     }
 
     const zones = analyzeZones(graph);
-    spinner.stop();
+    spinner?.stop();
+
+    // JSON output for CI/CD
+    if (options.json) {
+      outputJson('danger', { dangerZones: zones.dangerZones, summary: zones.summary });
+      return;
+    }
 
     const output = formatDangerZones(zones);
 
@@ -2596,21 +2934,31 @@ program
   .command('morning')
   .description('Get your daily codebase briefing')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
-    const spinner = createSpinner('Preparing your briefing...');
-    spinner.start();
+    const spinner = options.json ? null : createSpinner('Preparing your briefing...');
+    spinner?.start();
 
     const graph = await loadGraph(rootDir);
 
     if (!graph) {
-      spinner.fail('No graph found. Run `specter scan` first.');
+      spinner?.fail('No graph found. Run `specter scan` first.');
+      if (options.json) {
+        outputJsonError('morning', 'No graph found. Run `specter scan` first.');
+      }
       return;
     }
 
     const briefing = await generateMorning(graph, rootDir);
-    spinner.stop();
+    spinner?.stop();
+
+    // JSON output for CI/CD
+    if (options.json) {
+      outputJson('morning', briefing);
+      return;
+    }
 
     const output = formatMorning(briefing);
 
@@ -2650,21 +2998,31 @@ program
   .description('Generate a standup summary for your daily meeting')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
   .option('--since <time>', 'Look back period (e.g., "2 days ago")', '1 day ago')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
-    const spinner = createSpinner('Generating standup summary...');
-    spinner.start();
+    const spinner = options.json ? null : createSpinner('Generating standup summary...');
+    spinner?.start();
 
     const graph = await loadGraph(rootDir);
 
     if (!graph) {
-      spinner.fail('No graph found. Run `specter scan` first.');
+      spinner?.fail('No graph found. Run `specter scan` first.');
+      if (options.json) {
+        outputJsonError('standup', 'No graph found. Run `specter scan` first.');
+      }
       return;
     }
 
     const result = await generateStandup(rootDir, graph, { since: options.since });
-    spinner.stop();
+    spinner?.stop();
+
+    // JSON output for CI/CD
+    if (options.json) {
+      outputJson('standup', result);
+      return;
+    }
 
     const output = formatStandup(result);
 
@@ -2702,21 +3060,31 @@ program
   .command('predict')
   .description('Predict impact of staged changes before creating a PR')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
-    const spinner = createSpinner('Analyzing staged changes...');
-    spinner.start();
+    const spinner = options.json ? null : createSpinner('Analyzing staged changes...');
+    spinner?.start();
 
     const graph = await loadGraph(rootDir);
 
     if (!graph) {
-      spinner.fail('No graph found. Run `specter scan` first.');
+      spinner?.fail('No graph found. Run `specter scan` first.');
+      if (options.json) {
+        outputJsonError('predict', 'No graph found. Run `specter scan` first.');
+      }
       return;
     }
 
     const prediction = await generatePrediction(rootDir, graph);
-    spinner.stop();
+    spinner?.stop();
+
+    // JSON output for CI/CD
+    if (options.json) {
+      outputJson('predict', prediction);
+      return;
+    }
 
     const output = formatPrediction(prediction);
 
@@ -2763,21 +3131,31 @@ program
   .command('reviewers')
   .description('Suggest reviewers for staged changes based on file expertise')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
-    const spinner = createSpinner('Finding reviewers...');
-    spinner.start();
+    const spinner = options.json ? null : createSpinner('Finding reviewers...');
+    spinner?.start();
 
     const graph = await loadGraph(rootDir);
 
     if (!graph) {
-      spinner.fail('No graph found. Run `specter scan` first.');
+      spinner?.fail('No graph found. Run `specter scan` first.');
+      if (options.json) {
+        outputJsonError('reviewers', 'No graph found. Run `specter scan` first.');
+      }
       return;
     }
 
     const result = await suggestReviewers(rootDir, graph);
-    spinner.stop();
+    spinner?.stop();
+
+    // JSON output for CI/CD
+    if (options.json) {
+      outputJson('reviewers', result);
+      return;
+    }
 
     const output = formatReviewers(result);
 
@@ -2816,22 +3194,35 @@ program
   .description('Quick risk check before committing staged changes')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
   .option('--exit-code', 'Exit with code 1 if high-risk changes detected')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
     const exitCode = options.exitCode;
 
-    const spinner = createSpinner('Checking staged changes...');
-    spinner.start();
+    const spinner = options.json ? null : createSpinner('Checking staged changes...');
+    spinner?.start();
 
     const graph = await loadGraph(rootDir);
 
     if (!graph) {
-      spinner.fail('No graph found. Run `specter scan` first.');
+      spinner?.fail('No graph found. Run `specter scan` first.');
+      if (options.json) {
+        outputJsonError('precommit', 'No graph found. Run `specter scan` first.');
+      }
       return;
     }
 
     const result = await runPrecommitCheck(rootDir, graph);
-    spinner.stop();
+    spinner?.stop();
+
+    // JSON output for CI/CD
+    if (options.json) {
+      outputJson('precommit', result);
+      if (exitCode && result.status === 'fail') {
+        process.exit(1);
+      }
+      return;
+    }
 
     const output = formatPrecommit(result);
 
@@ -2879,16 +3270,26 @@ program
     'default'
   )
   .option('--exit-code', 'Exit with code 1 if health decreased significantly')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (branch, options) => {
     const rootDir = path.resolve(options.dir);
     const compareBranch = branch || 'main';
     const personality = options.personality as PersonalityMode;
 
-    const spinner = createSpinner(`Comparing with ${compareBranch}...`);
-    spinner.start();
+    const spinner = options.json ? null : createSpinner(`Comparing with ${compareBranch}...`);
+    spinner?.start();
 
     const result = await compareBranches(rootDir, compareBranch);
-    spinner.stop();
+    spinner?.stop();
+
+    // JSON output for CI/CD
+    if (options.json) {
+      outputJson('compare', result, { personality, compareBranch });
+      if (options.exitCode && result.riskLevel === 'danger') {
+        process.exit(1);
+      }
+      return;
+    }
 
     const output = formatCompare(result, personality);
 
@@ -2936,22 +3337,33 @@ program
     'Output personality: mentor, critic, roast, cheerleader, executive, noir',
     'default'
   )
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
     const personality = options.personality as PersonalityMode;
 
-    const spinner = createSpinner('Generating changelog...');
-    spinner.start();
+    const spinner = options.json ? null : createSpinner('Generating changelog...');
+    spinner?.start();
 
     const result = await generateChangelog(rootDir, {
       since: options.since,
       until: options.until,
       fromTag: options.fromTag,
     });
-    spinner.stop();
+    spinner?.stop();
 
     if (result.entries.length === 0) {
+      if (options.json) {
+        outputJson('changelog', { entries: [], message: 'No commits found in the specified range.' });
+        return;
+      }
       console.log(chalk.yellow('\n  No commits found in the specified range.\n'));
+      return;
+    }
+
+    // JSON output for CI/CD
+    if (options.json) {
+      outputJson('changelog', result, { personality });
       return;
     }
 
@@ -2994,16 +3406,26 @@ program
     'default'
   )
   .option('--exit-code', 'Exit with code 1 if breaking changes detected')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (branch, options) => {
     const rootDir = path.resolve(options.dir);
     const compareTo = branch || 'main';
     const personality = options.personality as PersonalityMode;
 
-    const spinner = createSpinner(`Analyzing changes vs ${compareTo}...`);
-    spinner.start();
+    const spinner = options.json ? null : createSpinner(`Analyzing changes vs ${compareTo}...`);
+    spinner?.start();
 
     const result = await detectBreakingChanges(rootDir, compareTo);
-    spinner.stop();
+    spinner?.stop();
+
+    // JSON output for CI/CD
+    if (options.json) {
+      outputJson('breaking-changes', result, { personality, compareTo });
+      if (options.exitCode && result.riskLevel === 'breaking') {
+        process.exit(1);
+      }
+      return;
+    }
 
     const output = formatBreakingChanges(result, personality);
 
@@ -3039,21 +3461,31 @@ program
   .command('drift')
   .description('Detect architecture drift from best practices')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
-    const spinner = createSpinner('Analyzing architecture...');
-    spinner.start();
+    const spinner = options.json ? null : createSpinner('Analyzing architecture...');
+    spinner?.start();
 
     const graph = await loadGraph(rootDir);
 
     if (!graph) {
-      spinner.fail('No graph found. Run `specter scan` first.');
+      spinner?.fail('No graph found. Run `specter scan` first.');
+      if (options.json) {
+        outputJsonError('drift', 'No graph found. Run `specter scan` first.');
+      }
       return;
     }
 
     const result = await detectDrift(rootDir, graph);
-    spinner.stop();
+    spinner?.stop();
+
+    // JSON output for CI/CD
+    if (options.json) {
+      outputJson('drift', result);
+      return;
+    }
 
     const output = formatDrift(result);
 
@@ -3092,22 +3524,35 @@ program
   .description('Detect circular dependencies in the codebase')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
   .option('--exit-code', 'Exit with code 1 if circular dependencies found')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
     const exitCode = options.exitCode;
 
-    const spinner = createSpinner('Hunting for cycles...');
-    spinner.start();
+    const spinner = options.json ? null : createSpinner('Hunting for cycles...');
+    spinner?.start();
 
     const graph = await loadGraph(rootDir);
 
     if (!graph) {
-      spinner.fail('No graph found. Run `specter scan` first.');
+      spinner?.fail('No graph found. Run `specter scan` first.');
+      if (options.json) {
+        outputJsonError('cycles', 'No graph found. Run `specter scan` first.');
+      }
       return;
     }
 
     const result = detectCycles(graph);
-    spinner.stop();
+    spinner?.stop();
+
+    // JSON output for CI/CD
+    if (options.json) {
+      outputJson('cycles', result);
+      if (exitCode && result.totalCycles > 0) {
+        process.exit(1);
+      }
+      return;
+    }
 
     const output = formatCycles(result);
 
@@ -3150,21 +3595,31 @@ program
   .command('velocity')
   .description('Track complexity velocity and debt growth over time')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
-    const spinner = createSpinner('Calculating complexity velocity...');
-    spinner.start();
+    const spinner = options.json ? null : createSpinner('Calculating complexity velocity...');
+    spinner?.start();
 
     const graph = await loadGraph(rootDir);
 
     if (!graph) {
-      spinner.fail('No graph found. Run `specter scan` first.');
+      spinner?.fail('No graph found. Run `specter scan` first.');
+      if (options.json) {
+        outputJsonError('velocity', 'No graph found. Run `specter scan` first.');
+      }
       return;
     }
 
     const result = await analyzeVelocity(rootDir, graph);
-    spinner.stop();
+    spinner?.stop();
+
+    // JSON output for CI/CD
+    if (options.json) {
+      outputJson('velocity', result);
+      return;
+    }
 
     const output = formatVelocity(result);
 
@@ -3212,21 +3667,31 @@ program
   .command('trajectory')
   .description('Project future codebase health based on historical trends')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
-    const spinner = createSpinner('Projecting health trajectory...');
-    spinner.start();
+    const spinner = options.json ? null : createSpinner('Projecting health trajectory...');
+    spinner?.start();
 
     const graph = await loadGraph(rootDir);
 
     if (!graph) {
-      spinner.fail('No graph found. Run `specter scan` first.');
+      spinner?.fail('No graph found. Run `specter scan` first.');
+      if (options.json) {
+        outputJsonError('trajectory', 'No graph found. Run `specter scan` first.');
+      }
       return;
     }
 
     const result = await projectTrajectory(rootDir, graph);
-    spinner.stop();
+    spinner?.stop();
+
+    // JSON output for CI/CD
+    if (options.json) {
+      outputJson('trajectory', result);
+      return;
+    }
 
     const output = formatTrajectory(result);
 
@@ -3275,21 +3740,31 @@ program
   .alias('kmap')
   .description('Generate a team expertise heatmap showing who knows what')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
-    const spinner = createSpinner('Mapping team expertise...');
-    spinner.start();
+    const spinner = options.json ? null : createSpinner('Mapping team expertise...');
+    spinner?.start();
 
     const graph = await loadGraph(rootDir);
 
     if (!graph) {
-      spinner.fail('No graph found. Run `specter scan` first.');
+      spinner?.fail('No graph found. Run `specter scan` first.');
+      if (options.json) {
+        outputJsonError('knowledge-map', 'No graph found. Run `specter scan` first.');
+      }
       return;
     }
 
     const result = await generateKnowledgeMap(graph, rootDir);
-    spinner.stop();
+    spinner?.stop();
+
+    // JSON output for CI/CD
+    if (options.json) {
+      outputJson('knowledge-map', result);
+      return;
+    }
 
     const output = formatKnowledgeMap(result);
 
@@ -3346,22 +3821,29 @@ program
   .option('--complexity', 'Show complexity indicators')
   .option('--health', 'Show health indicators')
   .option('-o, --output <file>', 'Save diagram to file')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
-    const spinner = createSpinner('Generating architecture diagram...');
-    spinner.start();
+    const spinner = options.json ? null : createSpinner('Generating architecture diagram...');
+    spinner?.start();
 
     const graph = await loadGraph(rootDir);
 
     if (!graph) {
-      spinner.fail('No graph found. Run `specter scan` first.');
+      spinner?.fail('No graph found. Run `specter scan` first.');
+      if (options.json) {
+        outputJsonError('diagram', 'No graph found. Run `specter scan` first.');
+      }
       return;
     }
 
     const format = options.format as DiagramFormat;
     if (!['mermaid', 'd2', 'ascii'].includes(format)) {
-      spinner.fail(`Invalid format: ${format}. Use mermaid, d2, or ascii.`);
+      spinner?.fail(`Invalid format: ${format}. Use mermaid, d2, or ascii.`);
+      if (options.json) {
+        outputJsonError('diagram', `Invalid format: ${format}. Use mermaid, d2, or ascii.`);
+      }
       return;
     }
 
@@ -3377,9 +3859,15 @@ program
     if (options.output) {
       const outputPath = path.resolve(options.output);
       result = await saveDiagram(result, outputPath);
-      spinner.succeed(`Diagram saved to ${outputPath}`);
+      spinner?.succeed(`Diagram saved to ${outputPath}`);
     } else {
-      spinner.stop();
+      spinner?.stop();
+    }
+
+    // JSON output for CI/CD
+    if (options.json) {
+      outputJson('diagram', result);
+      return;
     }
 
     const output = formatDiagramOutput(result);
@@ -3417,26 +3905,32 @@ program
   .description('Build embedding index for semantic search')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
   .option('--rebuild', 'Force rebuild even if index exists')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
-    console.log();
-    console.log(chalk.bold.magenta('  ╔═══════════════════════════════════════════╗'));
-    console.log(
-      chalk.bold.magenta('  ║') +
-        chalk.bold.white('      🧠 BUILDING SEMANTIC INDEX...         ') +
-        chalk.bold.magenta('║')
-    );
-    console.log(chalk.bold.magenta('  ╚═══════════════════════════════════════════╝'));
-    console.log();
+    if (!options.json) {
+      console.log();
+      console.log(chalk.bold.magenta('  ╔═══════════════════════════════════════════╗'));
+      console.log(
+        chalk.bold.magenta('  ║') +
+          chalk.bold.white('      🧠 BUILDING SEMANTIC INDEX...         ') +
+          chalk.bold.magenta('║')
+      );
+      console.log(chalk.bold.magenta('  ╚═══════════════════════════════════════════╝'));
+      console.log();
+    }
 
-    const spinner = createSpinner('Loading knowledge graph...');
-    spinner.start();
+    const spinner = options.json ? null : createSpinner('Loading knowledge graph...');
+    spinner?.start();
 
     const graph = await loadGraph(rootDir);
 
     if (!graph) {
-      spinner.fail('No graph found. Run `specter scan` first.');
+      spinner?.fail('No graph found. Run `specter scan` first.');
+      if (options.json) {
+        outputJsonError('index', 'No graph found. Run `specter scan` first.');
+      }
       return;
     }
 
@@ -3444,22 +3938,37 @@ program
     if (!options.rebuild && (await embeddingIndexExists(rootDir))) {
       const isStale = await isEmbeddingIndexStale(rootDir);
       if (!isStale) {
-        spinner.info('Embedding index is up to date. Use --rebuild to force rebuild.');
+        spinner?.info('Embedding index is up to date. Use --rebuild to force rebuild.');
+        if (options.json) {
+          outputJson('index', { upToDate: true, rebuilt: false });
+        }
         return;
       }
-      spinner.text = 'Index is stale, rebuilding...';
+      if (spinner) spinner.text = 'Index is stale, rebuilding...';
     }
 
-    spinner.text = 'Building TF-IDF vectors...';
+    if (spinner) spinner.text = 'Building TF-IDF vectors...';
 
     const startTime = Date.now();
     const index = await buildEmbeddingIndex(graph);
 
-    spinner.text = 'Saving embedding index...';
+    if (spinner) spinner.text = 'Saving embedding index...';
     await saveEmbeddingIndex(rootDir, index);
 
     const duration = Date.now() - startTime;
-    spinner.succeed(chalk.bold('Semantic index built!'));
+    spinner?.succeed(chalk.bold('Semantic index built!'));
+
+    // JSON output for CI/CD
+    if (options.json) {
+      outputJson('index', {
+        upToDate: false,
+        rebuilt: true,
+        chunkCount: index.chunkCount,
+        vocabularySize: index.vocabularySize,
+        durationMs: duration,
+      });
+      return;
+    }
 
     console.log();
     console.log(chalk.bold('┌─────────────────────────────────────────────┐'));
@@ -3497,6 +4006,7 @@ program
   .option('-l, --limit <n>', 'Maximum results to show', '10')
   .option('-s, --semantic', 'Use pure semantic search')
   .option('-k, --keyword', 'Use pure keyword search')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (query, options) => {
     const rootDir = path.resolve(options.dir);
     const limit = parseInt(options.limit, 10);
@@ -3509,13 +4019,16 @@ program
       mode = 'keyword';
     }
 
-    const spinner = createSpinner('Searching codebase...');
-    spinner.start();
+    const spinner = options.json ? null : createSpinner('Searching codebase...');
+    spinner?.start();
 
     const graph = await loadGraph(rootDir);
 
     if (!graph) {
-      spinner.fail('No graph found. Run `specter scan` first.');
+      spinner?.fail('No graph found. Run `specter scan` first.');
+      if (options.json) {
+        outputJsonError('search', 'No graph found. Run `specter scan` first.');
+      }
       return;
     }
 
@@ -3531,11 +4044,14 @@ program
 
       if (!index) {
         if (mode === 'semantic') {
-          spinner.fail('No embedding index found. Run `specter index` first for semantic search.');
+          spinner?.fail('No embedding index found. Run `specter index` first for semantic search.');
+          if (options.json) {
+            outputJsonError('search', 'No embedding index found. Run `specter index` first for semantic search.');
+          }
           return;
         }
         // Fall back to keyword search for hybrid mode
-        spinner.text = 'No embedding index found, using keyword search...';
+        if (spinner) spinner.text = 'No embedding index found, using keyword search...';
         response = searchCodebase(query, graph);
         response.mode = 'keyword';
       } else {
@@ -3543,7 +4059,18 @@ program
       }
     }
 
-    spinner.stop();
+    spinner?.stop();
+
+    // JSON output for CI/CD
+    if (options.json) {
+      outputJson('search', {
+        query,
+        mode: response.mode,
+        totalResults: response.results.length,
+        results: response.results.slice(0, limit),
+      });
+      return;
+    }
 
     const output = formatSearchWithMode(response, limit);
 
@@ -3605,22 +4132,37 @@ program
     'Output personality: default, noir, roast, mentor, cheerleader, critic, historian, minimalist, therapist, dramatic, ghost',
     'default'
   )
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (question, options) => {
     const rootDir = path.resolve(options.dir);
     const personality = options.personality as PersonalityMode;
 
-    const spinner = createSpinner('Thinking...');
-    spinner.start();
+    const spinner = options.json ? null : createSpinner('Thinking...');
+    spinner?.start();
 
     const graph = await loadGraph(rootDir);
 
     if (!graph) {
-      spinner.fail('No graph found. Run `specter scan` first.');
+      if (options.json) {
+        outputJsonError('ask', 'No graph found. Run `specter scan` first.');
+      }
+      spinner?.fail('No graph found. Run `specter scan` first.');
       return;
     }
 
     const result = await askCodebase(question, rootDir, graph, { personality });
-    spinner.stop();
+    spinner?.stop();
+
+    // JSON output for CI/CD
+    if (options.json) {
+      outputJson('ask', {
+        question,
+        answer: result.answer,
+        confidence: result.confidence,
+        relevantFiles: result.relevantFiles,
+      }, { personality });
+      return;
+    }
 
     const output = formatAsk(result);
 
@@ -3670,23 +4212,39 @@ program
   .description('Surface bus factor risks - which parts of the codebase are at risk if someone leaves')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
   .option('--critical-only', 'Only show critical risks')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
-    const spinner = createSpinner('Analyzing bus factor risks...');
-    spinner.start();
+    const spinner = options.json ? null : createSpinner('Analyzing bus factor risks...');
+    spinner?.start();
 
     const graph = await loadGraph(rootDir);
 
     if (!graph) {
-      spinner.fail('No graph found. Run `specter scan` first.');
+      if (options.json) {
+        outputJsonError('bus-factor', 'No graph found. Run `specter scan` first.');
+      }
+      spinner?.fail('No graph found. Run `specter scan` first.');
       return;
     }
 
     const result = await analyzeBusFactor(graph, {
       criticalOnly: options.criticalOnly,
     });
-    spinner.stop();
+    spinner?.stop();
+
+    // JSON output for CI/CD
+    if (options.json) {
+      outputJson('bus-factor', {
+        overallBusFactor: result.overallBusFactor,
+        riskLevel: result.riskLevel,
+        risks: result.risks,
+        summary: result.summary,
+        recommendations: result.recommendations,
+      });
+      return;
+    }
 
     const output = formatBusFactor(result);
 
@@ -3745,16 +4303,20 @@ program
   .option('-d, --dir <path>', 'Directory to analyze', '.')
   .option('-t, --top <n>', 'Number of hotspots to show', '20')
   .option('-s, --since <period>', 'Time period for churn analysis', '3 months ago')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
-    const spinner = createSpinner('Analyzing complexity x churn hotspots...');
-    spinner.start();
+    const spinner = options.json ? null : createSpinner('Analyzing complexity x churn hotspots...');
+    spinner?.start();
 
     const graph = await loadGraph(rootDir);
 
     if (!graph) {
-      spinner.fail('No graph found. Run `specter scan` first.');
+      if (options.json) {
+        outputJsonError('hotspots', 'No graph found. Run `specter scan` first.');
+      }
+      spinner?.fail('No graph found. Run `specter scan` first.');
       return;
     }
 
@@ -3762,7 +4324,18 @@ program
       since: options.since,
       top: parseInt(options.top, 10),
     });
-    spinner.stop();
+    spinner?.stop();
+
+    // JSON output for CI/CD
+    if (options.json) {
+      outputJson('hotspots', {
+        hotspots: result.hotspots,
+        summary: result.summary,
+        quadrants: result.quadrants,
+        timeRange: result.timeRange,
+      });
+      return;
+    }
 
     const output = formatHotspots(result);
 
@@ -3823,15 +4396,30 @@ program
   .option('--since <period>', 'Time period to analyze', '6 months ago')
   .option('--png <file>', 'Export as PNG image for sharing')
   .option('--qr', 'Add QR code linking to repo (with --png)')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
-    const spinner = createSpinner('Calculating DORA metrics...');
-    spinner.start();
+    const spinner = options.json ? null : createSpinner('Calculating DORA metrics...');
+    spinner?.start();
 
     try {
       const result = await calculateDora(rootDir, { since: options.since });
-      spinner.stop();
+      spinner?.stop();
+
+      // JSON output for CI/CD
+      if (options.json) {
+        outputJson('dora', {
+          deploymentFrequency: result.deploymentFrequency,
+          leadTimeForChanges: result.leadTimeForChanges,
+          changeFailureRate: result.changeFailureRate,
+          meanTimeToRecovery: result.meanTimeToRecovery,
+          overallLevel: result.overallLevel,
+          period: result.period,
+          rawData: result.rawData,
+        });
+        return;
+      }
 
       const output = formatDora(result);
 
@@ -3899,7 +4487,10 @@ program
       }
       console.log();
     } catch (error) {
-      spinner.fail('Failed to calculate DORA metrics');
+      if (options.json) {
+        outputJsonError('dora', error instanceof Error ? error.message : String(error));
+      }
+      spinner?.fail('Failed to calculate DORA metrics');
       console.error(chalk.red(error instanceof Error ? error.message : String(error)));
     }
   });
@@ -3916,18 +4507,22 @@ program
   .option('--no-dead-code', 'Skip dead code analysis')
   .option('--png <file>', 'Export as PNG image for sharing')
   .option('--qr', 'Add QR code linking to repo (with --png)')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
     const graph = await loadGraph(rootDir);
 
     if (!graph) {
+      if (options.json) {
+        outputJsonError('cost', 'No graph found. Run `specter scan` first.');
+      }
       console.log(chalk.yellow('No graph found. Run `specter scan` first.'));
       return;
     }
 
-    const spinner = createSpinner('Calculating tech debt costs...');
-    spinner.start();
+    const spinner = options.json ? null : createSpinner('Calculating tech debt costs...');
+    spinner?.start();
 
     try {
       const result = await analyzeCost(rootDir, graph, {
@@ -3935,7 +4530,21 @@ program
         currency: options.currency,
         includeDeadCode: options.deadCode !== false,
       });
-      spinner.stop();
+      spinner?.stop();
+
+      // JSON output for CI/CD
+      if (options.json) {
+        outputJson('cost', {
+          totalDebt: result.totalDebt,
+          categories: result.categories,
+          topFiles: result.topFiles,
+          quickWins: result.quickWins,
+          estimatedSavings: result.estimatedSavings,
+          hourlyRate: result.hourlyRate,
+          currency: result.currency,
+        });
+        return;
+      }
 
       const output = formatCost(result);
 
@@ -3988,7 +4597,10 @@ program
       }
       console.log();
     } catch (error) {
-      spinner.fail('Failed to calculate tech debt costs');
+      if (options.json) {
+        outputJsonError('cost', error instanceof Error ? error.message : String(error));
+      }
+      spinner?.fail('Failed to calculate tech debt costs');
       console.error(chalk.red(error instanceof Error ? error.message : String(error)));
     }
   });
@@ -4004,25 +4616,39 @@ program
   .option('--limit <n>', 'Number of contributors to show', '10')
   .option('--png <file>', 'Export as PNG image for sharing')
   .option('--qr', 'Add QR code linking to repo (with --png)')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
     const graph = await loadGraph(rootDir);
 
     if (!graph) {
+      if (options.json) {
+        outputJsonError('leaderboard', 'No graph found. Run `specter scan` first.');
+      }
       console.log(chalk.yellow('No graph found. Run `specter scan` first.'));
       return;
     }
 
-    const spinner = createSpinner('Analyzing contributor impact...');
-    spinner.start();
+    const spinner = options.json ? null : createSpinner('Analyzing contributor impact...');
+    spinner?.start();
 
     try {
       const result = await generateLeaderboard(rootDir, graph, {
         since: options.since,
         limit: parseInt(options.limit, 10),
       });
-      spinner.stop();
+      spinner?.stop();
+
+      // JSON output for CI/CD
+      if (options.json) {
+        outputJson('leaderboard', {
+          entries: result.entries,
+          teamStats: result.teamStats,
+          timeRange: result.timeRange,
+        });
+        return;
+      }
 
       const output = formatLeaderboard(result);
 
@@ -4087,7 +4713,10 @@ program
       }
       console.log();
     } catch (error) {
-      spinner.fail('Failed to generate leaderboard');
+      if (options.json) {
+        outputJsonError('leaderboard', error instanceof Error ? error.message : String(error));
+      }
+      spinner?.fail('Failed to generate leaderboard');
       console.error(chalk.red(error instanceof Error ? error.message : String(error)));
     }
   });
@@ -4101,16 +4730,20 @@ program
   .option('-d, --dir <path>', 'Directory to analyze', '.')
   .option('--hidden-only', 'Only show hidden couplings (no expected couplings)')
   .option('--min-strength <n>', 'Minimum coupling strength (0-100)', '30')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
-    const spinner = createSpinner('Analyzing coupling patterns...');
-    spinner.start();
+    const spinner = options.json ? null : createSpinner('Analyzing coupling patterns...');
+    spinner?.start();
 
     const graph = await loadGraph(rootDir);
 
     if (!graph) {
-      spinner.fail('No graph found. Run `specter scan` first.');
+      if (options.json) {
+        outputJsonError('coupling', 'No graph found. Run `specter scan` first.');
+      }
+      spinner?.fail('No graph found. Run `specter scan` first.');
       return;
     }
 
@@ -4118,7 +4751,19 @@ program
       hiddenOnly: options.hiddenOnly,
       minStrength: parseInt(options.minStrength, 10),
     });
-    spinner.stop();
+    spinner?.stop();
+
+    // JSON output for CI/CD
+    if (options.json) {
+      outputJson('coupling', {
+        pairs: result.pairs,
+        hiddenCouplings: result.hiddenCouplings,
+        expectedCouplings: result.expectedCouplings,
+        suspiciousCouplings: result.suspiciousCouplings,
+        recommendations: result.recommendations,
+      });
+      return;
+    }
 
     const output = formatCoupling(result);
 
@@ -4389,16 +5034,20 @@ program
   .option('-d, --dir <path>', 'Directory to analyze', '.')
   .option('--all', 'Analyze all files with issues')
   .option('-s, --severity <level>', 'Minimum severity: critical, warning, info', 'info')
+  .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (file, options) => {
     const rootDir = path.resolve(options.dir);
 
-    const spinner = createSpinner('Analyzing for fix suggestions...');
-    spinner.start();
+    const spinner = options.json ? null : createSpinner('Analyzing for fix suggestions...');
+    spinner?.start();
 
     const graph = await loadGraph(rootDir);
 
     if (!graph) {
-      spinner.fail('No graph found. Run `specter scan` first.');
+      if (options.json) {
+        outputJsonError('fix', 'No graph found. Run `specter scan` first.');
+      }
+      spinner?.fail('No graph found. Run `specter scan` first.');
       return;
     }
 
@@ -4407,7 +5056,18 @@ program
     if (options.all || !file) {
       // Analyze all files
       const results = await generateFixAll(rootDir, graph, { severity });
-      spinner.stop();
+      spinner?.stop();
+
+      // JSON output for CI/CD
+      if (options.json) {
+        outputJson('fix', {
+          mode: 'all',
+          results,
+          totalFiles: results.length,
+          totalSuggestions: results.reduce((sum, r) => sum + r.summary.total, 0),
+        });
+        return;
+      }
 
       const output = formatFixAll(results);
 
@@ -4443,13 +5103,26 @@ program
       );
 
       if (!fileNode) {
-        spinner.fail(`File not found in knowledge graph: ${file}`);
+        if (options.json) {
+          outputJsonError('fix', `File not found in knowledge graph: ${file}`);
+        }
+        spinner?.fail(`File not found in knowledge graph: ${file}`);
         console.log(chalk.dim('  Make sure the file was scanned. Run `specter scan` to update.'));
         return;
       }
 
       const result = await generateFix(fileNode.filePath, rootDir, graph, { severity });
-      spinner.stop();
+      spinner?.stop();
+
+      // JSON output for CI/CD (single file)
+      if (options.json) {
+        outputJson('fix', {
+          mode: 'single',
+          file: fileNode.filePath,
+          result,
+        });
+        return;
+      }
 
       const output = formatFix(result);
 
