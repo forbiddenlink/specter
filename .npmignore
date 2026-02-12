@@ -1,0 +1,49 @@
+# Source files
+src/
+tests/
+*.test.ts
+*.spec.ts
+
+# Config files
+tsconfig.json
+vitest.config.ts
+biome.json
+typedoc.json
+
+# Build artifacts
+coverage/
+.nyc_output/
+
+# Development
+.git/
+.github/
+node_modules/
+*.log
+
+# Documentation (except README)
+docs/
+DEMO_SCRIPT.md
+COMPETITION_CHECKLIST.md
+COMPETITION_ACTION_PLAN.md
+SHOWCASE.md
+PUBLISHING.md
+
+# Examples and thoughts
+examples/
+thoughts/
+
+# VS Code extension (separate package)
+vscode-extension/
+
+# Packages (handled separately)
+packages/
+
+# Plugin directory
+plugin/
+
+# Misc
+.DS_Store
+*.swp
+*.swo
+*~
+.vscode/

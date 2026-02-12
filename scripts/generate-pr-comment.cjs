@@ -7,8 +7,8 @@
  * that includes health scores, risk analysis, and recommendations.
  */
 
-const fs = require('fs');
-const path = require('path');
+const fs = require('node:fs');
+const _path = require('node:path');
 
 // Parse command line arguments
 function parseArgs() {
@@ -62,7 +62,7 @@ function readFileSafe(filePath) {
     if (filePath && fs.existsSync(filePath)) {
       return fs.readFileSync(filePath, 'utf8');
     }
-  } catch (e) {
+  } catch (_e) {
     // Ignore errors
   }
   return '';
@@ -72,7 +72,7 @@ function readFileSafe(filePath) {
 function parseJsonSafe(content) {
   try {
     return JSON.parse(content);
-  } catch (e) {
+  } catch (_e) {
     return {};
   }
 }
@@ -117,7 +117,7 @@ function parsePrecommitOutput(content) {
       currentRisk = 'medium';
     } else if (line.includes('LOW RISK')) {
       currentRisk = 'low';
-    } else if (currentRisk && line.trim().startsWith('src/') || line.trim().match(/^\S+\.\w+$/)) {
+    } else if ((currentRisk && line.trim().startsWith('src/')) || line.trim().match(/^\S+\.\w+$/)) {
       const filePath = line.trim();
       if (filePath && !filePath.startsWith('─') && !filePath.startsWith('━')) {
         // Check for reasons on next line
@@ -162,7 +162,7 @@ function parsePredictOutput(content) {
 
     const trimmed = line.trim();
     if (trimmed.startsWith('•') || trimmed.startsWith('-')) {
-      const text = trimmed.replace(/^[•\-]\s*/, '');
+      const text = trimmed.replace(/^[•-]\s*/, '');
       if (text && inRecommendations) {
         recommendations.push(text);
       } else if (text && inWarnings) {
@@ -216,7 +216,9 @@ function generateComment(args) {
   lines.push('| Metric | Value |');
   lines.push('|--------|-------|');
   lines.push(`| Health Score | ${args.healthScore}/100 ${healthEmoji} |`);
-  lines.push(`| PR Risk | ${args.riskLevel.charAt(0).toUpperCase() + args.riskLevel.slice(1)} ${riskEmoji} |`);
+  lines.push(
+    `| PR Risk | ${args.riskLevel.charAt(0).toUpperCase() + args.riskLevel.slice(1)} ${riskEmoji} |`
+  );
   lines.push(`| Files Changed | ${changedFiles || fileRisks.length || '-'} |`);
   lines.push(`| Est. Review Time | ~${args.reviewMinutes} min |`);
   lines.push('');

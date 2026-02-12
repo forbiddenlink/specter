@@ -45,7 +45,7 @@ runs:
       shell: bash
       run: |
         # Install specter globally from npm
-        npm install -g specter-mcp
+        npm install -g @purplegumdropz/specter
         echo "Specter installed successfully"
 
     - name: Run Specter Scan
