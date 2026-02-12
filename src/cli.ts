@@ -86,7 +86,9 @@ import { generateReport, formatReportSummary } from './report.js';
 import { analyzeCoupling, formatCoupling } from './coupling.js';
 import { calculateDora, formatDora } from './dora.js';
 import { analyzeCost, formatCost } from './cost.js';
+import { generateLeaderboard, formatLeaderboard } from './leaderboard.js';
 import { askCodebase, formatAsk } from './ask.js';
+import { generateFix, generateFixAll, formatFix, formatFixAll, type SuggestionSeverity } from './fix.js';
 import {
   initializeProject,
   initializeProjectInteractive,
@@ -97,6 +99,47 @@ import {
 } from './init.js';
 
 const program = new Command();
+
+/**
+ * ASCII banner for Specter CLI
+ * Ghost-themed, compact (5-7 lines), purple/magenta theme
+ */
+function printBanner(): void {
+  const ghost = chalk.magenta;
+  const bright = chalk.bold.magentaBright;
+  const dim = chalk.dim;
+
+  console.log();
+  console.log(ghost('   ____                  _            '));
+  console.log(ghost('  / ___| _ __   ___  ___| |_ ___ _ __ '));
+  console.log(bright('  \\___ \\| \'_ \\ / _ \\/ __| __/ _ \\ \'__|'));
+  console.log(bright('   ___) | |_) |  __/ (__| ||  __/ |   '));
+  console.log(ghost('  |____/| .__/ \\___|\\___|\\___|\\__|_|   '));
+  console.log(ghost('        |_|   ') + dim('Give your codebase a voice'));
+  console.log();
+}
+
+/**
+ * Print version with banner
+ */
+function printVersion(): void {
+  printBanner();
+  console.log(chalk.dim(`  v1.0.0`));
+  console.log();
+}
+
+// Check for version flag early to show banner
+const hasVersionFlag = process.argv.includes('-V') || process.argv.includes('--version');
+const hasNoCommand = process.argv.length === 2;
+
+if (hasVersionFlag) {
+  printVersion();
+  process.exit(0);
+}
+
+if (hasNoCommand) {
+  printBanner();
+}
 
 program
   .name('specter')
@@ -3748,6 +3791,103 @@ program
   });
 
 /**
+ * Leaderboard command - Team gamification stats
+ */
+program
+  .command('leaderboard')
+  .description('Show team gamification stats - who\'s improving the codebase?')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('--since <date>', 'Start date (e.g., "30 days ago", "2024-01-01")', '30 days ago')
+  .option('--limit <n>', 'Number of contributors to show', '10')
+  .option('--png <file>', 'Export as PNG image for sharing')
+  .action(async (options) => {
+    const rootDir = path.resolve(options.dir);
+
+    const graph = await loadGraph(rootDir);
+
+    if (!graph) {
+      console.log(chalk.yellow('No graph found. Run `specter scan` first.'));
+      return;
+    }
+
+    const spinner = createSpinner('Analyzing contributor impact...');
+    spinner.start();
+
+    try {
+      const result = await generateLeaderboard(rootDir, graph, {
+        since: options.since,
+        limit: parseInt(options.limit, 10),
+      });
+      spinner.stop();
+
+      const output = formatLeaderboard(result);
+
+      // PNG export
+      if (options.png) {
+        const pngAvailable = await isPngExportAvailable();
+        if (!pngAvailable) {
+          console.log(chalk.red('PNG export requires the canvas package. Install with: npm install canvas'));
+          return;
+        }
+
+        const pngSpinner = createSpinner('Generating shareable image...');
+        pngSpinner.start();
+
+        const outputPath = await exportToPng(output, options.png);
+
+        pngSpinner.succeed(`Image saved to ${outputPath}`);
+        console.log(chalk.dim('  Share your leaderboard! #SpecterLeaderboard'));
+        return;
+      }
+
+      // Console output with colors
+      console.log();
+      for (const line of output.split('\n')) {
+        if (line.includes('\uD83C\uDFC6')) {
+          // Trophy - header
+          console.log(chalk.bold.yellow(`${line}`));
+        } else if (line.includes('\uD83E\uDD47')) {
+          // Gold medal
+          console.log(chalk.bold.yellow(`${line}`));
+        } else if (line.includes('\uD83E\uDD48')) {
+          // Silver medal
+          console.log(chalk.hex('#C0C0C0')(`${line}`));
+        } else if (line.includes('\uD83E\uDD49')) {
+          // Bronze medal
+          console.log(chalk.hex('#CD7F32')(`${line}`));
+        } else if (line.includes('Health Hero')) {
+          console.log(chalk.green(`${line}`));
+        } else if (line.includes('Code Guardian')) {
+          console.log(chalk.cyan(`${line}`));
+        } else if (line.includes('Hotspot Hunter')) {
+          console.log(chalk.blue(`${line}`));
+        } else if (line.includes('Rising Star')) {
+          console.log(chalk.magenta(`${line}`));
+        } else if (line.includes('\u2550') || line.includes('\u2500')) {
+          // Dividers
+          console.log(chalk.dim(`${line}`));
+        } else if (line.includes('\uD83D\uDCCA')) {
+          // Chart emoji - team stats
+          console.log(chalk.bold.white(`${line}`));
+        } else if (line.includes('improving!')) {
+          console.log(chalk.green(`${line}`));
+        } else if (line.includes('needs attention')) {
+          console.log(chalk.yellow(`${line}`));
+        } else if (line.includes('commits') && line.includes('\u2502')) {
+          // Stats line
+          console.log(chalk.dim(`${line}`));
+        } else {
+          console.log(chalk.white(`${line}`));
+        }
+      }
+      console.log();
+    } catch (error) {
+      spinner.fail('Failed to generate leaderboard');
+      console.error(chalk.red(error instanceof Error ? error.message : String(error)));
+    }
+  });
+
+/**
  * Coupling command - Hidden coupling discovery
  */
 program
@@ -4032,6 +4172,110 @@ program
       spinner.fail('Failed to initialize Specter');
       console.error(chalk.red(error instanceof Error ? error.message : String(error)));
       process.exit(1);
+    }
+  });
+
+/**
+ * Fix command - suggest actionable fixes for detected issues
+ */
+program
+  .command('fix [file]')
+  .description('Suggest actionable fixes for detected issues in a file or all files')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('--all', 'Analyze all files with issues')
+  .option('-s, --severity <level>', 'Minimum severity: critical, warning, info', 'info')
+  .action(async (file, options) => {
+    const rootDir = path.resolve(options.dir);
+
+    const spinner = createSpinner('Analyzing for fix suggestions...');
+    spinner.start();
+
+    const graph = await loadGraph(rootDir);
+
+    if (!graph) {
+      spinner.fail('No graph found. Run `specter scan` first.');
+      return;
+    }
+
+    const severity = options.severity as SuggestionSeverity;
+
+    if (options.all || !file) {
+      // Analyze all files
+      const results = await generateFixAll(rootDir, graph, { severity });
+      spinner.stop();
+
+      const output = formatFixAll(results);
+
+      console.log();
+      for (const line of output.split('\n')) {
+        if (line.includes('\u{1F527}')) {
+          console.log(chalk.bold.cyan(`${line}`));
+        } else if (line.includes('\u2550')) {
+          console.log(chalk.magenta(`${line}`));
+        } else if (line.includes('\u{1F534}') || line.includes('CRITICAL')) {
+          console.log(chalk.bold.red(`${line}`));
+        } else if (line.includes('\u{1F7E1}') || line.includes('WARNING')) {
+          console.log(chalk.yellow(`${line}`));
+        } else if (line.includes('\u{1F480}') || line.includes('INFO')) {
+          console.log(chalk.dim(`${line}`));
+        } else if (line.includes('\u2705')) {
+          console.log(chalk.green(`${line}`));
+        } else if (line.includes('\u2500')) {
+          console.log(chalk.dim(`${line}`));
+        } else if (line.startsWith('  Run:')) {
+          console.log(chalk.cyan(`${line}`));
+        } else {
+          console.log(chalk.white(`${line}`));
+        }
+      }
+    } else {
+      // Analyze specific file
+      const filePath = path.relative(rootDir, path.resolve(rootDir, file));
+
+      // Check if file exists in graph
+      const fileNode = Object.values(graph.nodes).find(
+        (n) => n.type === 'file' && (n.filePath === filePath || n.filePath === file)
+      );
+
+      if (!fileNode) {
+        spinner.fail(`File not found in knowledge graph: ${file}`);
+        console.log(chalk.dim('  Make sure the file was scanned. Run `specter scan` to update.'));
+        return;
+      }
+
+      const result = await generateFix(fileNode.filePath, rootDir, graph, { severity });
+      spinner.stop();
+
+      const output = formatFix(result);
+
+      console.log();
+      for (const line of output.split('\n')) {
+        if (line.includes('\u{1F527}')) {
+          console.log(chalk.bold.cyan(`${line}`));
+        } else if (line.includes('\u2550')) {
+          console.log(chalk.magenta(`${line}`));
+        } else if (line.includes('\u{1F534}') || line.includes('CRITICAL')) {
+          console.log(chalk.bold.red(`${line}`));
+        } else if (line.includes('\u{1F7E1}') || line.includes('WARNING')) {
+          console.log(chalk.yellow(`${line}`));
+        } else if (line.includes('\u{1F480}') || line.includes('INFO')) {
+          console.log(chalk.dim(`${line}`));
+        } else if (line.includes('\u2705')) {
+          console.log(chalk.green(`${line}`));
+        } else if (line.includes('\u2500')) {
+          console.log(chalk.dim(`${line}`));
+        } else if (line.startsWith('     ') && (line.includes('Extract') || line.includes('Lines'))) {
+          console.log(chalk.cyan(`${line}`));
+        } else if (line.includes('Expected result:')) {
+          console.log(chalk.green(`${line}`));
+        } else if (line.startsWith('  Run:')) {
+          console.log(chalk.cyan(`${line}`));
+        } else if (line.startsWith('  Summary:')) {
+          console.log(chalk.bold.white(`${line}`));
+        } else {
+          console.log(chalk.white(`${line}`));
+        }
+      }
     }
   });
 
