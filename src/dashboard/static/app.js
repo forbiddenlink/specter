@@ -202,6 +202,43 @@ async function initGraph() {
   }
 }
 
+// Helper to create detail item safely using DOM APIs (prevents XSS)
+function createDetailItem(labelText, valueText, valueClass) {
+  const item = document.createElement('div');
+  item.className = 'detail-item';
+
+  const label = document.createElement('span');
+  label.className = 'label';
+  label.textContent = labelText;
+
+  const value = document.createElement('span');
+  value.className = valueClass ? `value ${valueClass}` : 'value';
+  value.textContent = valueText;
+
+  item.appendChild(label);
+  item.appendChild(value);
+  return item;
+}
+
+// Helper to create connection item safely (prevents XSS)
+function createConnectionItem(id, type, label, direction) {
+  const item = document.createElement('div');
+  item.className = 'connection-item';
+  item.dataset.id = id;
+
+  const typeSpan = document.createElement('span');
+  typeSpan.style.color = '#8b5cf6';
+  typeSpan.textContent = type;
+
+  item.appendChild(typeSpan);
+  item.appendChild(document.createTextNode(` ${direction} `));
+
+  const labelSpan = document.createTextNode(label);
+  item.appendChild(labelSpan);
+
+  return item;
+}
+
 // Show node details in side panel
 function showNodeDetails(data, node) {
   const level = getComplexityLevel(data.complexity);
@@ -209,104 +246,66 @@ function showNodeDetails(data, node) {
   const incoming = connections.filter((e) => e.target().id() === node.id());
   const outgoing = connections.filter((e) => e.source().id() === node.id());
 
-  let connectionsHtml = '';
+  const panel = document.getElementById('details-content');
+  panel.innerHTML = ''; // Clear previous content
+
+  // Add detail items using safe DOM manipulation
+  panel.appendChild(createDetailItem('Name', data.label));
+  panel.appendChild(createDetailItem('Type', data.type));
+  panel.appendChild(createDetailItem('File', data.filePath));
+  panel.appendChild(createDetailItem('Complexity', `${data.complexity} (${level})`, level));
+  panel.appendChild(createDetailItem('Lines', `${data.lineStart} - ${data.lineEnd}`));
+
+  // Add connections if any
   if (incoming.length > 0 || outgoing.length > 0) {
-    connectionsHtml = '<div class="connections-list">';
+    const connectionsDiv = document.createElement('div');
+    connectionsDiv.className = 'connections-list';
 
     if (incoming.length > 0) {
-      connectionsHtml += `<h3>Incoming (${incoming.length})</h3>`;
+      const h3 = document.createElement('h3');
+      h3.textContent = `Incoming (${incoming.length})`;
+      connectionsDiv.appendChild(h3);
+
       incoming.forEach((e) => {
         const source = e.source().data();
-        connectionsHtml +=
-          '<div class="connection-item" data-id="' +
-          source.id +
-          '">' +
-          '<span style="color: #8b5cf6">' +
-          e.data('type') +
-          '</span> from ' +
-          source.label +
-          '</div>';
+        const item = createConnectionItem(source.id, e.data('type'), source.label, 'from');
+        item.addEventListener('click', () => navigateToNode(source.id));
+        connectionsDiv.appendChild(item);
       });
     }
 
     if (outgoing.length > 0) {
-      connectionsHtml += `<h3>Outgoing (${outgoing.length})</h3>`;
+      const h3 = document.createElement('h3');
+      h3.textContent = `Outgoing (${outgoing.length})`;
+      connectionsDiv.appendChild(h3);
+
       outgoing.forEach((e) => {
         const target = e.target().data();
-        connectionsHtml +=
-          '<div class="connection-item" data-id="' +
-          target.id +
-          '">' +
-          '<span style="color: #8b5cf6">' +
-          e.data('type') +
-          '</span> to ' +
-          target.label +
-          '</div>';
+        const item = createConnectionItem(target.id, e.data('type'), target.label, 'to');
+        item.addEventListener('click', () => navigateToNode(target.id));
+        connectionsDiv.appendChild(item);
       });
     }
 
-    connectionsHtml += '</div>';
+    panel.appendChild(connectionsDiv);
   }
+}
 
-  const panel = document.getElementById('details-content');
-  panel.innerHTML =
-    '<div class="detail-item">' +
-    '<span class="label">Name</span>' +
-    '<span class="value">' +
-    data.label +
-    '</span>' +
-    '</div>' +
-    '<div class="detail-item">' +
-    '<span class="label">Type</span>' +
-    '<span class="value">' +
-    data.type +
-    '</span>' +
-    '</div>' +
-    '<div class="detail-item">' +
-    '<span class="label">File</span>' +
-    '<span class="value">' +
-    data.filePath +
-    '</span>' +
-    '</div>' +
-    '<div class="detail-item">' +
-    '<span class="label">Complexity</span>' +
-    '<span class="value ' +
-    level +
-    '">' +
-    data.complexity +
-    ' (' +
-    level +
-    ')</span>' +
-    '</div>' +
-    '<div class="detail-item">' +
-    '<span class="label">Lines</span>' +
-    '<span class="value">' +
-    data.lineStart +
-    ' - ' +
-    data.lineEnd +
-    '</span>' +
-    '</div>' +
-    connectionsHtml;
-
-  // Add click handlers to connection items
-  panel.querySelectorAll('.connection-item').forEach((item) => {
-    item.addEventListener('click', () => {
-      const id = item.dataset.id;
-      const targetNode = cy.getElementById(id);
-      if (targetNode.length > 0) {
-        cy.animate(
-          {
-            center: { eles: targetNode },
-            zoom: 1.5,
-          },
-          { duration: 300 }
-        );
-        showNodeDetails(targetNode.data(), targetNode);
-        cy.nodes().removeClass('selected');
-        targetNode.addClass('selected');
-      }
-    });
-  });
+// Navigate to a node by ID
+function navigateToNode(id) {
+  const targetNode = cy.getElementById(id);
+  if (targetNode.length > 0) {
+    cy.animate(
+      {
+        center: { eles: targetNode },
+        zoom: 1.5,
+      },
+      { duration: 300 }
+    );
+    showNodeDetails(targetNode.data(), targetNode);
+    cy.nodes().removeClass('selected');
+    targetNode.addClass('selected');
+  }
 }
 
 // Load summary
@@ -371,61 +370,64 @@ async function loadHealth() {
   }
 }
 
+// Helper to create hotspot item safely (prevents XSS)
+function createHotspotItem(filePath, name, complexity) {
+  const level = getComplexityLevel(complexity);
+  const item = document.createElement('div');
+  item.className = 'hotspot-item';
+  item.dataset.file = filePath;
+  item.dataset.name = name;
+
+  const nameSpan = document.createElement('span');
+  nameSpan.className = 'hotspot-name';
+  nameSpan.title = `${name} (${filePath})`;
+  nameSpan.textContent = name;
+
+  const complexitySpan = document.createElement('span');
+  complexitySpan.className = `hotspot-complexity ${level}`;
+  complexitySpan.textContent = complexity;
+
+  item.appendChild(nameSpan);
+  item.appendChild(complexitySpan);
+
+  item.addEventListener('click', () => highlightNode(name));
+
+  return item;
+}
+
+// Helper to show error/hint message safely
+function showMessage(elementId, message, className) {
+  const element = document.getElementById(elementId);
+  element.innerHTML = '';
+  const div = document.createElement('div');
+  div.className = className;
+  div.textContent = message;
+  element.appendChild(div);
+}
+
 // Load hotspots
 async function loadHotspots() {
   try {
     const response = await fetch('/api/hotspots');
     if (!response.ok) {
-      document.getElementById('hotspots-list').innerHTML =
-        '<div class="error">Failed to load hotspots</div>';
+      showMessage('hotspots-list', 'Failed to load hotspots', 'error');
       return;
     }
     const data = await response.json();
     const list = document.getElementById('hotspots-list');
 
     if (data.hotspots.length === 0) {
-      list.innerHTML = '<div class="hint">No complexity hotspots found!</div>';
+      showMessage('hotspots-list', 'No complexity hotspots found!', 'hint');
       return;
     }
 
-    list.innerHTML = data.hotspots
-      .slice(0, 8)
-      .map((h) => {
-        const level = getComplexityLevel(h.complexity);
-        return (
-          '<div class="hotspot-item" data-file="' +
-          h.filePath +
-          '" data-name="' +
-          h.name +
-          '">' +
-          '<span class="hotspot-name" title="' +
-          h.name +
-          ' (' +
-          h.filePath +
-          ')">' +
-          h.name +
-          '</span>' +
-          '<span class="hotspot-complexity ' +
-          level +
-          '">' +
-          h.complexity +
-          '</span>' +
-          '</div>'
-        );
-      })
-      .join('');
-
-    // Add click handlers
-    list.querySelectorAll('.hotspot-item').forEach((item) => {
-      item.addEventListener('click', () => {
-        const name = item.dataset.name;
-        highlightNode(name);
-      });
+    list.innerHTML = '';
+    data.hotspots.slice(0, 8).forEach((h) => {
+      list.appendChild(createHotspotItem(h.filePath, h.name, h.complexity));
     });
   } catch (error) {
     console.error('Failed to load hotspots:', error);
-    document.getElementById('hotspots-list').innerHTML =
-      '<div class="error">Failed to load hotspots</div>';
+    showMessage('hotspots-list', 'Failed to load hotspots', 'error');
   }
 }
 

@@ -5,11 +5,10 @@
  * Shows what changed: complexity delta, new hotspots, health score diff.
  */
 
-import { execSync } from 'node:child_process';
-import { generateComplexityReport, type ComplexityReport } from './analyzers/complexity.js';
-import { loadGraph, graphExists } from './graph/persistence.js';
+import { spawnSync } from 'node:child_process';
+import { type ComplexityReport, generateComplexityReport } from './analyzers/complexity.js';
 import { buildKnowledgeGraph } from './graph/builder.js';
-import type { KnowledgeGraph } from './graph/types.js';
+import { loadGraph } from './graph/persistence.js';
 import { getPersonality } from './personality/modes.js';
 import type { PersonalityMode } from './personality/types.js';
 
@@ -30,14 +29,26 @@ export interface CompareResult {
 }
 
 /**
+ * Execute git command safely using spawnSync with argument array
+ * Avoids shell injection by not interpolating user input into shell strings
+ */
+function gitCommand(args: string[], rootDir: string): string {
+  const result = spawnSync('git', args, {
+    cwd: rootDir,
+    encoding: 'utf-8',
+    maxBuffer: 10 * 1024 * 1024,
+  });
+  if (result.error) throw result.error;
+  if (result.status !== 0) throw new Error(result.stderr || 'Git command failed');
+  return result.stdout?.toString() || '';
+}
+
+/**
  * Get current git branch name
  */
 function getCurrentBranch(rootDir: string): string {
   try {
-    return execSync('git rev-parse --abbrev-ref HEAD', {
-      cwd: rootDir,
-      encoding: 'utf8',
-    }).trim();
+    return gitCommand(['rev-parse', '--abbrev-ref', 'HEAD'], rootDir).trim();
   } catch {
     return 'unknown';
   }
@@ -51,10 +62,7 @@ function getChangedFiles(
   compareBranch: string
 ): { added: string[]; removed: string[]; modified: string[] } {
   try {
-    const diff = execSync(`git diff --name-status ${compareBranch}...HEAD`, {
-      cwd: rootDir,
-      encoding: 'utf8',
-    });
+    const diff = gitCommand(['diff', '--name-status', `${compareBranch}...HEAD`], rootDir);
 
     const added: string[] = [];
     const removed: string[] = [];
@@ -120,25 +128,38 @@ export async function compareBranches(
   let compareHealth = currentHealth; // Default to same if we can't compare
   let compareReport = currentReport;
 
+  let checkedOutCompareBranch = false;
   try {
-    // Stash current changes, checkout compare branch, build graph, return
-    const hasChanges = execSync('git status --porcelain', { cwd: rootDir, encoding: 'utf8' }).trim();
+    // Check if working tree is clean before switching branches
+    const hasChanges = gitCommand(['status', '--porcelain'], rootDir).trim();
 
     if (!hasChanges) {
       // Only do full comparison if working tree is clean
-      execSync(`git checkout ${compareBranch}`, { cwd: rootDir, encoding: 'utf8' });
+      gitCommand(['checkout', compareBranch], rootDir);
+      checkedOutCompareBranch = true;
 
       try {
         const compareResult = await buildKnowledgeGraph({ rootDir, onProgress: () => {} });
         compareReport = generateComplexityReport(compareResult.graph);
         compareHealth = calculateHealthScore(compareReport);
       } finally {
-        // Return to original branch
-        execSync(`git checkout ${currentBranch}`, { cwd: rootDir, encoding: 'utf8' });
+        // Always return to original branch if we checked out compare branch
+        if (checkedOutCompareBranch) {
+          gitCommand(['checkout', currentBranch], rootDir);
+        }
       }
     }
   } catch {
     // Comparison branch might not exist or other issues
+    // Try to return to original branch if we're on the wrong one
+    if (checkedOutCompareBranch) {
+      try {
+        gitCommand(['checkout', currentBranch], rootDir);
+      } catch {
+        // Last resort: warn but continue
+        console.error(`Warning: Could not return to branch ${currentBranch}`);
+      }
+    }
     // Continue with current-only analysis
   }
 
@@ -148,14 +169,10 @@ export async function compareBranches(
   // Find new hotspots (files that became complex)
   const hotspotThreshold = 15;
   const currentHotspotSet = new Set(
-    currentReport.hotspots
-      .filter((h) => h.complexity >= hotspotThreshold)
-      .map((h) => h.filePath)
+    currentReport.hotspots.filter((h) => h.complexity >= hotspotThreshold).map((h) => h.filePath)
   );
   const compareHotspotSet = new Set(
-    compareReport.hotspots
-      .filter((h) => h.complexity >= hotspotThreshold)
-      .map((h) => h.filePath)
+    compareReport.hotspots.filter((h) => h.complexity >= hotspotThreshold).map((h) => h.filePath)
   );
 
   const newHotspots = currentReport.hotspots
@@ -177,7 +194,8 @@ export async function compareBranches(
   }
 
   // Generate summary
-  const totalChanges = changedFiles.added.length + changedFiles.modified.length + changedFiles.removed.length;
+  const totalChanges =
+    changedFiles.added.length + changedFiles.modified.length + changedFiles.removed.length;
   let summary = '';
   if (riskLevel === 'safe') {
     summary = `Safe to merge. ${totalChanges} files changed with minimal health impact.`;
@@ -207,23 +225,36 @@ export async function compareBranches(
 /**
  * Format compare result for display
  */
-export function formatCompare(result: CompareResult, personality: PersonalityMode = 'default'): string {
-  const config = getPersonality(personality);
+export function formatCompare(
+  result: CompareResult,
+  personality: PersonalityMode = 'default'
+): string {
+  const _config = getPersonality(personality);
   const lines: string[] = [];
 
   // Header
-  const riskEmoji = result.riskLevel === 'safe' ? '\u2705' : result.riskLevel === 'caution' ? '\u26A0\uFE0F' : '\u{1F6A8}';
-  const riskColor = result.riskLevel === 'safe' ? 'green' : result.riskLevel === 'caution' ? 'yellow' : 'red';
+  const riskEmoji =
+    result.riskLevel === 'safe'
+      ? '\u2705'
+      : result.riskLevel === 'caution'
+        ? '\u26A0\uFE0F'
+        : '\u{1F6A8}';
+  const _riskColor =
+    result.riskLevel === 'safe' ? 'green' : result.riskLevel === 'caution' ? 'yellow' : 'red';
 
   lines.push('');
-  lines.push(`${riskEmoji} PR HEALTH CHECK: ${result.currentBranch} \u2192 ${result.compareBranch}`);
+  lines.push(
+    `${riskEmoji} PR HEALTH CHECK: ${result.currentBranch} \u2192 ${result.compareBranch}`
+  );
   lines.push('\u2500'.repeat(50));
   lines.push('');
 
   // Health Score Delta
   const deltaSign = result.healthDelta >= 0 ? '+' : '';
   const healthEmoji = result.healthDelta >= 0 ? '\u{1F4C8}' : '\u{1F4C9}';
-  lines.push(`${healthEmoji} Health Score: ${Math.round(result.compareHealth)} \u2192 ${Math.round(result.currentHealth)} (${deltaSign}${result.healthDelta.toFixed(1)})`);
+  lines.push(
+    `${healthEmoji} Health Score: ${Math.round(result.compareHealth)} \u2192 ${Math.round(result.currentHealth)} (${deltaSign}${result.healthDelta.toFixed(1)})`
+  );
 
   // Complexity Delta
   const complexityEmoji = result.complexityDelta <= 0 ? '\u2728' : '\u26A0\uFE0F';
