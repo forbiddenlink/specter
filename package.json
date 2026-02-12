@@ -44,11 +44,13 @@
     "@fastify/cors": "^9.0.0",
     "@fastify/static": "^7.0.0",
     "@modelcontextprotocol/sdk": "^1.0.0",
+    "@types/qrcode": "^1.5.6",
     "canvas": "^3.2.1",
     "chalk": "^5.3.0",
     "commander": "^12.1.0",
     "fastify": "^4.26.0",
     "ora": "^8.0.1",
+    "qrcode": "^1.5.4",
     "simple-git": "^3.22.0",
     "ts-morph": "^22.0.0",
     "zod": "^3.22.0"

@@ -60,7 +60,7 @@ import { generatePrediction, formatPrediction } from './predict.js';
 import { suggestReviewers, formatReviewers } from './reviewers.js';
 import { runPrecommitCheck, formatPrecommit } from './precommit.js';
 import { detectDrift, formatDrift } from './drift.js';
-import { exportToPng, formatAchievementsForExport, isPngExportAvailable } from './export-png.js';
+import { exportToPng, formatAchievementsForExport, isPngExportAvailable, getRepoUrl } from './export-png.js';
 import { detectCycles, formatCycles } from './cycles.js';
 import { analyzeVelocity, formatVelocity } from './velocity.js';
 import { projectTrajectory, formatTrajectory } from './trajectory.js';
@@ -366,6 +366,7 @@ program
   .option('--exit-code', 'Exit with code 1 if health score is below threshold')
   .option('--threshold <n>', 'Health score threshold for --exit-code (default: 50)', '50')
   .option('--png <file>', 'Export as PNG image for sharing')
+  .option('--qr', 'Add QR code linking to repo (with --png)')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
     const limit = parseInt(options.limit, 10);
@@ -524,7 +525,8 @@ program
       const spinner = createSpinner('Generating shareable health report image...');
       spinner.start();
 
-      const outputPath = await exportToPng(output, options.png);
+      const qrUrl = options.qr ? await getRepoUrl(rootDir) : undefined;
+      const outputPath = await exportToPng(output, options.png, { qrUrl: qrUrl || undefined });
 
       spinner.succeed(`Image saved to ${outputPath}`);
       console.log(chalk.dim('  Share your health report on social media! #SpecterHealth'));
@@ -1155,6 +1157,7 @@ program
   .description('Generate a dating profile for your codebase')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
   .option('--png <file>', 'Export as PNG image for sharing')
+  .option('--qr', 'Add QR code linking to repo (with --png)')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
     const projectName = path.basename(rootDir);
@@ -1418,7 +1421,8 @@ program
       const spinner = createSpinner('Generating shareable dating profile image...');
       spinner.start();
 
-      const outputPath = await exportToPng(output, options.png);
+      const qrUrl = options.qr ? await getRepoUrl(rootDir) : undefined;
+      const outputPath = await exportToPng(output, options.png, { qrUrl: qrUrl || undefined });
 
       spinner.succeed(`Image saved to ${outputPath}`);
       console.log(chalk.dim('  Share your codebase profile on social media! #SpecterTinder'));
@@ -1450,6 +1454,7 @@ program
   .description('Get a comedic roast of your codebase')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
   .option('--png <file>', 'Export as PNG image for sharing')
+  .option('--qr', 'Add QR code linking to repo (with --png)')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
@@ -1585,7 +1590,8 @@ program
       const spinner = createSpinner('Generating shareable roast image...');
       spinner.start();
 
-      const outputPath = await exportToPng(output, options.png);
+      const qrUrl = options.qr ? await getRepoUrl(rootDir) : undefined;
+      const outputPath = await exportToPng(output, options.png, { qrUrl: qrUrl || undefined });
 
       spinner.succeed(`Image saved to ${outputPath}`);
       console.log(chalk.dim('  Share your roast on social media! #SpecterRoast'));
@@ -1836,6 +1842,7 @@ program
   .description('View your codebase achievements')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
   .option('--png <file>', 'Export as PNG image for sharing')
+  .option('--qr', 'Add QR code linking to repo (with --png)')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
@@ -1873,7 +1880,8 @@ program
       spinner.start();
 
       const content = formatAchievementsForExport(unlocked, locked, achievements.length);
-      const outputPath = await exportToPng(content, options.png);
+      const qrUrl = options.qr ? await getRepoUrl(rootDir) : undefined;
+      const outputPath = await exportToPng(content, options.png, { qrUrl: qrUrl || undefined });
 
       spinner.succeed(`Image saved to ${outputPath}`);
       console.log(chalk.dim('  Share your achievements on social media!'));
@@ -2035,6 +2043,7 @@ program
   .option('-d, --dir <path>', 'Directory to analyze', '.')
   .option('-y, --year <year>', 'Year to summarize (default: current year)')
   .option('--png <file>', 'Export as PNG image for sharing')
+  .option('--qr', 'Add QR code linking to repo (with --png)')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
     const year = options.year ? parseInt(options.year, 10) : undefined;
@@ -2065,7 +2074,8 @@ program
       const pngSpinner = createSpinner('Generating shareable image...');
       pngSpinner.start();
 
-      const outputPath = await exportToPng(output, options.png);
+      const qrUrl = options.qr ? await getRepoUrl(rootDir) : undefined;
+      const outputPath = await exportToPng(output, options.png, { qrUrl: qrUrl || undefined });
 
       pngSpinner.succeed(`Image saved to ${outputPath}`);
       console.log(chalk.dim('  Share your year in code on social media! #SpecterWrapped'));
@@ -2256,6 +2266,7 @@ program
   .option('-d, --dir <path>', 'Directory to analyze', '.')
   .option('-b, --badge', 'Output compact badge format')
   .option('--png <file>', 'Export as PNG image for sharing')
+  .option('--qr', 'Add QR code linking to repo (with --png)')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
@@ -2285,7 +2296,8 @@ program
       const pngSpinner = createSpinner('Generating shareable image...');
       pngSpinner.start();
 
-      const outputPath = await exportToPng(output, options.png);
+      const qrUrl = options.qr ? await getRepoUrl(rootDir) : undefined;
+      const outputPath = await exportToPng(output, options.png, { qrUrl: qrUrl || undefined });
 
       pngSpinner.succeed(`Image saved to ${outputPath}`);
       console.log(chalk.dim('  Share your codebase DNA on social media!'));
@@ -3623,6 +3635,7 @@ program
   .option('-d, --dir <path>', 'Directory to analyze', '.')
   .option('--since <period>', 'Time period to analyze', '6 months ago')
   .option('--png <file>', 'Export as PNG image for sharing')
+  .option('--qr', 'Add QR code linking to repo (with --png)')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
@@ -3646,7 +3659,8 @@ program
         const pngSpinner = createSpinner('Generating shareable image...');
         pngSpinner.start();
 
-        const outputPath = await exportToPng(output, options.png);
+        const qrUrl = options.qr ? await getRepoUrl(rootDir) : undefined;
+      const outputPath = await exportToPng(output, options.png, { qrUrl: qrUrl || undefined });
 
         pngSpinner.succeed(`Image saved to ${outputPath}`);
         console.log(chalk.dim('  Share your DORA metrics on social media! #SpecterDORA'));
@@ -3714,6 +3728,7 @@ program
   .option('--currency <code>', 'Currency code (USD, EUR, GBP)', 'USD')
   .option('--no-dead-code', 'Skip dead code analysis')
   .option('--png <file>', 'Export as PNG image for sharing')
+  .option('--qr', 'Add QR code linking to repo (with --png)')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
@@ -3748,7 +3763,8 @@ program
         const pngSpinner = createSpinner('Generating shareable image...');
         pngSpinner.start();
 
-        const outputPath = await exportToPng(output, options.png);
+        const qrUrl = options.qr ? await getRepoUrl(rootDir) : undefined;
+      const outputPath = await exportToPng(output, options.png, { qrUrl: qrUrl || undefined });
 
         pngSpinner.succeed(`Image saved to ${outputPath}`);
         console.log(chalk.dim('  Share your tech debt analysis! #SpecterCost'));
@@ -3800,6 +3816,7 @@ program
   .option('--since <date>', 'Start date (e.g., "30 days ago", "2024-01-01")', '30 days ago')
   .option('--limit <n>', 'Number of contributors to show', '10')
   .option('--png <file>', 'Export as PNG image for sharing')
+  .option('--qr', 'Add QR code linking to repo (with --png)')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
@@ -3833,7 +3850,8 @@ program
         const pngSpinner = createSpinner('Generating shareable image...');
         pngSpinner.start();
 
-        const outputPath = await exportToPng(output, options.png);
+        const qrUrl = options.qr ? await getRepoUrl(rootDir) : undefined;
+      const outputPath = await exportToPng(output, options.png, { qrUrl: qrUrl || undefined });
 
         pngSpinner.succeed(`Image saved to ${outputPath}`);
         console.log(chalk.dim('  Share your leaderboard! #SpecterLeaderboard'));
