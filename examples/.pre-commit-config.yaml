@@ -1,0 +1,37 @@
+# Example .pre-commit-config.yaml for Specter
+# Copy this file to your project root and update the rev to your desired version
+#
+# Prerequisites:
+# 1. Install pre-commit: pip install pre-commit
+# 2. Install Specter: npm install -g specter
+# 3. Run initial scan: specter scan
+# 4. Install hooks: pre-commit install
+#
+# See https://pre-commit.com for more information
+
+repos:
+  # Specter codebase analysis hooks
+  - repo: https://github.com/your-org/specter
+    rev: v1.0.0  # Update to your version
+    hooks:
+      # Risk check for staged changes - blocks high-risk commits
+      - id: specter-precommit
+        # Optional: only run on specific file types
+        # types: [typescript, javascript]
+
+      # Health check - blocks if health score falls below 50
+      - id: specter-health
+        # Optionally set a custom threshold (default: 50)
+        # args: ['--threshold', '60']
+
+      # Cycle detection - blocks if circular dependencies exist
+      - id: specter-cycles
+
+  # Other common hooks you might want to include:
+  # - repo: https://github.com/pre-commit/pre-commit-hooks
+  #   rev: v4.5.0
+  #   hooks:
+  #     - id: trailing-whitespace
+  #     - id: end-of-file-fixer
+  #     - id: check-yaml
+  #     - id: check-added-large-files

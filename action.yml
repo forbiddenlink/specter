@@ -1,0 +1,155 @@
+name: 'Specter Code Analysis'
+description: 'Give your codebase a voice - automated health checks for PRs'
+author: 'Specter'
+branding:
+  icon: 'ghost'
+  color: 'purple'
+
+inputs:
+  github-token:
+    description: 'GitHub token for posting comments'
+    required: true
+  scan-dir:
+    description: 'Directory to scan'
+    default: '.'
+  personality:
+    description: 'Personality mode (default, noir, therapist, roast)'
+    default: 'default'
+  comment-on-pr:
+    description: 'Post results as PR comment'
+    default: 'true'
+  fail-on-high-risk:
+    description: 'Fail the action if high-risk changes are detected'
+    default: 'false'
+
+outputs:
+  health-score:
+    description: 'Overall codebase health score (0-100)'
+    value: ${{ steps.analysis.outputs.health_score }}
+  risk-level:
+    description: 'PR risk level (low, medium, high, critical)'
+    value: ${{ steps.analysis.outputs.risk_level }}
+  review-minutes:
+    description: 'Estimated review time in minutes'
+    value: ${{ steps.analysis.outputs.review_minutes }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install Specter
+      shell: bash
+      run: |
+        # Install specter globally from npm
+        npm install -g specter-mcp
+        echo "Specter installed successfully"
+
+    - name: Run Specter Scan
+      shell: bash
+      working-directory: ${{ inputs.scan-dir }}
+      run: |
+        echo "Scanning codebase..."
+        specter scan --quiet || true
+        echo "Scan complete"
+
+    - name: Generate PR Analysis
+      shell: bash
+      id: analysis
+      working-directory: ${{ inputs.scan-dir }}
+      env:
+        SPECTER_PERSONALITY: ${{ inputs.personality }}
+      run: |
+        # Generate JSON report for parsing
+        specter report --format json --quick > /tmp/specter-report.json 2>/dev/null || echo '{}' > /tmp/specter-report.json
+
+        # Extract metrics from report
+        HEALTH_SCORE=$(cat /tmp/specter-report.json | node -e "
+          const fs = require('fs');
+          const data = JSON.parse(fs.readFileSync('/dev/stdin', 'utf8'));
+          console.log(data.health?.score || 0);
+        " 2>/dev/null || echo "0")
+
+        # Run precommit check on changed files
+        specter precommit > /tmp/specter-precommit.txt 2>/dev/null || true
+
+        # Run predict for PR impact
+        specter predict > /tmp/specter-predict.txt 2>/dev/null || true
+
+        # Parse risk level from predict output
+        RISK_LEVEL=$(grep -i "overall risk" /tmp/specter-predict.txt | grep -oE "(low|medium|high|critical)" | head -1 || echo "low")
+
+        # Parse review minutes
+        REVIEW_MINUTES=$(grep -i "review time" /tmp/specter-predict.txt | grep -oE "[0-9]+" | head -1 || echo "5")
+
+        # Set outputs
+        echo "health_score=${HEALTH_SCORE}" >> $GITHUB_OUTPUT
+        echo "risk_level=${RISK_LEVEL}" >> $GITHUB_OUTPUT
+        echo "review_minutes=${REVIEW_MINUTES}" >> $GITHUB_OUTPUT
+
+        # Generate the PR comment markdown
+        node "${{ github.action_path }}/scripts/generate-pr-comment.cjs" \
+          --health-score "${HEALTH_SCORE}" \
+          --risk-level "${RISK_LEVEL}" \
+          --review-minutes "${REVIEW_MINUTES}" \
+          --precommit-file /tmp/specter-precommit.txt \
+          --predict-file /tmp/specter-predict.txt \
+          --report-file /tmp/specter-report.json \
+          > /tmp/specter-comment.md
+
+    - name: Post PR Comment
+      if: inputs.comment-on-pr == 'true' && github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const fs = require('fs');
+
+          // Read the generated comment
+          const commentBody = fs.readFileSync('/tmp/specter-comment.md', 'utf8');
+
+          // Find existing Specter comment to update
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number
+          });
+
+          const specterComment = comments.find(c =>
+            c.body.includes('<!-- specter-analysis -->') &&
+            c.user.type === 'Bot'
+          );
+
+          if (specterComment) {
+            // Update existing comment
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: specterComment.id,
+              body: commentBody
+            });
+            console.log('Updated existing Specter comment');
+          } else {
+            // Create new comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: commentBody
+            });
+            console.log('Created new Specter comment');
+          }
+
+    - name: Check Risk Threshold
+      if: inputs.fail-on-high-risk == 'true'
+      shell: bash
+      run: |
+        RISK_LEVEL="${{ steps.analysis.outputs.risk_level }}"
+        if [ "$RISK_LEVEL" = "critical" ] || [ "$RISK_LEVEL" = "high" ]; then
+          echo "::error::High-risk changes detected (risk level: $RISK_LEVEL)"
+          exit 1
+        fi
+        echo "Risk level acceptable: $RISK_LEVEL"

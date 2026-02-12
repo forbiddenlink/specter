@@ -1,0 +1,28 @@
+# Specter pre-commit hooks
+# See https://pre-commit.com for more information
+# Usage: Add this repo to your .pre-commit-config.yaml
+
+- id: specter-precommit
+  name: Specter Pre-commit Check
+  description: Run Specter risk analysis on staged changes
+  entry: specter precommit --exit-code
+  language: system
+  pass_filenames: false
+  always_run: true
+  stages: [commit]
+
+- id: specter-health
+  name: Specter Health Check
+  description: Verify codebase health score is above threshold
+  entry: specter health --exit-code
+  language: system
+  pass_filenames: false
+  stages: [commit]
+
+- id: specter-cycles
+  name: Specter Cycle Detection
+  description: Detect circular dependencies in the codebase
+  entry: specter cycles --exit-code
+  language: system
+  pass_filenames: false
+  stages: [commit]

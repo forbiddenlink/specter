@@ -1,0 +1,51 @@
+{
+  "name": "specter-vscode",
+  "displayName": "Specter",
+  "description": "Give your codebase a voice",
+  "version": "0.1.0",
+  "publisher": "specter",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/specter-cli/specter"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "workspaceContains:.specter"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "specter.health",
+        "title": "Specter: Show Health"
+      },
+      {
+        "command": "specter.morning",
+        "title": "Specter: Morning Briefing"
+      },
+      {
+        "command": "specter.scan",
+        "title": "Specter: Scan Codebase"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "typescript": "^5.0.0"
+  }
+}

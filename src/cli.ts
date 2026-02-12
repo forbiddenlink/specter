@@ -52,8 +52,48 @@ import { generateReading, formatReading } from './fortune.js';
 import { generateDNA, formatDNA, generateBadge } from './dna.js';
 import { generateTour, formatTour } from './tour.js';
 import { findExperts, formatWho } from './who.js';
+import { explainWhy, formatWhy } from './why.js';
 import { analyzeZones, formatSafeZones, formatDangerZones } from './zones.js';
 import { generateMorning, formatMorning } from './morning.js';
+import { generateStandup, formatStandup } from './standup.js';
+import { generatePrediction, formatPrediction } from './predict.js';
+import { suggestReviewers, formatReviewers } from './reviewers.js';
+import { runPrecommitCheck, formatPrecommit } from './precommit.js';
+import { detectDrift, formatDrift } from './drift.js';
+import { exportToPng, formatAchievementsForExport, isPngExportAvailable } from './export-png.js';
+import { detectCycles, formatCycles } from './cycles.js';
+import { analyzeVelocity, formatVelocity } from './velocity.js';
+import { projectTrajectory, formatTrajectory } from './trajectory.js';
+import { generateKnowledgeMap, formatKnowledgeMap } from './knowledge-map.js';
+import {
+  generateDiagram,
+  saveDiagram,
+  formatDiagramOutput,
+  getDiagramExtension,
+  type DiagramFormat,
+} from './diagram.js';
+import { searchCodebase, formatSearch, semanticSearch, formatSearchWithMode, type SearchMode } from './search.js';
+import {
+  buildEmbeddingIndex,
+  saveEmbeddingIndex,
+  loadEmbeddingIndex,
+  embeddingIndexExists,
+  isEmbeddingIndexStale,
+} from './embeddings.js';
+import { analyzeBusFactor, formatBusFactor } from './bus-factor.js';
+import { analyzeHotspots, formatHotspots } from './hotspots.js';
+import { generateReport, formatReportSummary } from './report.js';
+import { analyzeCoupling, formatCoupling } from './coupling.js';
+import { calculateDora, formatDora } from './dora.js';
+import { askCodebase, formatAsk } from './ask.js';
+import {
+  initializeProject,
+  initializeProjectInteractive,
+  formatInitWelcome,
+  formatInitComplete,
+  listAvailablePersonalities,
+  INIT_PERSONALITIES,
+} from './init.js';
 
 const program = new Command();
 
@@ -278,10 +318,14 @@ program
     'Output personality: mentor, critic, historian, cheerleader, minimalist',
     'default'
   )
+  .option('--exit-code', 'Exit with code 1 if health score is below threshold')
+  .option('--threshold <n>', 'Health score threshold for --exit-code (default: 50)', '50')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
     const limit = parseInt(options.limit, 10);
     const personality = options.personality as PersonalityMode;
+    const exitCode = options.exitCode;
+    const threshold = parseInt(options.threshold, 10);
 
     const graph = await loadGraph(rootDir);
 
@@ -417,6 +461,13 @@ program
       console.log(chalk.yellow(`  ${healthComment}`));
     } else {
       console.log(chalk.red(`  ${healthComment}`));
+    }
+
+    // Exit with error code if health is below threshold
+    if (exitCode && healthScore < threshold) {
+      console.log();
+      console.log(chalk.red(`  Health score ${Math.round(healthScore)} is below threshold ${threshold}`));
+      process.exit(1);
     }
   });
 
@@ -1660,6 +1711,7 @@ program
   .command('achievements')
   .description('View your codebase achievements')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('--png <file>', 'Export as PNG image for sharing')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
@@ -1684,6 +1736,25 @@ program
     );
 
     const { unlocked, locked } = checkAchievements(graph, stats);
+
+    // PNG export
+    if (options.png) {
+      const pngAvailable = await isPngExportAvailable();
+      if (!pngAvailable) {
+        console.log(chalk.red('PNG export requires the canvas package. Install with: npm install canvas'));
+        return;
+      }
+
+      const spinner = createSpinner('Generating shareable image...');
+      spinner.start();
+
+      const content = formatAchievementsForExport(unlocked, locked, achievements.length);
+      const outputPath = await exportToPng(content, options.png);
+
+      spinner.succeed(`Image saved to ${outputPath}`);
+      console.log(chalk.dim('  Share your achievements on social media!'));
+      return;
+    }
 
     const W = 45; // inner width
 
@@ -1839,6 +1910,7 @@ program
   .description('Get your Spotify Wrapped-style yearly summary')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
   .option('-y, --year <year>', 'Year to summarize (default: current year)')
+  .option('--png <file>', 'Export as PNG image for sharing')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
     const year = options.year ? parseInt(options.year, 10) : undefined;
@@ -1857,6 +1929,24 @@ program
     spinner.stop();
 
     const output = formatWrapped(wrappedData);
+
+    // PNG export
+    if (options.png) {
+      const pngAvailable = await isPngExportAvailable();
+      if (!pngAvailable) {
+        console.log(chalk.red('PNG export requires the canvas package. Install with: npm install canvas'));
+        return;
+      }
+
+      const pngSpinner = createSpinner('Generating shareable image...');
+      pngSpinner.start();
+
+      const outputPath = await exportToPng(output, options.png);
+
+      pngSpinner.succeed(`Image saved to ${outputPath}`);
+      console.log(chalk.dim('  Share your year in code on social media! #SpecterWrapped'));
+      return;
+    }
 
     console.log();
     // Print with gradient styling
@@ -2041,6 +2131,7 @@ program
   .description('Generate a unique visual DNA fingerprint of your codebase')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
   .option('-b, --badge', 'Output compact badge format')
+  .option('--png <file>', 'Export as PNG image for sharing')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
@@ -2058,6 +2149,24 @@ program
     spinner.stop();
 
     const output = options.badge ? generateBadge(profile) : formatDNA(profile);
+
+    // PNG export
+    if (options.png) {
+      const pngAvailable = await isPngExportAvailable();
+      if (!pngAvailable) {
+        console.log(chalk.red('PNG export requires the canvas package. Install with: npm install canvas'));
+        return;
+      }
+
+      const pngSpinner = createSpinner('Generating shareable image...');
+      pngSpinner.start();
+
+      const outputPath = await exportToPng(output, options.png);
+
+      pngSpinner.succeed(`Image saved to ${outputPath}`);
+      console.log(chalk.dim('  Share your codebase DNA on social media!'));
+      return;
+    }
 
     console.log();
     for (const line of output.split('\n')) {
@@ -2181,6 +2290,60 @@ program
         console.log(chalk.italic.cyan(`  ${line}`));
       } else if (line.includes('⚠️')) {
         console.log(chalk.yellow(`  ${line}`));
+      } else {
+        console.log(chalk.white(`  ${line}`));
+      }
+    }
+    console.log();
+  });
+
+/**
+ * Why command - explain why code exists
+ */
+program
+  .command('why <file>')
+  .description('Explain why a file exists based on history, comments, and patterns')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .action(async (file, options) => {
+    const rootDir = path.resolve(options.dir);
+
+    const spinner = createSpinner('Analyzing file purpose...');
+    spinner.start();
+
+    const graph = await loadGraph(rootDir);
+
+    if (!graph) {
+      spinner.fail('No graph found. Run `specter scan` first.');
+      return;
+    }
+
+    const result = await explainWhy(rootDir, file, graph);
+    spinner.stop();
+
+    const output = formatWhy(result);
+
+    console.log();
+    for (const line of output.split('\n')) {
+      if (line.includes('WHY DOES THIS EXIST')) {
+        console.log(chalk.bold.cyan(`  ${line}`));
+      } else if (line.startsWith('File:')) {
+        console.log(chalk.yellow(`  ${line}`));
+      } else if (line.startsWith('ORIGIN') || line.startsWith('AUTHOR') || line.startsWith('CONNECTIONS') || line.startsWith('PATTERNS') || line.startsWith('MAJOR') || line.startsWith('SUGGESTIONS')) {
+        console.log(chalk.bold.magenta(`  ${line}`));
+      } else if (line.startsWith('-'.repeat(10)) || line.startsWith('='.repeat(10))) {
+        console.log(chalk.dim(`  ${line}`));
+      } else if (line.includes('Created:')) {
+        console.log(chalk.green(`  ${line}`));
+      } else if (line.startsWith('   "')) {
+        console.log(chalk.italic.cyan(`  ${line}`));
+      } else if (line.startsWith('   *')) {
+        console.log(chalk.white(`  ${line}`));
+      } else if (line.startsWith('     -')) {
+        console.log(chalk.dim(`  ${line}`));
+      } else if (line.startsWith('   !')) {
+        console.log(chalk.yellow(`  ${line}`));
+      } else if (line.startsWith('FILE NOT FOUND')) {
+        console.log(chalk.red(`  ${line}`));
       } else {
         console.log(chalk.white(`  ${line}`));
       }
@@ -2319,6 +2482,1521 @@ program
         console.log(chalk.white(`  ${line}`));
       }
     }
+    console.log();
+  });
+
+/**
+ * Standup command - Generate standup summary
+ */
+program
+  .command('standup')
+  .description('Generate a standup summary for your daily meeting')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('--since <time>', 'Look back period (e.g., "2 days ago")', '1 day ago')
+  .action(async (options) => {
+    const rootDir = path.resolve(options.dir);
+
+    const spinner = createSpinner('Generating standup summary...');
+    spinner.start();
+
+    const graph = await loadGraph(rootDir);
+
+    if (!graph) {
+      spinner.fail('No graph found. Run `specter scan` first.');
+      return;
+    }
+
+    const result = await generateStandup(rootDir, graph, { since: options.since });
+    spinner.stop();
+
+    const output = formatStandup(result);
+
+    console.log();
+    for (const line of output.split('\n')) {
+      if (line.includes('\u250F') || line.includes('\u2517') || line.includes('\u2503')) {
+        console.log(chalk.bold.cyan(`  ${line}`));
+      } else if (line.startsWith('YESTERDAY') || line.startsWith('TODAY') || line.startsWith('BLOCKERS')) {
+        console.log(chalk.bold.yellow(`  ${line}`));
+      } else if (line.startsWith('\u2500')) {
+        console.log(chalk.dim(`  ${line}`));
+      } else if (line.includes('\u2713')) {
+        console.log(chalk.green(`  ${line}`));
+      } else if (line.includes('\u2705')) {
+        console.log(chalk.green(`  ${line}`));
+      } else if (line.includes('\u26A0')) {
+        console.log(chalk.red(`  ${line}`));
+      } else if (line.includes('\uD83D\uDCDD') || line.includes('\uD83C\uDFAF') || line.includes('\uD83D\uDCA1')) {
+        console.log(chalk.white(`  ${line}`));
+      } else if (line.includes('\uD83D\uDCC5')) {
+        console.log(chalk.cyan(`  ${line}`));
+      } else if (line.trim().startsWith('-')) {
+        console.log(chalk.dim(`  ${line}`));
+      } else {
+        console.log(chalk.white(`  ${line}`));
+      }
+    }
+    console.log();
+  });
+
+/**
+ * Predict command - PR impact prediction
+ */
+program
+  .command('predict')
+  .description('Predict impact of staged changes before creating a PR')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .action(async (options) => {
+    const rootDir = path.resolve(options.dir);
+
+    const spinner = createSpinner('Analyzing staged changes...');
+    spinner.start();
+
+    const graph = await loadGraph(rootDir);
+
+    if (!graph) {
+      spinner.fail('No graph found. Run `specter scan` first.');
+      return;
+    }
+
+    const prediction = await generatePrediction(rootDir, graph);
+    spinner.stop();
+
+    const output = formatPrediction(prediction);
+
+    console.log();
+    for (const line of output.split('\n')) {
+      if (line.includes('┏') || line.includes('┗') || line.includes('┃')) {
+        console.log(chalk.bold.magenta(`  ${line}`));
+      } else if (line.startsWith('SUMMARY') || line.startsWith('FILE IMPACTS')) {
+        console.log(chalk.bold.cyan(`  ${line}`));
+      } else if (line.includes('WARNINGS')) {
+        console.log(chalk.bold.red(`  ${line}`));
+      } else if (line.includes('RECOMMENDATIONS')) {
+        console.log(chalk.bold.green(`  ${line}`));
+      } else if (line.startsWith('─') || line.startsWith('━')) {
+        console.log(chalk.dim(`  ${line}`));
+      } else if (line.includes('🔴') || line.includes('CRITICAL')) {
+        console.log(chalk.red(`  ${line}`));
+      } else if (line.includes('🟠') || line.includes('HIGH')) {
+        console.log(chalk.yellow(`  ${line}`));
+      } else if (line.includes('🟡') || line.includes('MEDIUM')) {
+        console.log(chalk.yellow(`  ${line}`));
+      } else if (line.includes('🟢') || line.includes('LOW')) {
+        console.log(chalk.green(`  ${line}`));
+      } else if (line.includes('🆕') || line.includes('🗑️') || line.includes('✏️')) {
+        console.log(chalk.white(`  ${line}`));
+      } else if (line.includes('Risk:') && line.includes('█')) {
+        const riskMatch = line.match(/(\d+)%/);
+        const riskValue = riskMatch ? parseInt(riskMatch[1], 10) : 0;
+        const color = riskValue >= 60 ? chalk.red : riskValue >= 40 ? chalk.yellow : chalk.green;
+        console.log(color(`  ${line}`));
+      } else if (line.startsWith('  •')) {
+        console.log(chalk.white(`  ${line}`));
+      } else {
+        console.log(chalk.white(`  ${line}`));
+      }
+    }
+    console.log();
+  });
+
+/**
+ * Reviewers command - suggest PR reviewers
+ */
+program
+  .command('reviewers')
+  .description('Suggest reviewers for staged changes based on file expertise')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .action(async (options) => {
+    const rootDir = path.resolve(options.dir);
+
+    const spinner = createSpinner('Finding reviewers...');
+    spinner.start();
+
+    const graph = await loadGraph(rootDir);
+
+    if (!graph) {
+      spinner.fail('No graph found. Run `specter scan` first.');
+      return;
+    }
+
+    const result = await suggestReviewers(rootDir, graph);
+    spinner.stop();
+
+    const output = formatReviewers(result);
+
+    console.log();
+    for (const line of output.split('\n')) {
+      if (line.includes('┏') || line.includes('┗') || line.includes('┃')) {
+        console.log(chalk.bold.cyan(`  ${line}`));
+      } else if (line.includes('PRIMARY')) {
+        console.log(chalk.bold.yellow(`  ${line}`));
+      } else if (line.includes('BACKUP')) {
+        console.log(chalk.bold.blue(`  ${line}`));
+      } else if (line.includes('OPTIONAL')) {
+        console.log(chalk.dim(`  ${line}`));
+      } else if (line.includes('WARNINGS')) {
+        console.log(chalk.bold.red(`  ${line}`));
+      } else if (line.includes('RECOMMENDATIONS')) {
+        console.log(chalk.bold.green(`  ${line}`));
+      } else if (line.startsWith('─') || line.startsWith('━')) {
+        console.log(chalk.dim(`  ${line}`));
+      } else if (line.includes('Score:')) {
+        console.log(chalk.white(`  ${line}`));
+      } else if (line.startsWith('  •')) {
+        console.log(chalk.white(`  ${line}`));
+      } else {
+        console.log(chalk.white(`  ${line}`));
+      }
+    }
+    console.log();
+  });
+
+/**
+ * Precommit command - quick risk check before committing
+ */
+program
+  .command('precommit')
+  .description('Quick risk check before committing staged changes')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('--exit-code', 'Exit with code 1 if high-risk changes detected')
+  .action(async (options) => {
+    const rootDir = path.resolve(options.dir);
+    const exitCode = options.exitCode;
+
+    const spinner = createSpinner('Checking staged changes...');
+    spinner.start();
+
+    const graph = await loadGraph(rootDir);
+
+    if (!graph) {
+      spinner.fail('No graph found. Run `specter scan` first.');
+      return;
+    }
+
+    const result = await runPrecommitCheck(rootDir, graph);
+    spinner.stop();
+
+    const output = formatPrecommit(result);
+
+    console.log();
+    for (const line of output.split('\n')) {
+      if (line.includes('┏') || line.includes('┗') || line.includes('┃')) {
+        const color =
+          result.status === 'pass' ? chalk.bold.green :
+          result.status === 'warn' ? chalk.bold.yellow : chalk.bold.red;
+        console.log(color(`  ${line}`));
+      } else if (line.includes('HIGH RISK')) {
+        console.log(chalk.bold.red(`  ${line}`));
+      } else if (line.includes('MEDIUM RISK')) {
+        console.log(chalk.bold.yellow(`  ${line}`));
+      } else if (line.includes('LOW RISK')) {
+        console.log(chalk.bold.green(`  ${line}`));
+      } else if (line.includes('SUGGESTIONS')) {
+        console.log(chalk.bold.cyan(`  ${line}`));
+      } else if (line.startsWith('─') || line.startsWith('━')) {
+        console.log(chalk.dim(`  ${line}`));
+      } else if (line.startsWith('  •')) {
+        console.log(chalk.white(`  ${line}`));
+      } else {
+        console.log(chalk.white(`  ${line}`));
+      }
+    }
+    console.log();
+
+    // Exit with error code if high-risk changes detected
+    if (exitCode && result.status === 'fail') {
+      process.exit(1);
+    }
+  });
+
+/**
+ * Drift command - architecture drift detection
+ */
+program
+  .command('drift')
+  .description('Detect architecture drift from best practices')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .action(async (options) => {
+    const rootDir = path.resolve(options.dir);
+
+    const spinner = createSpinner('Analyzing architecture...');
+    spinner.start();
+
+    const graph = await loadGraph(rootDir);
+
+    if (!graph) {
+      spinner.fail('No graph found. Run `specter scan` first.');
+      return;
+    }
+
+    const result = await detectDrift(rootDir, graph);
+    spinner.stop();
+
+    const output = formatDrift(result);
+
+    console.log();
+    for (const line of output.split('\n')) {
+      if (line.includes('┏') || line.includes('┗') || line.includes('┃')) {
+        console.log(chalk.bold.magenta(`  ${line}`));
+      } else if (line.startsWith('DRIFT SCORE') || line.includes('VIOLATIONS') || line.includes('ISSUES')) {
+        console.log(chalk.bold.cyan(`  ${line}`));
+      } else if (line.includes('RECOMMENDATIONS')) {
+        console.log(chalk.bold.green(`  ${line}`));
+      } else if (line.startsWith('─') || line.startsWith('━')) {
+        console.log(chalk.dim(`  ${line}`));
+      } else if (line.includes('🔴')) {
+        console.log(chalk.red(`  ${line}`));
+      } else if (line.includes('🟡')) {
+        console.log(chalk.yellow(`  ${line}`));
+      } else if (line.includes('🟠')) {
+        console.log(chalk.yellow(`  ${line}`));
+      } else if (line.includes('🟢')) {
+        console.log(chalk.green(`  ${line}`));
+      } else if (line.startsWith('  •') || line.startsWith('   →')) {
+        console.log(chalk.white(`  ${line}`));
+      } else {
+        console.log(chalk.white(`  ${line}`));
+      }
+    }
+    console.log();
+  });
+
+/**
+ * Cycles command - circular dependency detection
+ */
+program
+  .command('cycles')
+  .description('Detect circular dependencies in the codebase')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('--exit-code', 'Exit with code 1 if circular dependencies found')
+  .action(async (options) => {
+    const rootDir = path.resolve(options.dir);
+    const exitCode = options.exitCode;
+
+    const spinner = createSpinner('Hunting for cycles...');
+    spinner.start();
+
+    const graph = await loadGraph(rootDir);
+
+    if (!graph) {
+      spinner.fail('No graph found. Run `specter scan` first.');
+      return;
+    }
+
+    const result = detectCycles(graph);
+    spinner.stop();
+
+    const output = formatCycles(result);
+
+    console.log();
+    for (const line of output.split('\n')) {
+      if (line.includes('┏') || line.includes('┗') || line.includes('┃')) {
+        console.log(chalk.bold.magenta(`  ${line}`));
+      } else if (line.startsWith('SUMMARY') || line.includes('SEVERITY CYCLES') || line.includes('WORST CYCLE')) {
+        console.log(chalk.bold.cyan(`  ${line}`));
+      } else if (line.includes('SUGGESTIONS')) {
+        console.log(chalk.bold.green(`  ${line}`));
+      } else if (line.startsWith('─') || line.startsWith('━')) {
+        console.log(chalk.dim(`  ${line}`));
+      } else if (line.includes('🔴')) {
+        console.log(chalk.red(`  ${line}`));
+      } else if (line.includes('🟡')) {
+        console.log(chalk.yellow(`  ${line}`));
+      } else if (line.includes('🟢')) {
+        console.log(chalk.green(`  ${line}`));
+      } else if (line.startsWith('  •')) {
+        console.log(chalk.white(`  ${line}`));
+      } else if (line.includes('No circular dependencies')) {
+        console.log(chalk.bold.green(`  ${line}`));
+      } else {
+        console.log(chalk.white(`  ${line}`));
+      }
+    }
+    console.log();
+
+    // Exit with error code if cycles found
+    if (exitCode && result.totalCycles > 0) {
+      process.exit(1);
+    }
+  });
+
+/**
+ * Velocity command - complexity velocity tracking
+ */
+program
+  .command('velocity')
+  .description('Track complexity velocity and debt growth over time')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .action(async (options) => {
+    const rootDir = path.resolve(options.dir);
+
+    const spinner = createSpinner('Calculating complexity velocity...');
+    spinner.start();
+
+    const graph = await loadGraph(rootDir);
+
+    if (!graph) {
+      spinner.fail('No graph found. Run `specter scan` first.');
+      return;
+    }
+
+    const result = await analyzeVelocity(rootDir, graph);
+    spinner.stop();
+
+    const output = formatVelocity(result);
+
+    console.log();
+    for (const line of output.split('\n')) {
+      if (line.includes('┏') || line.includes('┗') || line.includes('┃')) {
+        console.log(chalk.bold.magenta(`  ${line}`));
+      } else if (line.startsWith('OVERALL VELOCITY') || line.startsWith('INSUFFICIENT DATA')) {
+        console.log(chalk.bold.cyan(`  ${line}`));
+      } else if (line.includes('CURRENT STATE')) {
+        console.log(chalk.bold.cyan(`  ${line}`));
+      } else if (line.includes('30-DAY PROJECTION')) {
+        console.log(chalk.bold.cyan(`  ${line}`));
+      } else if (line.includes('FASTEST GROWING')) {
+        console.log(chalk.bold.red(`  ${line}`));
+      } else if (line.includes('FASTEST IMPROVING')) {
+        console.log(chalk.bold.green(`  ${line}`));
+      } else if (line.includes('INSIGHTS')) {
+        console.log(chalk.bold.yellow(`  ${line}`));
+      } else if (line.startsWith('─') || line.startsWith('━')) {
+        console.log(chalk.dim(`  ${line}`));
+      } else if (line.includes('🔴') || line.includes('critical')) {
+        console.log(chalk.red(`  ${line}`));
+      } else if (line.includes('🟡')) {
+        console.log(chalk.yellow(`  ${line}`));
+      } else if (line.includes('🟠')) {
+        console.log(chalk.yellow(`  ${line}`));
+      } else if (line.includes('🟢') || line.includes('improving')) {
+        console.log(chalk.green(`  ${line}`));
+      } else if (line.includes('📈') || line.includes('degrading')) {
+        console.log(chalk.yellow(`  ${line}`));
+      } else if (line.includes('📉')) {
+        console.log(chalk.green(`  ${line}`));
+      } else {
+        console.log(chalk.white(`  ${line}`));
+      }
+    }
+    console.log();
+  });
+
+/**
+ * Trajectory command - health trajectory projection
+ */
+program
+  .command('trajectory')
+  .description('Project future codebase health based on historical trends')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .action(async (options) => {
+    const rootDir = path.resolve(options.dir);
+
+    const spinner = createSpinner('Projecting health trajectory...');
+    spinner.start();
+
+    const graph = await loadGraph(rootDir);
+
+    if (!graph) {
+      spinner.fail('No graph found. Run `specter scan` first.');
+      return;
+    }
+
+    const result = await projectTrajectory(rootDir, graph);
+    spinner.stop();
+
+    const output = formatTrajectory(result);
+
+    console.log();
+    for (const line of output.split('\n')) {
+      if (line.includes('┏') || line.includes('┗') || line.includes('┃')) {
+        console.log(chalk.bold.magenta(`  ${line}`));
+      } else if (line.startsWith('CURRENT STATE') || line.startsWith('INSUFFICIENT DATA')) {
+        console.log(chalk.bold.cyan(`  ${line}`));
+      } else if (line.includes('PROJECTIONS')) {
+        console.log(chalk.bold.cyan(`  ${line}`));
+      } else if (line.includes('TRAJECTORY')) {
+        console.log(chalk.bold.cyan(`  ${line}`));
+      } else if (line.includes('RISK FACTORS')) {
+        console.log(chalk.bold.red(`  ${line}`));
+      } else if (line.includes('RECOMMENDATIONS')) {
+        console.log(chalk.bold.yellow(`  ${line}`));
+      } else if (line.includes('OUTLOOK')) {
+        console.log(chalk.bold.cyan(`  ${line}`));
+      } else if (line.startsWith('─') || line.startsWith('━')) {
+        console.log(chalk.dim(`  ${line}`));
+      } else if (line.includes('🔴') || line.includes('critical')) {
+        console.log(chalk.red(`  ${line}`));
+      } else if (line.includes('🟡')) {
+        console.log(chalk.yellow(`  ${line}`));
+      } else if (line.includes('🟠')) {
+        console.log(chalk.yellow(`  ${line}`));
+      } else if (line.includes('🟢') || line.includes('improving')) {
+        console.log(chalk.green(`  ${line}`));
+      } else if (line.includes('█')) {
+        console.log(chalk.green(`  ${line}`));
+      } else if (line.includes('░')) {
+        console.log(chalk.dim(`  ${line}`));
+      } else {
+        console.log(chalk.white(`  ${line}`));
+      }
+    }
+    console.log();
+  });
+
+/**
+ * Knowledge Map command - team expertise heatmap
+ */
+program
+  .command('knowledge-map')
+  .alias('kmap')
+  .description('Generate a team expertise heatmap showing who knows what')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .action(async (options) => {
+    const rootDir = path.resolve(options.dir);
+
+    const spinner = createSpinner('Mapping team expertise...');
+    spinner.start();
+
+    const graph = await loadGraph(rootDir);
+
+    if (!graph) {
+      spinner.fail('No graph found. Run `specter scan` first.');
+      return;
+    }
+
+    const result = await generateKnowledgeMap(graph, rootDir);
+    spinner.stop();
+
+    const output = formatKnowledgeMap(result);
+
+    console.log();
+    for (const line of output.split('\n')) {
+      if (line.includes('┏') || line.includes('┗') || line.includes('┃')) {
+        console.log(chalk.bold.cyan(`  ${line}`));
+      } else if (line.startsWith('OVERALL BUS FACTOR') || line.startsWith('Risk Areas')) {
+        console.log(chalk.bold.white(`  ${line}`));
+      } else if (line.startsWith('EXPERTISE HEATMAP') || line.startsWith('AREA DETAILS')) {
+        console.log(chalk.bold.magenta(`  ${line}`));
+      } else if (line.includes('RISK AREAS')) {
+        console.log(chalk.bold.red(`  ${line}`));
+      } else if (line.includes('SUGGESTIONS')) {
+        console.log(chalk.bold.green(`  ${line}`));
+      } else if (line.startsWith('─') || line.startsWith('━')) {
+        console.log(chalk.dim(`  ${line}`));
+      } else if (line.includes('🔴')) {
+        console.log(chalk.red(`  ${line}`));
+      } else if (line.includes('🟡')) {
+        console.log(chalk.yellow(`  ${line}`));
+      } else if (line.includes('🟢') || line.includes('🌟')) {
+        console.log(chalk.green(`  ${line}`));
+      } else if (line.includes('⚠️')) {
+        console.log(chalk.red(`  ${line}`));
+      } else if (line.includes('Legend:')) {
+        console.log(chalk.dim(`  ${line}`));
+      } else if (line.startsWith('  •')) {
+        console.log(chalk.white(`  ${line}`));
+      } else if (line.includes('░') || line.includes('▒') || line.includes('▓') || line.includes('█')) {
+        // Heatmap cells - use default coloring
+        console.log(chalk.white(`  ${line}`));
+      } else {
+        console.log(chalk.white(`  ${line}`));
+      }
+    }
+    console.log();
+  });
+
+/**
+ * Diagram command - generate architecture diagrams
+ */
+program
+  .command('diagram')
+  .description('Generate architecture diagram from the knowledge graph')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option(
+    '-f, --format <format>',
+    'Output format: mermaid, d2, or ascii',
+    'mermaid'
+  )
+  .option('--depth <n>', 'Directory depth to show', '2')
+  .option('--focus <path>', 'Focus on specific file or directory')
+  .option('--complexity', 'Show complexity indicators')
+  .option('--health', 'Show health indicators')
+  .option('-o, --output <file>', 'Save diagram to file')
+  .action(async (options) => {
+    const rootDir = path.resolve(options.dir);
+
+    const spinner = createSpinner('Generating architecture diagram...');
+    spinner.start();
+
+    const graph = await loadGraph(rootDir);
+
+    if (!graph) {
+      spinner.fail('No graph found. Run `specter scan` first.');
+      return;
+    }
+
+    const format = options.format as DiagramFormat;
+    if (!['mermaid', 'd2', 'ascii'].includes(format)) {
+      spinner.fail(`Invalid format: ${format}. Use mermaid, d2, or ascii.`);
+      return;
+    }
+
+    let result = generateDiagram(graph, {
+      format,
+      depth: parseInt(options.depth, 10),
+      focus: options.focus,
+      showComplexity: options.complexity,
+      showHealth: options.health,
+    });
+
+    // Save to file if requested
+    if (options.output) {
+      const outputPath = path.resolve(options.output);
+      result = await saveDiagram(result, outputPath);
+      spinner.succeed(`Diagram saved to ${outputPath}`);
+    } else {
+      spinner.stop();
+    }
+
+    const output = formatDiagramOutput(result);
+
+    console.log();
+    for (const line of output.split('\n')) {
+      if (line.includes('┏') || line.includes('┗') || line.includes('┃')) {
+        console.log(chalk.bold.magenta(`  ${line}`));
+      } else if (line.startsWith('Format:') || line.startsWith('Nodes:') || line.startsWith('Edges:')) {
+        console.log(chalk.cyan(`  ${line}`));
+      } else if (line.startsWith('Saved:')) {
+        console.log(chalk.green(`  ${line}`));
+      } else if (line.startsWith('graph TD') || line.startsWith('subgraph')) {
+        console.log(chalk.yellow(`  ${line}`));
+      } else if (line.includes('-->')) {
+        console.log(chalk.blue(`  ${line}`));
+      } else if (line.startsWith('─') || line.startsWith('━')) {
+        console.log(chalk.dim(`  ${line}`));
+      } else if (line.includes('Paste into') || line.includes('Render with')) {
+        console.log(chalk.dim.italic(`  ${line}`));
+      } else if (line.includes('┌') || line.includes('└') || line.includes('│') || line.includes('├')) {
+        console.log(chalk.white(`  ${line}`));
+      } else {
+        console.log(chalk.white(`  ${line}`));
+      }
+    }
+    console.log();
+  });
+
+/**
+ * Index command - Build embedding index for semantic search
+ */
+program
+  .command('index')
+  .description('Build embedding index for semantic search')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('--rebuild', 'Force rebuild even if index exists')
+  .action(async (options) => {
+    const rootDir = path.resolve(options.dir);
+
+    console.log();
+    console.log(chalk.bold.magenta('  ╔═══════════════════════════════════════════╗'));
+    console.log(
+      chalk.bold.magenta('  ║') +
+        chalk.bold.white('      🧠 BUILDING SEMANTIC INDEX...         ') +
+        chalk.bold.magenta('║')
+    );
+    console.log(chalk.bold.magenta('  ╚═══════════════════════════════════════════╝'));
+    console.log();
+
+    const spinner = createSpinner('Loading knowledge graph...');
+    spinner.start();
+
+    const graph = await loadGraph(rootDir);
+
+    if (!graph) {
+      spinner.fail('No graph found. Run `specter scan` first.');
+      return;
+    }
+
+    // Check if index already exists and is fresh
+    if (!options.rebuild && (await embeddingIndexExists(rootDir))) {
+      const isStale = await isEmbeddingIndexStale(rootDir);
+      if (!isStale) {
+        spinner.info('Embedding index is up to date. Use --rebuild to force rebuild.');
+        return;
+      }
+      spinner.text = 'Index is stale, rebuilding...';
+    }
+
+    spinner.text = 'Building TF-IDF vectors...';
+
+    const startTime = Date.now();
+    const index = await buildEmbeddingIndex(graph);
+
+    spinner.text = 'Saving embedding index...';
+    await saveEmbeddingIndex(rootDir, index);
+
+    const duration = Date.now() - startTime;
+    spinner.succeed(chalk.bold('Semantic index built!'));
+
+    console.log();
+    console.log(chalk.bold('┌─────────────────────────────────────────────┐'));
+    console.log(
+      chalk.bold('│') +
+        chalk.cyan('  🧠 EMBEDDING INDEX READY'.padEnd(44)) +
+        chalk.bold('│')
+    );
+    console.log(chalk.bold('├─────────────────────────────────────────────┤'));
+    console.log(
+      chalk.bold('│') +
+        `  📦 Chunks:      ${chalk.cyan(String(index.chunkCount).padStart(6))}`.padEnd(50) +
+        chalk.bold('│')
+    );
+    console.log(
+      chalk.bold('│') +
+        `  📚 Vocabulary:  ${chalk.cyan(String(index.vocabularySize).padStart(6))}`.padEnd(50) +
+        chalk.bold('│')
+    );
+    console.log(
+      chalk.bold('│') +
+        `  ⏱️  Built in:    ${chalk.cyan(String(duration).padStart(4))}ms`.padEnd(49) +
+        chalk.bold('│')
+    );
+    console.log(chalk.bold('└─────────────────────────────────────────────┘'));
+    console.log();
+    console.log(chalk.dim('  Use `specter search "query"` for semantic search'));
+    console.log();
+  });
+
+program
+  .command('search <query>')
+  .description('Natural language code search with semantic understanding')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('-l, --limit <n>', 'Maximum results to show', '10')
+  .option('-s, --semantic', 'Use pure semantic search')
+  .option('-k, --keyword', 'Use pure keyword search')
+  .action(async (query, options) => {
+    const rootDir = path.resolve(options.dir);
+    const limit = parseInt(options.limit, 10);
+
+    // Determine search mode
+    let mode: SearchMode = 'hybrid';
+    if (options.semantic) {
+      mode = 'semantic';
+    } else if (options.keyword) {
+      mode = 'keyword';
+    }
+
+    const spinner = createSpinner('Searching codebase...');
+    spinner.start();
+
+    const graph = await loadGraph(rootDir);
+
+    if (!graph) {
+      spinner.fail('No graph found. Run `specter scan` first.');
+      return;
+    }
+
+    let response;
+
+    if (mode === 'keyword') {
+      // Pure keyword search (no index needed)
+      response = searchCodebase(query, graph);
+      response.mode = 'keyword';
+    } else {
+      // Need embedding index for semantic or hybrid search
+      const index = await loadEmbeddingIndex(rootDir);
+
+      if (!index) {
+        if (mode === 'semantic') {
+          spinner.fail('No embedding index found. Run `specter index` first for semantic search.');
+          return;
+        }
+        // Fall back to keyword search for hybrid mode
+        spinner.text = 'No embedding index found, using keyword search...';
+        response = searchCodebase(query, graph);
+        response.mode = 'keyword';
+      } else {
+        response = semanticSearch(query, graph, index, { mode, limit: limit * 2 });
+      }
+    }
+
+    spinner.stop();
+
+    const output = formatSearchWithMode(response, limit);
+
+    console.log();
+    for (const line of output.split('\n')) {
+      if (line.includes('┏') || line.includes('┗') || line.includes('┃')) {
+        console.log(chalk.bold.cyan(`  ${line}`));
+      } else if (line.startsWith('Query:')) {
+        console.log(chalk.yellow(`  ${line}`));
+      } else if (line.startsWith('Found:')) {
+        console.log(chalk.dim(`  ${line}`));
+      } else if (line.startsWith('TOP MATCHES') || line.startsWith('GOOD MATCHES') || line.startsWith('OTHER MATCHES')) {
+        console.log(chalk.bold.magenta(`  ${line}`));
+      } else if (line.startsWith('SUGGESTIONS')) {
+        console.log(chalk.bold.yellow(`  ${line}`));
+      } else if (line.startsWith('─') || line.startsWith('━')) {
+        console.log(chalk.dim(`  ${line}`));
+      } else if (line.includes('💡')) {
+        console.log(chalk.italic.cyan(`  ${line}`));
+      } else if (line.startsWith('📁')) {
+        console.log(chalk.cyan(`  ${line}`));
+      } else if (line.startsWith('🔣') || line.startsWith('📦')) {
+        console.log(chalk.green(`  ${line}`));
+      } else if (line.startsWith('📋') || line.startsWith('📝')) {
+        console.log(chalk.blue(`  ${line}`));
+      } else if (line.includes('📍')) {
+        console.log(chalk.dim.cyan(`  ${line}`));
+      } else if (line.includes('✓')) {
+        console.log(chalk.dim.green(`  ${line}`));
+      } else if (line.includes('[█') || line.includes('[▓') || line.includes('[░')) {
+        // Relevance bars - color based on content
+        if (line.includes('█')) {
+          console.log(chalk.green(`  ${line}`));
+        } else if (line.includes('▓')) {
+          console.log(chalk.yellow(`  ${line}`));
+        } else {
+          console.log(chalk.dim(`  ${line}`));
+        }
+      } else if (line.includes('No matches')) {
+        console.log(chalk.yellow(`  ${line}`));
+      } else if (line.includes('... and')) {
+        console.log(chalk.dim(`  ${line}`));
+      } else {
+        console.log(chalk.white(`  ${line}`));
+      }
+    }
+    console.log();
+  });
+
+/**
+ * Ask command - Natural language Q&A with personality
+ */
+program
+  .command('ask <question>')
+  .description('Ask questions about your codebase in natural language')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option(
+    '-p, --personality <mode>',
+    'Output personality: default, noir, roast, mentor, cheerleader, critic, historian, minimalist, therapist, dramatic, ghost',
+    'default'
+  )
+  .action(async (question, options) => {
+    const rootDir = path.resolve(options.dir);
+    const personality = options.personality as PersonalityMode;
+
+    const spinner = createSpinner('Thinking...');
+    spinner.start();
+
+    const graph = await loadGraph(rootDir);
+
+    if (!graph) {
+      spinner.fail('No graph found. Run `specter scan` first.');
+      return;
+    }
+
+    const result = await askCodebase(question, rootDir, graph, { personality });
+    spinner.stop();
+
+    const output = formatAsk(result);
+
+    console.log();
+    for (const line of output.split('\n')) {
+      if (line.includes('┏') || line.includes('┗') || line.includes('┃')) {
+        console.log(chalk.bold.cyan(`  ${line}`));
+      } else if (line.startsWith('Q:')) {
+        console.log(chalk.bold.yellow(`  ${line}`));
+      } else if (line.startsWith('A:')) {
+        console.log(chalk.bold.green(`  ${line}`));
+      } else if (line.startsWith('📁 Relevant')) {
+        console.log(chalk.bold.magenta(`  ${line}`));
+      } else if (line.startsWith('Confidence:')) {
+        // Color confidence based on level
+        if (line.includes('█')) {
+          console.log(chalk.green(`  ${line}`));
+        } else if (line.includes('▓')) {
+          console.log(chalk.yellow(`  ${line}`));
+        } else {
+          console.log(chalk.red(`  ${line}`));
+        }
+      } else if (line.startsWith('─') || line.startsWith('━')) {
+        console.log(chalk.dim(`  ${line}`));
+      } else if (line.startsWith('   📂') || line.startsWith('   📄')) {
+        console.log(chalk.cyan(`  ${line}`));
+      } else if (line.startsWith('   🔣') || line.startsWith('   📦')) {
+        console.log(chalk.green(`  ${line}`));
+      } else if (line.startsWith('   📋') || line.startsWith('   •')) {
+        console.log(chalk.blue(`  ${line}`));
+      } else if (line.includes('*')) {
+        // Personality flourishes (noir, dramatic, etc.)
+        console.log(chalk.italic.dim(`  ${line}`));
+      } else {
+        console.log(chalk.white(`  ${line}`));
+      }
+    }
+    console.log();
+  });
+
+/**
+ * Bus Factor command - Surface bus factor risks prominently
+ */
+program
+  .command('bus-factor')
+  .alias('bus')
+  .description('Surface bus factor risks - which parts of the codebase are at risk if someone leaves')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('--critical-only', 'Only show critical risks')
+  .action(async (options) => {
+    const rootDir = path.resolve(options.dir);
+
+    const spinner = createSpinner('Analyzing bus factor risks...');
+    spinner.start();
+
+    const graph = await loadGraph(rootDir);
+
+    if (!graph) {
+      spinner.fail('No graph found. Run `specter scan` first.');
+      return;
+    }
+
+    const result = await analyzeBusFactor(graph, {
+      criticalOnly: options.criticalOnly,
+    });
+    spinner.stop();
+
+    const output = formatBusFactor(result);
+
+    console.log();
+    for (const line of output.split('\n')) {
+      if (line.includes('+--') || line.includes('|')) {
+        console.log(chalk.bold.cyan(`  ${line}`));
+      } else if (line.startsWith('Overall Bus Factor')) {
+        // Color based on risk level
+        if (line.includes('CRITICAL') || line.includes('[!!]')) {
+          console.log(chalk.bold.red(`  ${line}`));
+        } else if (line.includes('DANGEROUS') || line.includes('[!]')) {
+          console.log(chalk.bold.hex('#FFA500')(`  ${line}`));
+        } else if (line.includes('CONCERNING') || line.includes('[~]')) {
+          console.log(chalk.bold.yellow(`  ${line}`));
+        } else {
+          console.log(chalk.bold.green(`  ${line}`));
+        }
+      } else if (line.startsWith('CRITICAL RISKS') || line.startsWith('[!]') || line.startsWith('[!!]')) {
+        console.log(chalk.bold.red(`  ${line}`));
+      } else if (line.startsWith('MODERATE RISKS') || line.startsWith('[~]')) {
+        console.log(chalk.yellow(`  ${line}`));
+      } else if (line.startsWith('HEALTHY AREAS') || line.startsWith('[+]')) {
+        console.log(chalk.green(`  ${line}`));
+      } else if (line.startsWith('SUMMARY') || line.startsWith('RECOMMENDATIONS')) {
+        console.log(chalk.bold.white(`  ${line}`));
+      } else if (line.startsWith('-'.repeat(10))) {
+        console.log(chalk.dim(`  ${line}`));
+      } else if (line.includes('Solo owner:')) {
+        console.log(chalk.red(`  ${line}`));
+      } else if (line.includes('lines at risk')) {
+        console.log(chalk.yellow(`  ${line}`));
+      } else if (line.startsWith('   ->')) {
+        console.log(chalk.italic.cyan(`  ${line}`));
+      } else if (line.startsWith('[*]')) {
+        console.log(chalk.hex('#FFA500')(`  ${line}`));
+      } else if (line.startsWith('  *')) {
+        console.log(chalk.white(`  ${line}`));
+      } else if (line.includes('... and')) {
+        console.log(chalk.dim(`  ${line}`));
+      } else if (line.includes('Files with single owner') || line.includes('Lines at risk') || line.includes('Percentage of codebase')) {
+        console.log(chalk.white(`  ${line}`));
+      } else {
+        console.log(chalk.white(`  ${line}`));
+      }
+    }
+    console.log();
+  });
+
+/**
+ * Hotspots command - Complexity x Churn analysis
+ */
+program
+  .command('hotspots')
+  .description('Find complexity x churn hotspots - highest priority for refactoring')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('-t, --top <n>', 'Number of hotspots to show', '20')
+  .option('-s, --since <period>', 'Time period for churn analysis', '3 months ago')
+  .action(async (options) => {
+    const rootDir = path.resolve(options.dir);
+
+    const spinner = createSpinner('Analyzing complexity x churn hotspots...');
+    spinner.start();
+
+    const graph = await loadGraph(rootDir);
+
+    if (!graph) {
+      spinner.fail('No graph found. Run `specter scan` first.');
+      return;
+    }
+
+    const result = await analyzeHotspots(rootDir, graph, {
+      since: options.since,
+      top: parseInt(options.top, 10),
+    });
+    spinner.stop();
+
+    const output = formatHotspots(result);
+
+    console.log();
+    for (const line of output.split('\n')) {
+      if (line.includes('\u250F') || line.includes('\u2517') || line.includes('\u2503')) {
+        console.log(chalk.bold.red(`  ${line}`));
+      } else if (line.startsWith('SCATTER PLOT') || line.startsWith('QUADRANT') || line.startsWith('TOP HOTSPOTS')) {
+        console.log(chalk.bold.magenta(`  ${line}`));
+      } else if (line.startsWith('SUMMARY') || line.startsWith('RECOMMENDATIONS')) {
+        console.log(chalk.bold.cyan(`  ${line}`));
+      } else if (line.startsWith('Period:')) {
+        console.log(chalk.dim(`  ${line}`));
+      } else if (line.startsWith('\u2500') || line.startsWith('Legend:')) {
+        console.log(chalk.dim(`  ${line}`));
+      } else if (line.includes('\uD83D\uDD34 CRITICAL')) {
+        console.log(chalk.bold.red(`  ${line}`));
+      } else if (line.includes('\uD83D\uDFE0 HIGH') || line.includes('\uD83D\uDFE0 Legacy')) {
+        console.log(chalk.yellow(`  ${line}`));
+      } else if (line.includes('\uD83D\uDFE1 MEDIUM') || line.includes('\uD83D\uDFE1 Active')) {
+        console.log(chalk.cyan(`  ${line}`));
+      } else if (line.includes('\uD83D\uDFE2') || line.includes('Healthy')) {
+        console.log(chalk.green(`  ${line}`));
+      } else if (line.includes('\uD83D\uDD34 DANGER')) {
+        console.log(chalk.bold.red(`  ${line}`));
+      } else if (line.includes('Score:')) {
+        console.log(chalk.yellow(`  ${line}`));
+      } else if (line.includes('Complexity:') || line.includes('Churn:')) {
+        console.log(chalk.dim.cyan(`  ${line}`));
+      } else if (line.includes('Contributors:')) {
+        console.log(chalk.dim(`  ${line}`));
+      } else if (line.includes('Estimated effort:')) {
+        console.log(chalk.dim.yellow(`  ${line}`));
+      } else if (line.includes('\uD83D\uDEA8') || line.includes('\u26A0\uFE0F') || line.includes('\uD83D\uDCCA')) {
+        console.log(chalk.italic.yellow(`  ${line}`));
+      } else if (line.includes('\u25B2') || line.includes('\u25B6') || line.includes('\u2502') || line.includes('\u2514')) {
+        // Scatter plot
+        console.log(chalk.white(`  ${line}`));
+      } else if (line.includes('\u25CF') || line.includes('\u25CB') || line.includes('\u25E6')) {
+        // Plot markers
+        console.log(chalk.white(`  ${line}`));
+      } else if (line.includes('... and')) {
+        console.log(chalk.dim(`  ${line}`));
+      } else {
+        console.log(chalk.white(`  ${line}`));
+      }
+    }
+    console.log();
+  });
+
+/**
+ * DORA command - DevOps Research & Assessment metrics
+ */
+program
+  .command('dora')
+  .description('Calculate DORA metrics for software delivery performance')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('--since <period>', 'Time period to analyze', '6 months ago')
+  .action(async (options) => {
+    const rootDir = path.resolve(options.dir);
+
+    const spinner = createSpinner('Calculating DORA metrics...');
+    spinner.start();
+
+    try {
+      const result = await calculateDora(rootDir, { since: options.since });
+      spinner.stop();
+
+      const output = formatDora(result);
+
+      console.log();
+      for (const line of output.split('\n')) {
+        if (line.includes('\u250F') || line.includes('\u2517') || line.includes('\u2503')) {
+          console.log(chalk.bold.cyan(`  ${line}`));
+        } else if (line.startsWith('Overall Performance:')) {
+          if (line.includes('ELITE')) {
+            console.log(chalk.bold.green(`  ${line}`));
+          } else if (line.includes('HIGH')) {
+            console.log(chalk.bold.green(`  ${line}`));
+          } else if (line.includes('MEDIUM')) {
+            console.log(chalk.bold.yellow(`  ${line}`));
+          } else {
+            console.log(chalk.bold.red(`  ${line}`));
+          }
+        } else if (line.includes('\u2B50')) {
+          // Star emoji - elite
+          console.log(chalk.bold.green(`  ${line}`));
+        } else if (line.includes('\uD83D\uDFE2')) {
+          // Green circle - high
+          console.log(chalk.green(`  ${line}`));
+        } else if (line.includes('\uD83D\uDFE1')) {
+          // Yellow circle - medium
+          console.log(chalk.yellow(`  ${line}`));
+        } else if (line.includes('\uD83D\uDD34')) {
+          // Red circle - low
+          console.log(chalk.red(`  ${line}`));
+        } else if (line.startsWith('  [')) {
+          // Progress bar
+          console.log(chalk.cyan(`  ${line}`));
+        } else if (line.startsWith('\u2500') || line.startsWith('Period:')) {
+          console.log(chalk.dim(`  ${line}`));
+        } else if (line.startsWith('Data Summary:') || line.startsWith('Recommendations:')) {
+          console.log(chalk.bold.white(`  ${line}`));
+        } else if (line.includes('\u2022')) {
+          // Bullet points
+          console.log(chalk.italic.yellow(`  ${line}`));
+        } else if (line.includes('\u2728')) {
+          // Sparkles
+          console.log(chalk.bold.green(`  ${line}`));
+        } else {
+          console.log(chalk.white(`  ${line}`));
+        }
+      }
+      console.log();
+    } catch (error) {
+      spinner.fail('Failed to calculate DORA metrics');
+      console.error(chalk.red(error instanceof Error ? error.message : String(error)));
+    }
+  });
+
+/**
+ * Coupling command - Hidden coupling discovery
+ */
+program
+  .command('coupling')
+  .description('Find hidden couplings - files that change together but have no direct dependency')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('--hidden-only', 'Only show hidden couplings (no expected couplings)')
+  .option('--min-strength <n>', 'Minimum coupling strength (0-100)', '30')
+  .action(async (options) => {
+    const rootDir = path.resolve(options.dir);
+
+    const spinner = createSpinner('Analyzing coupling patterns...');
+    spinner.start();
+
+    const graph = await loadGraph(rootDir);
+
+    if (!graph) {
+      spinner.fail('No graph found. Run `specter scan` first.');
+      return;
+    }
+
+    const result = await analyzeCoupling(rootDir, graph, {
+      hiddenOnly: options.hiddenOnly,
+      minStrength: parseInt(options.minStrength, 10),
+    });
+    spinner.stop();
+
+    const output = formatCoupling(result);
+
+    console.log();
+    for (const line of output.split('\n')) {
+      if (line.includes('\u250F') || line.includes('\u2517') || line.includes('\u2503')) {
+        console.log(chalk.bold.cyan(`  ${line}`));
+      } else if (line.startsWith('\uD83D\uDD34 HIDDEN') || line.startsWith('\uD83D\uDD34 SUSPICIOUS')) {
+        console.log(chalk.bold.red(`  ${line}`));
+      } else if (line.startsWith('\uD83D\uDFE1 HIDDEN')) {
+        console.log(chalk.bold.yellow(`  ${line}`));
+      } else if (line.startsWith('\uD83D\uDFE2 EXPECTED')) {
+        console.log(chalk.bold.green(`  ${line}`));
+      } else if (line.includes('\uD83D\uDD34')) {
+        console.log(chalk.red(`  ${line}`));
+      } else if (line.includes('\uD83D\uDFE1')) {
+        console.log(chalk.yellow(`  ${line}`));
+      } else if (line.includes('\uD83D\uDFE2')) {
+        console.log(chalk.green(`  ${line}`));
+      } else if (line.includes('\u26A0\uFE0F') || line.includes('No direct import')) {
+        console.log(chalk.bold.yellow(`  ${line}`));
+      } else if (line.startsWith('   \u2192')) {
+        console.log(chalk.italic.cyan(`  ${line}`));
+      } else if (line.startsWith('   \u2194')) {
+        console.log(chalk.magenta(`  ${line}`));
+      } else if (line.startsWith('RECOMMENDATIONS') || line.startsWith('\uD83D\uDD34 HIDDEN COUPLINGS')) {
+        console.log(chalk.bold.white(`  ${line}`));
+      } else if (line.startsWith('\u2500')) {
+        console.log(chalk.dim(`  ${line}`));
+      } else if (line.startsWith('Found') || line.startsWith('  \uD83D')) {
+        console.log(chalk.white(`  ${line}`));
+      } else if (line.startsWith('  \u2022')) {
+        console.log(chalk.cyan(`  ${line}`));
+      } else if (line.includes('correlation') || line.includes('Changed together')) {
+        console.log(chalk.dim.cyan(`  ${line}`));
+      } else if (line.includes('... and')) {
+        console.log(chalk.dim(`  ${line}`));
+      } else {
+        console.log(chalk.white(`  ${line}`));
+      }
+    }
+    console.log();
+  });
+
+/**
+ * Report command - generate comprehensive markdown report
+ */
+program
+  .command('report')
+  .description('Generate a comprehensive codebase health report')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('-o, --output <file>', 'Save report to file')
+  .option('--json', 'Output in JSON format')
+  .option('--quick', 'Generate executive summary only')
+  .option('--no-health', 'Skip health overview section')
+  .option('--no-risks', 'Skip risks section')
+  .option('--no-dora', 'Skip development metrics section')
+  .option('--no-hotspots', 'Skip hotspots section')
+  .option('--no-bus-factor', 'Skip bus factor section')
+  .option('--no-trajectory', 'Skip trajectory section')
+  .action(async (options) => {
+    const rootDir = path.resolve(options.dir);
+    const fs = await import('node:fs/promises');
+
+    const spinner = createSpinner('Generating comprehensive report...');
+    spinner.start();
+
+    const graph = await loadGraph(rootDir);
+
+    if (!graph) {
+      spinner.fail('No graph found. Run `specter scan` first.');
+      return;
+    }
+
+    try {
+      const reportOptions = {
+        includeHealth: options.health !== false,
+        includeRisks: options.risks !== false,
+        includeDora: options.dora !== false,
+        includeHotspots: options.hotspots !== false,
+        includeBusFactor: options.busFactor !== false,
+        includeTrajectory: options.trajectory !== false,
+        format: options.json ? 'json' as const : 'markdown' as const,
+        quick: options.quick || false,
+      };
+
+      const result = await generateReport(rootDir, graph, reportOptions);
+      spinner.stop();
+
+      // Output or save the report
+      if (options.output) {
+        await fs.writeFile(options.output, result.content, 'utf-8');
+        result.outputPath = options.output;
+
+        // Show summary
+        const summary = formatReportSummary(result);
+        for (const line of summary.split('\n')) {
+          if (line.includes('+') || line.includes('|')) {
+            console.log(chalk.bold.green(line));
+          } else if (line.includes('KEY METRICS:')) {
+            console.log(chalk.bold.cyan(line));
+          } else if (line.includes('Saved to:')) {
+            console.log(chalk.bold.yellow(line));
+          } else {
+            console.log(chalk.white(line));
+          }
+        }
+      } else {
+        // Output to stdout
+        if (options.json) {
+          console.log(result.content);
+        } else {
+          // Pretty print markdown for terminal
+          console.log();
+          for (const line of result.content.split('\n')) {
+            if (line.startsWith('# ')) {
+              console.log(chalk.bold.magenta(line));
+            } else if (line.startsWith('## ')) {
+              console.log(chalk.bold.cyan(line));
+            } else if (line.startsWith('### ')) {
+              console.log(chalk.bold.yellow(line));
+            } else if (line.startsWith('| ')) {
+              console.log(chalk.white(line));
+            } else if (line.startsWith('|---')) {
+              console.log(chalk.dim(line));
+            } else if (line.startsWith('- ')) {
+              console.log(chalk.white(line));
+            } else if (line.startsWith('> ')) {
+              console.log(chalk.italic.cyan(line));
+            } else if (line.startsWith('```')) {
+              console.log(chalk.dim(line));
+            } else if (line.startsWith('---')) {
+              console.log(chalk.dim(line));
+            } else if (line.startsWith('*') && line.endsWith('*')) {
+              console.log(chalk.italic(line));
+            } else if (line.includes(':red_circle:')) {
+              console.log(chalk.red(line.replace(/:red_circle:/g, '\uD83D\uDD34')));
+            } else if (line.includes(':orange_circle:')) {
+              console.log(chalk.yellow(line.replace(/:orange_circle:/g, '\uD83D\uDFE0')));
+            } else if (line.includes(':yellow_circle:')) {
+              console.log(chalk.yellow(line.replace(/:yellow_circle:/g, '\uD83D\uDFE1')));
+            } else if (line.includes(':green_circle:')) {
+              console.log(chalk.green(line.replace(/:green_circle:/g, '\uD83D\uDFE2')));
+            } else if (line.includes(':white_check_mark:')) {
+              console.log(chalk.green(line.replace(/:white_check_mark:/g, '\u2705')));
+            } else if (line.includes(':warning:')) {
+              console.log(chalk.yellow(line.replace(/:warning:/g, '\u26A0\uFE0F')));
+            } else if (line.includes(':arrow_')) {
+              let processed = line
+                .replace(/:arrow_upper_right:/g, '\u2197\uFE0F')
+                .replace(/:arrow_lower_right:/g, '\u2198\uFE0F')
+                .replace(/:arrow_right:/g, '\u2192')
+                .replace(/:arrow_double_down:/g, '\u23EC');
+              console.log(chalk.white(processed));
+            } else if (line.includes(':blue_circle:')) {
+              console.log(chalk.blue(line.replace(/:blue_circle:/g, '\uD83D\uDD35')));
+            } else {
+              console.log(chalk.white(line));
+            }
+          }
+          console.log();
+        }
+      }
+    } catch (error) {
+      spinner.fail('Failed to generate report');
+      console.error(chalk.red(error instanceof Error ? error.message : String(error)));
+      process.exit(1);
+    }
+  });
+
+/**
+ * Init command - set up Specter for a new project
+ */
+program
+  .command('init')
+  .description('Initialize Specter for a new project with interactive setup')
+  .option('-d, --dir <path>', 'Directory to initialize', '.')
+  .option('-y, --yes', 'Accept all defaults (non-interactive)')
+  .option('--no-hooks', 'Skip pre-commit hook setup')
+  .option('--no-scan', 'Skip initial scan')
+  .option(
+    '-p, --personality <mode>',
+    `Personality mode: ${listAvailablePersonalities()}`,
+    'default'
+  )
+  .action(async (options) => {
+    const rootDir = path.resolve(options.dir);
+
+    // Interactive mode (default)
+    if (!options.yes) {
+      // Print welcome banner
+      console.log(chalk.bold.magenta(formatInitWelcome()));
+
+      try {
+        const result = await initializeProjectInteractive(rootDir);
+
+        // Print completion message
+        console.log(chalk.bold.green(formatInitComplete(result, rootDir)));
+      } catch (error) {
+        console.error(chalk.red('Failed to initialize Specter'));
+        console.error(chalk.red(error instanceof Error ? error.message : String(error)));
+        process.exit(1);
+      }
+      return;
+    }
+
+    // Non-interactive mode (--yes flag)
+    const spinner = createSpinner('Initializing Specter...').start();
+
+    try {
+      const result = await initializeProject(rootDir, {
+        hooks: options.hooks !== false,
+        scan: options.scan !== false,
+        config: true,
+        personality: options.personality as PersonalityMode,
+      });
+
+      if (!result.configCreated && !result.scanCompleted) {
+        spinner.stop();
+        console.log('Specter is already initialized in this project.');
+        console.log(chalk.dim('  To reinitialize, delete specter.config.json and .specter/'));
+        return;
+      }
+
+      spinner.succeed('Specter initialized!');
+
+      // Print summary
+      console.log();
+      console.log(chalk.bold('  Created:'));
+      if (result.configCreated) {
+        console.log(chalk.green('    ✓ specter.config.json'));
+      }
+      if (result.hooksInstalled) {
+        console.log(chalk.green('    ✓ .husky/pre-commit'));
+      }
+      if (result.scanCompleted) {
+        console.log(chalk.green('    ✓ .specter/ (knowledge graph)'));
+        if (result.fileCount && result.nodeCount) {
+          console.log();
+          console.log(chalk.cyan(`    Files: ${result.fileCount}`));
+          console.log(chalk.cyan(`    Symbols: ${result.nodeCount}`));
+          if (result.healthScore !== undefined) {
+            const healthEmoji = result.healthScore >= 70 ? '🟢' : result.healthScore >= 40 ? '🟡' : '🔴';
+            console.log(chalk.cyan(`    Health: ${healthEmoji} ${result.healthScore}/100`));
+          }
+        }
+      }
+
+      console.log();
+      console.log(chalk.dim('  Next steps:'));
+      console.log(chalk.dim('    specter health    # Check codebase health'));
+      console.log(chalk.dim('    specter tour      # Take a guided tour'));
+      console.log(chalk.dim('    specter morning   # Get your daily briefing'));
+      console.log();
+    } catch (error) {
+      spinner.fail('Failed to initialize Specter');
+      console.error(chalk.red(error instanceof Error ? error.message : String(error)));
+      process.exit(1);
+    }
+  });
+
+/**
+ * Init-hooks command - set up git hooks for automatic checks
+ */
+program
+  .command('init-hooks')
+  .description('Set up git hooks for automatic Specter checks')
+  .option('--pre-commit', 'Install pre-commit framework hook')
+  .option('--husky', 'Set up with Husky')
+  .option('--simple', 'Install simple git hook (no framework)')
+  .action(async (options) => {
+    const fs = await import('node:fs');
+    const rootDir = process.cwd();
+    const gitDir = path.join(rootDir, '.git');
+
+    // Check if we're in a git repo
+    if (!fs.existsSync(gitDir)) {
+      console.log(chalk.red('Not a git repository. Run `git init` first.'));
+      process.exit(1);
+    }
+
+    // Check if graph exists
+    const graph = await loadGraph(rootDir);
+    if (!graph) {
+      console.log(chalk.yellow('No Specter graph found. Run `specter scan` first.'));
+      console.log(chalk.dim('Specter hooks require an initial scan to work.'));
+      console.log();
+    }
+
+    console.log();
+    console.log(chalk.bold.magenta('  Setting up Specter Git Hooks'));
+    console.log(chalk.dim('  ' + '─'.repeat(40)));
+    console.log();
+
+    if (options.husky) {
+      // Husky setup
+      const huskyDir = path.join(rootDir, '.husky');
+
+      if (!fs.existsSync(huskyDir)) {
+        console.log(chalk.yellow('  Husky not installed. Installing...'));
+        const { execSync } = await import('node:child_process');
+        try {
+          execSync('npx husky init', { cwd: rootDir, stdio: 'inherit' });
+        } catch {
+          console.log(chalk.red('  Failed to initialize Husky. Install manually:'));
+          console.log(chalk.dim('    npm install -D husky && npx husky init'));
+          process.exit(1);
+        }
+      }
+
+      const preCommitPath = path.join(huskyDir, 'pre-commit');
+      const hookContent = `#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Specter pre-commit check
+specter precommit --exit-code
+`;
+
+      fs.writeFileSync(preCommitPath, hookContent, { mode: 0o755 });
+      console.log(chalk.green('  Created .husky/pre-commit'));
+      console.log();
+      console.log(chalk.bold('  Specter will now check every commit!'));
+      console.log(chalk.dim('  High-risk commits will be blocked.'));
+
+    } else if (options.simple) {
+      // Simple git hook
+      const hooksDir = path.join(gitDir, 'hooks');
+      const preCommitPath = path.join(hooksDir, 'pre-commit');
+
+      // Check if hook already exists
+      if (fs.existsSync(preCommitPath)) {
+        const existing = fs.readFileSync(preCommitPath, 'utf-8');
+        if (!existing.includes('specter')) {
+          // Append to existing hook
+          const updatedHook = existing + `
+# Specter pre-commit check
+specter precommit --exit-code || exit 1
+`;
+          fs.writeFileSync(preCommitPath, updatedHook, { mode: 0o755 });
+          console.log(chalk.green('  Added Specter to existing pre-commit hook'));
+        } else {
+          console.log(chalk.yellow('  Specter already in pre-commit hook'));
+        }
+      } else {
+        // Create new hook
+        const hookContent = `#!/bin/sh
+# Specter pre-commit check
+# Blocks high-risk commits automatically
+
+specter precommit --exit-code || exit 1
+`;
+        fs.writeFileSync(preCommitPath, hookContent, { mode: 0o755 });
+        console.log(chalk.green('  Created .git/hooks/pre-commit'));
+      }
+
+      console.log();
+      console.log(chalk.bold('  Specter will now check every commit!'));
+      console.log(chalk.dim('  High-risk commits will be blocked.'));
+
+    } else if (options.preCommit) {
+      // Pre-commit framework setup
+      const configPath = path.join(rootDir, '.pre-commit-config.yaml');
+
+      if (fs.existsSync(configPath)) {
+        console.log(chalk.yellow('  .pre-commit-config.yaml already exists'));
+        console.log(chalk.dim('  Add the following to your repos section:'));
+        console.log();
+        console.log(chalk.cyan('  - repo: https://github.com/your-org/specter'));
+        console.log(chalk.cyan('    rev: v1.0.0'));
+        console.log(chalk.cyan('    hooks:'));
+        console.log(chalk.cyan('      - id: specter-precommit'));
+      } else {
+        const configContent = `# Pre-commit hooks configuration
+# See https://pre-commit.com for more information
+
+repos:
+  - repo: https://github.com/your-org/specter
+    rev: v1.0.0
+    hooks:
+      - id: specter-precommit
+      # Optionally add more hooks:
+      # - id: specter-health
+      # - id: specter-cycles
+`;
+        fs.writeFileSync(configPath, configContent);
+        console.log(chalk.green('  Created .pre-commit-config.yaml'));
+        console.log();
+        console.log(chalk.dim('  Install hooks with:'));
+        console.log(chalk.cyan('    pre-commit install'));
+      }
+
+    } else {
+      // Show options
+      console.log('  Choose a hook setup method:');
+      console.log();
+      console.log(chalk.bold('  --simple'));
+      console.log(chalk.dim('    Direct .git/hooks/pre-commit'));
+      console.log(chalk.dim('    No dependencies, works everywhere'));
+      console.log();
+      console.log(chalk.bold('  --husky'));
+      console.log(chalk.dim('    Uses Husky for hook management'));
+      console.log(chalk.dim('    Best for Node.js projects'));
+      console.log();
+      console.log(chalk.bold('  --pre-commit'));
+      console.log(chalk.dim('    Uses pre-commit framework'));
+      console.log(chalk.dim('    Best for Python or multi-language projects'));
+      console.log();
+      console.log(chalk.dim('  Example: specter init-hooks --simple'));
+    }
+
     console.log();
   });
 

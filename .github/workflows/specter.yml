@@ -1,0 +1,34 @@
+name: Specter Analysis
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+# Prevent duplicate runs
+concurrency:
+  group: specter-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze PR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for accurate analysis
+
+      - name: Run Specter Analysis
+        uses: ./
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          scan-dir: '.'
+          personality: 'default'
+          comment-on-pr: 'true'
+          # Uncomment to fail on high-risk changes:
+          # fail-on-high-risk: 'true'
