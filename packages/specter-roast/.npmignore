@@ -1,0 +1,19 @@
+# Source files
+src/
+*.ts
+!dist/**/*.d.ts
+
+# Tests
+tests/
+*.test.ts
+*.spec.ts
+
+# Config
+tsconfig.json
+
+# Development
+node_modules/
+*.log
+
+# Misc
+.DS_Store

@@ -7,7 +7,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   COMPLEXITY_THRESHOLDS,
-  type ComplexityReport,
   compareComplexity,
   findComplexityHotspots,
   generateComplexityReport,
@@ -540,6 +539,120 @@ describe('Complexity Analyzer', () => {
 
       // Should have two suggestions for the same function
       expect(suggestions).toHaveLength(2);
+    });
+  });
+
+  describe('Custom thresholds', () => {
+    it('should respect custom thresholds in getComplexityCategory', () => {
+      const customThresholds = { low: 3, medium: 6, high: 12 };
+
+      expect(getComplexityCategory(3, customThresholds)).toBe('low');
+      expect(getComplexityCategory(4, customThresholds)).toBe('medium');
+      expect(getComplexityCategory(6, customThresholds)).toBe('medium');
+      expect(getComplexityCategory(7, customThresholds)).toBe('high');
+      expect(getComplexityCategory(12, customThresholds)).toBe('high');
+      expect(getComplexityCategory(13, customThresholds)).toBe('veryHigh');
+    });
+
+    it('should use custom thresholds in getComplexityEmoji', () => {
+      const customThresholds = { low: 2, medium: 4, high: 8 };
+
+      expect(getComplexityEmoji(2, customThresholds)).toBe('\u{1F7E2}'); // Green - low
+      expect(getComplexityEmoji(3, customThresholds)).toBe('\u{1F7E1}'); // Yellow - medium
+      expect(getComplexityEmoji(5, customThresholds)).toBe('\u{1F7E0}'); // Orange - high
+      expect(getComplexityEmoji(10, customThresholds)).toBe('\u{1F534}'); // Red - veryHigh
+    });
+
+    it('should use custom thresholds in findComplexityHotspots', () => {
+      const graph = createMockGraph([
+        { id: 'f1', name: 'simple', complexity: 3 },
+        { id: 'f2', name: 'moderate', complexity: 5 },
+        { id: 'f3', name: 'complex', complexity: 8 },
+      ]);
+
+      const customThresholds = { low: 2, medium: 4, high: 6 };
+
+      // With custom medium threshold of 4, should find 5 and 8
+      const hotspots = findComplexityHotspots(graph, {
+        threshold: customThresholds.medium,
+        thresholds: customThresholds,
+      });
+
+      expect(hotspots).toHaveLength(2);
+      expect(hotspots[0].complexity).toBe(8);
+      expect(hotspots[1].complexity).toBe(5);
+    });
+
+    it('should use custom thresholds in generateComplexityReport', () => {
+      const graph = createMockGraph([
+        { id: 'f1', complexity: 2 }, // low with custom
+        { id: 'f2', complexity: 4 }, // medium with custom
+        { id: 'f3', complexity: 6 }, // high with custom
+        { id: 'f4', complexity: 10 }, // veryHigh with custom
+      ]);
+
+      const customThresholds = { low: 2, medium: 4, high: 8 };
+      const report = generateComplexityReport(graph, customThresholds);
+
+      expect(report.distribution.low).toBe(1);
+      expect(report.distribution.medium).toBe(1);
+      expect(report.distribution.high).toBe(1);
+      expect(report.distribution.veryHigh).toBe(1);
+    });
+
+    it('should use custom thresholds in suggestRefactoringTargets', () => {
+      const graph = createMockGraph([
+        { id: 'f1', name: 'simpleFunc', complexity: 3, lineStart: 1, lineEnd: 10 },
+        { id: 'f2', name: 'moderateFunc', complexity: 5, lineStart: 11, lineEnd: 30 },
+        { id: 'f3', name: 'complexFunc', complexity: 8, lineStart: 31, lineEnd: 50 },
+      ]);
+
+      // With custom thresholds:
+      // - complexity 3: not suggested (3 is not > medium 4)
+      // - complexity 5: medium priority (5 > medium 4, but not > high 6)
+      // - complexity 8: high priority (8 > high 6)
+      const customThresholds = { low: 2, medium: 4, high: 6 };
+      const suggestions = suggestRefactoringTargets(graph, customThresholds);
+
+      expect(suggestions).toHaveLength(2);
+      expect(suggestions[0].priority).toBe('high');
+      expect(suggestions[0].node.name).toBe('complexFunc');
+      expect(suggestions[1].priority).toBe('medium');
+      expect(suggestions[1].node.name).toBe('moderateFunc');
+    });
+
+    it('should handle stricter thresholds', () => {
+      const graph = createMockGraph([
+        { id: 'f1', complexity: 2 },
+        { id: 'f2', complexity: 3 },
+        { id: 'f3', complexity: 5 },
+      ]);
+
+      const strictThresholds = { low: 1, medium: 2, high: 4 };
+      const report = generateComplexityReport(graph, strictThresholds);
+
+      // With strict thresholds, most functions are high/veryHigh
+      expect(report.distribution.low).toBe(0);
+      expect(report.distribution.medium).toBe(1); // complexity 2
+      expect(report.distribution.high).toBe(1); // complexity 3
+      expect(report.distribution.veryHigh).toBe(1); // complexity 5
+    });
+
+    it('should handle relaxed thresholds', () => {
+      const graph = createMockGraph([
+        { id: 'f1', complexity: 10 },
+        { id: 'f2', complexity: 20 },
+        { id: 'f3', complexity: 30 },
+      ]);
+
+      const relaxedThresholds = { low: 15, medium: 25, high: 40 };
+      const report = generateComplexityReport(graph, relaxedThresholds);
+
+      // With relaxed thresholds, even high complexity is considered low/medium
+      expect(report.distribution.low).toBe(1); // complexity 10
+      expect(report.distribution.medium).toBe(1); // complexity 20
+      expect(report.distribution.high).toBe(1); // complexity 30
+      expect(report.distribution.veryHigh).toBe(0);
     });
   });
 

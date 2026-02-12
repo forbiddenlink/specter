@@ -1,6 +1,15 @@
 # Specter
 
 <p align="center">
+  <a href="https://www.npmjs.com/package/@purplegumdropz/specter"><img src="https://img.shields.io/npm/v/@purplegumdropz/specter.svg" alt="npm version"></a>
+  <a href="https://github.com/forbiddenlink/specter/actions"><img src="https://github.com/forbiddenlink/specter/workflows/CI/badge.svg" alt="Build Status"></a>
+  <a href="https://codecov.io/gh/forbiddenlink/specter"><img src="https://codecov.io/gh/forbiddenlink/specter/branch/main/graph/badge.svg" alt="Coverage"></a>
+  <a href="https://github.com/forbiddenlink/specter/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/@purplegumdropz/specter.svg" alt="License"></a>
+  <a href="https://github.com/forbiddenlink/specter"><img src="https://img.shields.io/github/stars/forbiddenlink/specter?style=social" alt="GitHub stars"></a>
+  <a href="https://securityscorecards.dev/viewer/?uri=github.com/forbiddenlink/specter"><img src="https://api.securityscorecards.dev/projects/github.com/forbiddenlink/specter/badge" alt="OpenSSF Scorecard"></a>
+</p>
+
+<p align="center">
   <strong>Give your codebase a voice.</strong>
 </p>
 

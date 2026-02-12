@@ -133,7 +133,7 @@ export function analyzeCodebase(rootDir: string): CodebaseStats {
       }
 
       // Check for suspicious patterns
-      const lowerContent = content.toLowerCase();
+      const _lowerContent = content.toLowerCase();
       todoCount += (content.match(/TODO|FIXME|HACK|XXX/gi) || []).length;
       consoleLogCount += (content.match(/console\.log/g) || []).length;
       anyCount += (content.match(/:\s*any\b/g) || []).length;

@@ -1,5 +1,5 @@
 {
-  "name": "specter-roast",
+  "name": "@purplegumdropz/specter-roast",
   "version": "1.0.0",
   "description": "Get a brutally honest roast of your codebase. From the makers of Specter.",
   "type": "module",
@@ -7,6 +7,10 @@
   "bin": {
     "specter-roast": "dist/cli.js"
   },
+  "files": [
+    "dist/",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch"
@@ -32,10 +36,10 @@
   },
   "dependencies": {
     "chalk": "^5.3.0",
-    "commander": "^12.1.0"
+    "commander": "^14.0.0"
   },
   "devDependencies": {
-    "@types/node": "^20.11.0",
-    "typescript": "^5.3.0"
+    "@types/node": "^20.19.33",
+    "typescript": "^5.9.0"
   }
 }
