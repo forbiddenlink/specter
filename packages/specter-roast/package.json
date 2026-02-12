@@ -1,0 +1,41 @@
+{
+  "name": "specter-roast",
+  "version": "1.0.0",
+  "description": "Get a brutally honest roast of your codebase. From the makers of Specter.",
+  "type": "module",
+  "main": "dist/cli.js",
+  "bin": {
+    "specter-roast": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "keywords": [
+    "code-analysis",
+    "roast",
+    "code-review",
+    "fun",
+    "developer-tools",
+    "linter",
+    "cli"
+  ],
+  "author": "Liz Stein",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/forbiddenlink/specter",
+    "directory": "packages/specter-roast"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.3.0"
+  }
+}

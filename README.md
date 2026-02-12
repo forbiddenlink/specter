@@ -52,6 +52,15 @@ specter scan && specter health && specter morning
 2. `specter health` - See overall health and hotspots
 3. `specter morning` - Get your daily briefing
 
+### Quick Roast (No Install Required)
+
+Want to try Specter without installing? Get a brutal roast of any codebase:
+
+```bash
+npx specter-roast          # Normal roast
+npx specter-roast --savage  # Maximum brutality
+```
+
 ---
 
 ## Features at a Glance
@@ -862,7 +871,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: your-org/specter-action@v1
+      - uses: forbiddenlink/specter@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           personality: noir
@@ -881,7 +890,7 @@ Using [pre-commit](https://pre-commit.com):
 ```yaml
 # .pre-commit-config.yaml
 repos:
-  - repo: https://github.com/your-org/specter
+  - repo: https://github.com/forbiddenlink/specter
     rev: v1.0.0
     hooks:
       - id: specter-precommit  # Block high-risk commits
