@@ -10,7 +10,7 @@ Give your codebase a voice - right in VS Code.
 
 ## Requirements
 
-- [Specter CLI](https://github.com/specter-cli/specter) must be installed and available in your PATH
+- [Specter CLI](https://github.com/forbiddenlink/specter) must be installed: `npm install -g @purplegumdropz/specter`
 - A `.specter` file in your workspace root (the extension activates when this is present)
 
 ## Commands

@@ -6,7 +6,7 @@
 
 <p align="center">
   A haunted code analysis tool that speaks <em>as</em> your codebase in first person.<br/>
-  51 commands. 12 personality modes. One ghost.
+  63 commands. 12 personality modes. One ghost.
 </p>
 
 ```
@@ -37,7 +37,7 @@ $ specter health
 
 ```bash
 # Install globally
-npm install -g specter-mcp
+npm install -g @purplegumdropz/specter
 
 # Initialize a new project (interactive setup)
 specter init
@@ -57,8 +57,8 @@ specter scan && specter health && specter morning
 Want to try Specter without installing? Get a brutal roast of any codebase:
 
 ```bash
-npx specter-roast          # Normal roast
-npx specter-roast --savage  # Maximum brutality
+npx @purplegumdropz/specter-roast          # Normal roast
+npx @purplegumdropz/specter-roast --savage  # Maximum brutality
 ```
 
 ---
@@ -68,9 +68,9 @@ npx specter-roast --savage  # Maximum brutality
 | Category | Commands | What They Do |
 |----------|----------|--------------|
 | **Fun/Viral** | `roast`, `tinder`, `horoscope`, `wrapped`, `achievements`, `seance`, `dna`, `origin`, `confess`, `fortune`, `vitals`, `leaderboard` | Shareable, personality-driven entertainment + gamification |
-| **Daily Workflow** | `morning`, `precommit`, `compare`, `tour`, `who`, `safe`, `danger`, `predict`, `reviewers`, `why`, `standup`, `fix` | Practical tools for everyday development |
+| **Daily Workflow** | `morning`, `precommit`, `compare`, `tour`, `who`, `safe`, `danger`, `predict`, `reviewers`, `why`, `standup`, `fix`, `watch`, `review` | Practical tools for everyday development |
 | **Deep Intelligence** | `drift`, `cycles`, `velocity`, `trajectory`, `knowledge-map`, `search`, `diagram`, `hotspots`, `bus-factor`, `dora`, `coupling`, `report`, `index`, `ask`, `cost`, `breaking-changes`, `changelog` | Advanced analysis and metrics |
-| **Setup & Core** | `init`, `init-hooks`, `scan`, `status`, `health`, `trends`, `risk`, `dashboard`, `clean` | Foundation commands |
+| **Setup & Core** | `init`, `init-hooks`, `scan`, `status`, `health`, `trends`, `risk`, `dashboard`, `clean`, `demo` | Foundation commands |
 
 ---
 
@@ -527,6 +527,162 @@ specter fix                         # All files with issues
 specter fix --severity critical     # Only critical issues
 ```
 
+### `specter fix --interactive`
+Apply fixes step-by-step interactively.
+
+```
+$ specter fix src/utils/helpers.ts --interactive
+
+  INTERACTIVE FIX MODE
+
+  src/utils/helpers.ts has 3 issues
+
+  ──────────────────────────────────────────────────────────
+
+  1/3 💀 CRITICAL: High complexity (37)
+
+     Function processData() is too complex
+
+     Suggested fix:
+       - Extract validation logic to validateInput()
+       - Extract transformation to transformData()
+       - Extract error handling to handleErrors()
+
+  Apply this fix? (y)es / (n)o / (s)kip all / (q)uit: y
+
+  ✓ Applied fix to line 142
+  
+  [AUTO-SAFE] Unused export removed automatically
+
+  ✓ Removed formatLegacy (line 203) - safe auto-fix
+
+  ──────────────────────────────────────────────────────────
+
+  Summary: 2 applied, 1 skipped
+```
+
+**Features:**
+- Step-by-step walkthrough of each issue
+- Auto-apply safe fixes (unused exports, dead code)
+- Skip or quit at any point  
+- Real AST transformations for safe edits
+
+```bash
+specter fix --interactive              # Interactive mode
+specter fix --interactive --auto-apply # Auto-apply safe fixes
+```
+
+### `specter watch`
+Real-time file monitoring with live analysis.
+
+```
+$ specter watch
+
+  👻 Specter is watching your files...
+  Press Ctrl+C to stop
+
+  [14:32:15] ✏️  src/api/handlers.ts changed (+23 lines)
+  [14:32:15] 📊 Complexity delta: +3
+  [14:32:15] ⚠️  Warning: Function complexity increased to 12
+
+  [14:33:02] ✏️  src/utils/parser.ts changed (+8 lines)
+  [14:33:02] ✨ Nice! Complexity decreased by 2
+
+  [14:35:19] ✏️  tests/api.test.ts changed (+45 lines)
+  [14:35:19] 🎯 Great! Test coverage increased
+
+  ──────────────────────────────────────────────────────────
+
+  Session Summary:
+  • Files changed: 3
+  • Lines added: 76
+  • Lines removed: 12
+  • Complexity delta: +1
+```
+
+**Features:**
+  - Live file monitoring with instant feedback
+- Complexity tracking per change
+- Session statistics on exit
+- Works with all 12 personality modes
+- Debouncing prevents spam
+
+```bash
+specter watch                        # Watch current directory
+specter watch --personality roast    # Watch with roast mode
+specter watch --debounce 1000        # 1 second debounce
+specter watch --all                  # Watch all files (not just git)
+```
+
+### `specter review`
+Review GitHub pull requests with risk analysis.
+
+```
+$ specter review --pr 123 --owner user --repo project --token $GITHUB_TOKEN
+
+  🔍 Reviewing PR #123 in user/project...
+
+  📝 Analyzing 8 changed files...
+
+  ✅ Review posted successfully!
+
+  ## 🔮 Specter PR Review
+
+  ### 📊 Change Summary
+
+  - **Files Changed**: 8
+  - **Lines Added**: +342
+  - **Lines Removed**: -87
+  - **Overall Risk**: 🟠 **HIGH**
+
+  ### 🎯 Risk Breakdown
+
+  - 🔴 **Critical Risk**: 1 file(s)
+  - 🟠 **High Risk**: 2 file(s)
+  - 🟡 **Medium Risk**: 3 file(s)
+  - 🟢 **Low Risk**: 2 file(s)
+
+  ### ⚠️ Files Requiring Extra Attention
+
+  #### 🔴 `src/auth/middleware.ts`
+
+  - Risk Level: **CRITICAL**
+  - Changes: +156/-23
+  - Recommendations:
+    - Extra security review recommended for critical path
+    - Consider adding tests for this change
+```
+
+**Features:**
+- Automated risk scoring by file
+- Complexity and size analysis
+- Security path detection (auth, payment, etc.)
+- Inline comments on high-risk files
+- Works with all 12 personality modes
+- JSON output for CI/CD
+
+```bash
+specter review --pr 123 --owner user --repo project --token $TOKEN
+specter review --pr 123 --owner user --repo project --inline  # Post inline comments
+specter review --pr 123 --owner user --repo project -p roast  # Roast mode
+specter review --pr 123 --owner user --repo project --json    # JSON for CI
+```
+
+**GitHub Actions Integration:**
+
+```yaml
+name: Specter PR Review
+on: pull_request
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: npx @purplegumdropz/specter scan
+      - run: npx @purplegumdropz/specter review --pr ${{ github.event.pull_request.number }} --owner ${{ github.repository_owner }} --repo ${{ github.event.repository.name }} --token ${{ secrets.GITHUB_TOKEN }} --inline
+```
+
 ---
 
 ## Deep Intelligence Commands
@@ -958,6 +1114,84 @@ specter dora --json | curl -X POST -d @- https://metrics.example.com/dora
 ```
 
 **47 commands** support `--json` (all except interactive: `init`, `init-hooks`, `dashboard`)
+
+---
+
+## GitHub Copilot CLI Integration
+
+Specter integrates seamlessly with [GitHub Copilot CLI](https://github.com/github/copilot-cli) to provide AI-powered code analysis.
+
+### Prerequisites
+
+```bash
+# Install GitHub Copilot CLI
+npm install -g @github/copilot
+
+# Verify installation
+copilot --version
+```
+
+### AI-Powered Commands
+
+| Command | Description |
+|---------|-------------|
+| `specter ai-ask <question>` | Ask questions about your codebase with AI + Specter context |
+| `specter ai-commit` | Generate AI-powered commit messages from staged changes |
+| `specter explain-hotspot <file>` | Get AI explanation of why a file is a complexity hotspot |
+| `specter suggest-refactor <file>` | AI-powered refactoring suggestions |
+
+### Example: AI-Powered Q&A
+
+```bash
+$ specter ai-ask "What are the most complex areas of this codebase?"
+
+🤖 GitHub Copilot says:
+
+Based on Specter's analysis:
+
+1. src/cli.ts (complexity: 53) - Main CLI with many commands
+2. src/who.ts (complexity: 47) - Expert finder with complex git analysis
+3. src/why.ts (complexity: 46) - History explanation engine
+
+These files handle complex logic and would benefit from refactoring...
+```
+
+### Example: AI Commit Messages
+
+```bash
+$ git add src/auth/
+$ specter ai-commit
+
+📝 Suggested Commit Message:
+
+refactor(auth): simplify token validation logic
+
+- Extract JWT verification to separate function
+- Add type guards for token payload
+- Remove deprecated session handling
+```
+
+### MCP Server for Copilot CLI
+
+Configure Specter as an MCP server for GitHub Copilot CLI:
+
+```bash
+# Add to ~/.copilot/mcp-config.json
+{
+  "mcpServers": {
+    "specter": {
+      "command": "npx",
+      "args": ["@purplegumdropz/specter-mcp"]
+    }
+  }
+}
+```
+
+Then use Specter tools directly in Copilot CLI:
+
+```bash
+copilot -i "Use specter to analyze the complexity hotspots in this project"
+```
 
 ---
 

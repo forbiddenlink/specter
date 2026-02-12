@@ -10,7 +10,6 @@ import path from 'node:path';
 import readline from 'node:readline';
 import { buildKnowledgeGraph, getGraphStats } from './graph/builder.js';
 import { graphExists, saveGraph } from './graph/persistence.js';
-import { listPersonalities, personalities } from './personality/modes.js';
 import type { PersonalityMode } from './personality/types.js';
 
 export interface InitOptions {
@@ -150,17 +149,26 @@ export function formatInitComplete(result: InitResult, rootDir: string): string 
       lines.push(`    Files: ${result.fileCount}`);
       lines.push(`    Symbols: ${result.nodeCount}`);
       if (result.healthScore !== undefined) {
-        const healthEmoji = result.healthScore >= 70 ? '(healthy)' : result.healthScore >= 40 ? '(moderate)' : '(needs attention)';
+        const healthEmoji =
+          result.healthScore >= 70
+            ? '(healthy)'
+            : result.healthScore >= 40
+              ? '(moderate)'
+              : '(needs attention)';
         lines.push(`    Health: ${result.healthScore}/100 ${healthEmoji}`);
       }
     }
   }
 
   lines.push('');
+  lines.push('  Your codebase is now haunted.');
+  lines.push('');
   lines.push('  Next steps:');
+  lines.push('    specter roast     # Get roasted (if you dare)');
   lines.push('    specter health    # Check codebase health');
-  lines.push('    specter tour      # Take a guided tour');
-  lines.push('    specter morning   # Get your daily briefing');
+  lines.push('    specter demo      # Watch the magic unfold');
+  lines.push('');
+  lines.push('  Or try: npx @purplegumdropz/specter-roast');
   lines.push('');
 
   return lines.join('\n');
@@ -184,7 +192,7 @@ async function configExists(rootDir: string): Promise<boolean> {
  */
 async function createConfig(rootDir: string, config: SpecterProjectConfig): Promise<void> {
   const configPath = path.join(rootDir, 'specter.config.json');
-  await fs.writeFile(configPath, JSON.stringify(config, null, 2) + '\n', 'utf-8');
+  await fs.writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`, 'utf-8');
 }
 
 /**
@@ -318,7 +326,7 @@ export async function initializeProjectInteractive(rootDir: string): Promise<Ini
     // 2. Set up hooks?
     console.log('  Set up pre-commit hooks?');
     console.log('    y - Run checks before each commit (recommended)');
-    console.log('    n - I\'ll run manually');
+    console.log("    n - I'll run manually");
     console.log('');
 
     const hooksAnswer = await prompt(rl, '  Set up hooks? (Y/n): ');
@@ -336,7 +344,7 @@ export async function initializeProjectInteractive(rootDir: string): Promise<Ini
     // 3. Run initial scan?
     console.log('  Run initial scan now?');
     console.log('    y - Scan and build knowledge graph (recommended)');
-    console.log('    n - I\'ll run \'specter scan\' later');
+    console.log("    n - I'll run 'specter scan' later");
     console.log('');
 
     const scanAnswer = await prompt(rl, '  Run scan? (Y/n): ');
@@ -394,7 +402,7 @@ export async function initializeProjectInteractive(rootDir: string): Promise<Ini
         }
       });
 
-      process.stdout.write('\r' + ' '.repeat(60) + '\r');
+      process.stdout.write(`\r${' '.repeat(60)}\r`);
       console.log('  [check] Built knowledge graph');
 
       result.scanCompleted = true;

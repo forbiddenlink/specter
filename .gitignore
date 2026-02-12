@@ -23,8 +23,21 @@ docs/
 # Development thoughts/planning
 thoughts/
 
+# VS Code history extension
+.history/
+
+# Internal competition/planning docs
+COMPETITION*.md
+COMPETITIVE*.md
+PUBLISHING.md
+SHOWCASE.md
+
 # Test coverage reports
 coverage/
 
 # User-specific configuration (use specter.config.example.json as template)
 specter.config.json
+
+
+#Ignore vscode AI rules
+.github/instructions/codacy.instructions.md

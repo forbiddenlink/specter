@@ -33,7 +33,52 @@ function showShareLinks(commandType: string, repoUrl?: string | null): void {
   console.log(chalk.cyan(`     LinkedIn: `) + chalk.dim(shareUrls.linkedin));
 }
 
+import { achievements, calculateStats, checkAchievements } from './achievements.js';
+// AI-powered commands using GitHub Copilot CLI
+import { askQuestion } from './ai-ask.js';
+import { generateCommitMessage } from './ai-commit.js';
 import { generateComplexityReport, getComplexityEmoji } from './analyzers/complexity.js';
+import { askCodebase, formatAsk } from './ask.js';
+import { detectBreakingChanges, formatBreakingChanges } from './breaking-changes.js';
+import { analyzeBusFactor, formatBusFactor } from './bus-factor.js';
+import { formatChangelog, generateChangelog } from './changelog.js';
+import { compareBranches, formatCompare } from './compare.js';
+import { analyzeCost, formatCost } from './cost.js';
+import { analyzeCoupling, formatCoupling } from './coupling.js';
+import { detectCycles, formatCycles } from './cycles.js';
+import {
+  type DiagramFormat,
+  formatDiagramOutput,
+  generateDiagram,
+  saveDiagram,
+} from './diagram.js';
+import { formatDNA, generateBadge, generateDNA } from './dna.js';
+import { calculateDora, formatDora } from './dora.js';
+import { detectDrift, formatDrift } from './drift.js';
+import {
+  buildEmbeddingIndex,
+  embeddingIndexExists,
+  isEmbeddingIndexStale,
+  loadEmbeddingIndex,
+  saveEmbeddingIndex,
+} from './embeddings.js';
+import { explainHotspot } from './explain-hotspot.js';
+import {
+  exportToPng,
+  formatAchievementsForExport,
+  generateShareUrls,
+  getRepoUrl,
+  isPngExportAvailable,
+} from './export-png.js';
+import {
+  formatFix,
+  formatFixAll,
+  generateFix,
+  generateFixAll,
+  type SuggestionSeverity,
+} from './fix.js';
+import { runInteractiveFix } from './fix-interactive.js';
+import { formatReading, generateReading } from './fortune.js';
 import { buildKnowledgeGraph, getGraphStats } from './graph/builder.js';
 import {
   deleteGraph,
@@ -45,71 +90,45 @@ import {
 } from './graph/persistence.js';
 import { loadSnapshots } from './history/storage.js';
 import { analyzeTrends, getTimeSpan } from './history/trends.js';
+import { formatHoroscope, generateHoroscope } from './horoscope.js';
+import { analyzeHotspots, formatHotspots } from './hotspots.js';
+import {
+  formatInitComplete,
+  formatInitWelcome,
+  initializeProject,
+  initializeProjectInteractive,
+  listAvailablePersonalities,
+} from './init.js';
+import { formatDemoSteps, runDemo } from './demo.js';
+import { outputJson, outputJsonError } from './json-output.js';
+import { formatKnowledgeMap, generateKnowledgeMap } from './knowledge-map.js';
+import { formatLeaderboard, generateLeaderboard } from './leaderboard.js';
+import { formatMorning, generateMorning } from './morning.js';
+import { gatherOriginData, generateOriginStory } from './origin.js';
 import {
   formatHealthComment,
   formatRiskComment,
   formatTrendComment,
 } from './personality/formatter.js';
 import type { PersonalityMode } from './personality/types.js';
+import { reviewPullRequest } from './pr-review.js';
+import { formatPrecommit, runPrecommitCheck } from './precommit.js';
+import { formatPrediction, generatePrediction } from './predict.js';
+import { formatReportSummary, generateReport } from './report.js';
+import { formatReviewers, suggestReviewers } from './reviewers.js';
+import { formatSeance, listRecentlyDeleted, summonSpirits } from './seance.js';
+import { formatSearchWithMode, type SearchMode, searchCodebase, semanticSearch } from './search.js';
+import { formatStandup, generateStandup } from './standup.js';
+import { suggestRefactoring } from './suggest-refactor.js';
+import { formatTour, generateTour } from './tour.js';
+import { formatTrajectory, projectTrajectory } from './trajectory.js';
 import { coloredSparkline, healthBar } from './ui/index.js';
-import { calculateStats, checkAchievements, achievements } from './achievements.js';
-import { formatHoroscope, generateHoroscope } from './horoscope.js';
-import { gatherOriginData, generateOriginStory } from './origin.js';
-import { gatherWrappedData, formatWrapped, type WrappedPeriod } from './wrapped.js';
-import { summonSpirits, formatSeance, listRecentlyDeleted } from './seance.js';
-import { generateReading, formatReading } from './fortune.js';
-import { generateDNA, formatDNA, generateBadge } from './dna.js';
-import { generateTour, formatTour } from './tour.js';
+import { analyzeVelocity, formatVelocity } from './velocity.js';
+import { startWatch } from './watch.js';
 import { findExperts, formatWho } from './who.js';
 import { explainWhy, formatWhy } from './why.js';
-import { analyzeZones, formatSafeZones, formatDangerZones } from './zones.js';
-import { generateMorning, formatMorning } from './morning.js';
-import { generateStandup, formatStandup } from './standup.js';
-import { generatePrediction, formatPrediction } from './predict.js';
-import { suggestReviewers, formatReviewers } from './reviewers.js';
-import { runPrecommitCheck, formatPrecommit } from './precommit.js';
-import { detectDrift, formatDrift } from './drift.js';
-import { exportToPng, formatAchievementsForExport, isPngExportAvailable, getRepoUrl, generateShareUrls } from './export-png.js';
-import { detectCycles, formatCycles } from './cycles.js';
-import { analyzeVelocity, formatVelocity } from './velocity.js';
-import { projectTrajectory, formatTrajectory } from './trajectory.js';
-import { generateKnowledgeMap, formatKnowledgeMap } from './knowledge-map.js';
-import {
-  generateDiagram,
-  saveDiagram,
-  formatDiagramOutput,
-  getDiagramExtension,
-  type DiagramFormat,
-} from './diagram.js';
-import { searchCodebase, formatSearch, semanticSearch, formatSearchWithMode, type SearchMode } from './search.js';
-import {
-  buildEmbeddingIndex,
-  saveEmbeddingIndex,
-  loadEmbeddingIndex,
-  embeddingIndexExists,
-  isEmbeddingIndexStale,
-} from './embeddings.js';
-import { analyzeBusFactor, formatBusFactor } from './bus-factor.js';
-import { analyzeHotspots, formatHotspots } from './hotspots.js';
-import { generateReport, formatReportSummary } from './report.js';
-import { analyzeCoupling, formatCoupling } from './coupling.js';
-import { calculateDora, formatDora } from './dora.js';
-import { analyzeCost, formatCost } from './cost.js';
-import { generateLeaderboard, formatLeaderboard } from './leaderboard.js';
-import { askCodebase, formatAsk } from './ask.js';
-import { compareBranches, formatCompare } from './compare.js';
-import { generateChangelog, formatChangelog } from './changelog.js';
-import { detectBreakingChanges, formatBreakingChanges } from './breaking-changes.js';
-import { generateFix, generateFixAll, formatFix, formatFixAll, type SuggestionSeverity } from './fix.js';
-import {
-  initializeProject,
-  initializeProjectInteractive,
-  formatInitWelcome,
-  formatInitComplete,
-  listAvailablePersonalities,
-  INIT_PERSONALITIES,
-} from './init.js';
-import { outputJson, outputJsonError } from './json-output.js';
+import { formatWrapped, gatherWrappedData, type WrappedPeriod } from './wrapped.js';
+import { analyzeZones, formatDangerZones, formatSafeZones } from './zones.js';
 
 const program = new Command();
 
@@ -125,7 +144,7 @@ function printBanner(): void {
   console.log();
   console.log(ghost('   ____                  _            '));
   console.log(ghost('  / ___| _ __   ___  ___| |_ ___ _ __ '));
-  console.log(bright('  \\___ \\| \'_ \\ / _ \\/ __| __/ _ \\ \'__|'));
+  console.log(bright("  \\___ \\| '_ \\ / _ \\/ __| __/ _ \\ '__|"));
   console.log(bright('   ___) | |_) |  __/ (__| ||  __/ |   '));
   console.log(ghost('  |____/| .__/ \\___|\\___|\\___|\\__|_|   '));
   console.log(ghost('        |_|   ') + dim('Give your codebase a voice'));
@@ -409,6 +428,7 @@ program
   .option('--exit-code', 'Exit with code 1 if health score is below threshold')
   .option('--threshold <n>', 'Health score threshold for --exit-code (default: 50)', '50')
   .option('--png <file>', 'Export as PNG image for sharing')
+  .option('--social', 'Optimize PNG for Twitter/LinkedIn (1200x630)')
   .option('--qr', 'Add QR code linking to repo (with --png)')
   .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
@@ -433,21 +453,25 @@ program
 
     // JSON output for CI/CD
     if (options.json) {
-      outputJson('health', {
-        healthScore: Math.round(healthScore),
-        averageComplexity: report.averageComplexity,
-        maxComplexity: report.maxComplexity,
-        distribution: report.distribution,
-        hotspots: report.hotspots.slice(0, limit).map((h) => ({
-          filePath: h.filePath,
-          name: h.name,
-          type: h.type,
-          complexity: h.complexity,
-          lineStart: h.lineStart,
-          lineEnd: h.lineEnd,
-        })),
-        totalHotspots: report.hotspots.length,
-      }, { personality, threshold });
+      outputJson(
+        'health',
+        {
+          healthScore: Math.round(healthScore),
+          averageComplexity: report.averageComplexity,
+          maxComplexity: report.maxComplexity,
+          distribution: report.distribution,
+          hotspots: report.hotspots.slice(0, limit).map((h) => ({
+            filePath: h.filePath,
+            name: h.name,
+            type: h.type,
+            complexity: h.complexity,
+            lineStart: h.lineStart,
+            lineEnd: h.lineEnd,
+          })),
+          totalHotspots: report.hotspots.length,
+        },
+        { personality, threshold }
+      );
       if (exitCode && healthScore < threshold) {
         process.exit(1);
       }
@@ -588,7 +612,9 @@ program
     if (options.png) {
       const pngAvailable = await isPngExportAvailable();
       if (!pngAvailable) {
-        console.log(chalk.red('PNG export requires the canvas package. Install with: npm install canvas'));
+        console.log(
+          chalk.red('PNG export requires the canvas package. Install with: npm install canvas')
+        );
         return;
       }
 
@@ -596,7 +622,10 @@ program
       spinner.start();
 
       const qrUrl = options.qr ? await getRepoUrl(rootDir) : undefined;
-      const outputPath = await exportToPng(output, options.png, { qrUrl: qrUrl || undefined });
+      const outputPath = await exportToPng(output, options.png, {
+        qrUrl: qrUrl || undefined,
+        socialFormat: options.social,
+      });
 
       spinner.succeed(`Image saved to ${outputPath}`);
       showShareLinks('health', qrUrl);
@@ -608,7 +637,9 @@ program
     // Exit with error code if health is below threshold
     if (exitCode && healthScore < threshold) {
       console.log();
-      console.log(chalk.red(`  Health score ${Math.round(healthScore)} is below threshold ${threshold}`));
+      console.log(
+        chalk.red(`  Health score ${Math.round(healthScore)} is below threshold ${threshold}`)
+      );
       process.exit(1);
     }
   });
@@ -664,22 +695,28 @@ program
     // JSON output for CI/CD
     if (options.json) {
       const selectedTrend = analysis.trends[period];
-      outputJson('trends', {
-        current: analysis.current?.metrics || null,
-        snapshotCount,
-        timeSpan,
-        period,
-        trend: selectedTrend ? {
-          direction: selectedTrend.direction,
-          changePercent: selectedTrend.changePercent,
-          insights: selectedTrend.insights,
-        } : null,
-        snapshots: snapshots.map((s) => ({
-          timestamp: s.timestamp,
-          commitHash: s.commitHash,
-          metrics: s.metrics,
-        })),
-      }, { personality, period });
+      outputJson(
+        'trends',
+        {
+          current: analysis.current?.metrics || null,
+          snapshotCount,
+          timeSpan,
+          period,
+          trend: selectedTrend
+            ? {
+                direction: selectedTrend.direction,
+                changePercent: selectedTrend.changePercent,
+                insights: selectedTrend.insights,
+              }
+            : null,
+          snapshots: snapshots.map((s) => ({
+            timestamp: s.timestamp,
+            commitHash: s.commitHash,
+            metrics: s.metrics,
+          })),
+        },
+        { personality, period }
+      );
       return;
     }
 
@@ -883,13 +920,17 @@ program
 
       // JSON output for CI/CD
       if (options.json) {
-        outputJson('risk', {
-          overall: risk.overall,
-          level: risk.level,
-          factors: risk.factors,
-          recommendations: risk.recommendations,
-          summary: risk.summary,
-        }, { personality });
+        outputJson(
+          'risk',
+          {
+            overall: risk.overall,
+            level: risk.level,
+            factors: risk.factors,
+            recommendations: risk.recommendations,
+            summary: risk.summary,
+          },
+          { personality }
+        );
         return;
       }
 
@@ -1064,8 +1105,7 @@ program
     const healthScore = Math.max(0, 100 - report.averageComplexity * 5);
     const healthColor =
       healthScore >= 80 ? chalk.green : healthScore >= 60 ? chalk.yellow : chalk.red;
-    const pulseStatus =
-      healthScore >= 80 ? 'STABLE' : healthScore >= 60 ? 'ELEVATED' : 'CRITICAL';
+    const pulseStatus = healthScore >= 80 ? 'STABLE' : healthScore >= 60 ? 'ELEVATED' : 'CRITICAL';
 
     // Calculate metrics for display
     const avgComplexity = report.averageComplexity;
@@ -1081,7 +1121,8 @@ program
     const filesWithComplexity = Object.values(graph.nodes).filter(
       (n) => n.type === 'file' && n.complexity !== undefined
     ).length;
-    const coverageEstimate = stats.fileCount > 0 ? (filesWithComplexity / stats.fileCount) * 100 : 0;
+    const coverageEstimate =
+      stats.fileCount > 0 ? (filesWithComplexity / stats.fileCount) * 100 : 0;
 
     // Load snapshots for heartbeat sparkline
     const snapshots = await loadSnapshots(rootDir);
@@ -1121,7 +1162,7 @@ program
     };
 
     // Determine status indicators
-    const getHealthIndicator = () => {
+    const _getHealthIndicator = () => {
       const change =
         snapshots.length >= 2
           ? snapshots[0].metrics.healthScore - snapshots[1].metrics.healthScore
@@ -1131,25 +1172,25 @@ program
       return chalk.dim('--');
     };
 
-    const getComplexityStatus = () => {
+    const _getComplexityStatus = () => {
       if (avgComplexity <= 5) return chalk.green('healthy');
       if (avgComplexity <= 10) return chalk.yellow('\u26A0\uFE0F  warning');
       return chalk.red('critical');
     };
 
-    const getBusFactorStatus = () => {
+    const _getBusFactorStatus = () => {
       if (busFactorValue >= 3) return chalk.green('healthy');
       if (busFactorValue >= 2) return chalk.yellow('\u{1F630} at risk');
       return chalk.red('critical');
     };
 
-    const getDeadCodeStatus = () => {
+    const _getDeadCodeStatus = () => {
       if (deadExports === 0) return chalk.green('clean');
       if (deadExports <= 5) return chalk.yellow('\u{1F47B} haunted');
       return chalk.red('infested');
     };
 
-    const getCoverageStatus = () => {
+    const _getCoverageStatus = () => {
       if (coverageEstimate >= 80) return chalk.green('\u{1F6E1}\uFE0F  solid');
       if (coverageEstimate >= 50) return chalk.yellow('\u{1F6E1}\uFE0F  decent');
       return chalk.red('sparse');
@@ -1160,7 +1201,7 @@ program
     const B = chalk.bold.magenta; // Border color shorthand
 
     // Helper to pad a line to width (use for uncolored text only)
-    const padLine = (content: string, width: number = W): string => {
+    const _padLine = (content: string, width: number = W): string => {
       const visibleLen = content.replace(/\x1b\[[0-9;]*m/g, '').length;
       const padding = Math.max(0, width - visibleLen);
       return content + ' '.repeat(padding);
@@ -1170,7 +1211,8 @@ program
     console.log(B(`\u2554${'\u2550'.repeat(W)}\u2557`));
 
     // Header with pulse
-    const pulseColor = healthScore >= 80 ? chalk.green : healthScore >= 60 ? chalk.yellow : chalk.red;
+    const pulseColor =
+      healthScore >= 80 ? chalk.green : healthScore >= 60 ? chalk.yellow : chalk.red;
     console.log(
       B('\u2551') +
         chalk.bold.white('  SPECTER VITAL SIGNS') +
@@ -1184,42 +1226,64 @@ program
     console.log(B('\u2551') + ' '.repeat(W) + B('\u2551'));
 
     // Health score - calculate indicator text without ANSI for padding
-    const healthIndicatorVal = snapshots.length >= 2
-      ? snapshots[0].metrics.healthScore - snapshots[1].metrics.healthScore
-      : 0;
-    const healthIndicatorText = healthIndicatorVal > 0 ? `+${healthIndicatorVal}` : healthIndicatorVal < 0 ? `${healthIndicatorVal}` : '--';
-    const healthIndicator = healthIndicatorVal > 0 ? chalk.green(`\u{1F4C8} ${healthIndicatorText}`) :
-                            healthIndicatorVal < 0 ? chalk.red(healthIndicatorText) :
-                            chalk.dim(healthIndicatorText);
+    const healthIndicatorVal =
+      snapshots.length >= 2
+        ? snapshots[0].metrics.healthScore - snapshots[1].metrics.healthScore
+        : 0;
+    const healthIndicatorText =
+      healthIndicatorVal > 0
+        ? `+${healthIndicatorVal}`
+        : healthIndicatorVal < 0
+          ? `${healthIndicatorVal}`
+          : '--';
+    const healthIndicator =
+      healthIndicatorVal > 0
+        ? chalk.green(`\u{1F4C8} ${healthIndicatorText}`)
+        : healthIndicatorVal < 0
+          ? chalk.red(healthIndicatorText)
+          : chalk.dim(healthIndicatorText);
 
     console.log(
       B('\u2551') +
-        `  HEALTH      [` + healthColor(makeBar(healthScore, 100, 10)) + `] ` +
-        String(Math.round(healthScore)).padStart(2) + `/100   ` +
+        `  HEALTH      [` +
+        healthColor(makeBar(healthScore, 100, 10)) +
+        `] ` +
+        String(Math.round(healthScore)).padStart(2) +
+        `/100   ` +
         healthIndicator +
         ' '.repeat(8) +
         B('\u2551')
     );
 
     // Complexity
-    const complexityColor = avgComplexity <= 5 ? chalk.green : avgComplexity <= 10 ? chalk.yellow : chalk.red;
-    const complexityStatus = avgComplexity <= 5 ? 'healthy' : avgComplexity <= 10 ? '\u26A0\uFE0F  warning' : 'critical';
+    const complexityColor =
+      avgComplexity <= 5 ? chalk.green : avgComplexity <= 10 ? chalk.yellow : chalk.red;
+    const complexityStatus =
+      avgComplexity <= 5 ? 'healthy' : avgComplexity <= 10 ? '\u26A0\uFE0F  warning' : 'critical';
     console.log(
       B('\u2551') +
-        `  COMPLEXITY  [` + complexityColor(makeBar(avgComplexity, 30, 10)) + `] ` +
-        avgComplexity.toFixed(0).padStart(2) + ` avg   ` +
+        `  COMPLEXITY  [` +
+        complexityColor(makeBar(avgComplexity, 30, 10)) +
+        `] ` +
+        avgComplexity.toFixed(0).padStart(2) +
+        ` avg   ` +
         complexityColor(complexityStatus) +
         ' '.repeat(4) +
         B('\u2551')
     );
 
     // Bus factor
-    const busColor = busFactorValue >= 3 ? chalk.green : busFactorValue >= 2 ? chalk.yellow : chalk.red;
-    const busStatus = busFactorValue >= 3 ? 'healthy' : busFactorValue >= 2 ? '\u{1F630} at risk' : 'critical';
+    const busColor =
+      busFactorValue >= 3 ? chalk.green : busFactorValue >= 2 ? chalk.yellow : chalk.red;
+    const busStatus =
+      busFactorValue >= 3 ? 'healthy' : busFactorValue >= 2 ? '\u{1F630} at risk' : 'critical';
     console.log(
       B('\u2551') +
-        `  BUS FACTOR  [` + busColor(makeBar(busFactorValue, 5, 10)) + `] ` +
-        busFactorValue.toFixed(1).padStart(3) + `      ` +
+        `  BUS FACTOR  [` +
+        busColor(makeBar(busFactorValue, 5, 10)) +
+        `] ` +
+        busFactorValue.toFixed(1).padStart(3) +
+        `      ` +
         busColor(busStatus) +
         ' '.repeat(4) +
         B('\u2551')
@@ -1227,24 +1291,37 @@ program
 
     // Dead code
     const deadColor = deadExports === 0 ? chalk.green : deadExports <= 5 ? chalk.yellow : chalk.red;
-    const deadStatus = deadExports === 0 ? 'clean' : deadExports <= 5 ? '\u{1F47B} haunted' : 'infested';
+    const deadStatus =
+      deadExports === 0 ? 'clean' : deadExports <= 5 ? '\u{1F47B} haunted' : 'infested';
     const deadBarVal = deadExports === 0 ? 0 : Math.min(deadExports, 20);
     console.log(
       B('\u2551') +
-        `  DEAD CODE   [` + deadColor(makeBar(deadBarVal, 20, 10)) + `] ` +
-        String(deadExports).padStart(3) + ` exp  ` +
+        `  DEAD CODE   [` +
+        deadColor(makeBar(deadBarVal, 20, 10)) +
+        `] ` +
+        String(deadExports).padStart(3) +
+        ` exp  ` +
         deadColor(deadStatus) +
         ' '.repeat(4) +
         B('\u2551')
     );
 
     // Coverage estimate
-    const covColor = coverageEstimate >= 80 ? chalk.green : coverageEstimate >= 50 ? chalk.yellow : chalk.red;
-    const covStatus = coverageEstimate >= 80 ? '\u{1F6E1}\uFE0F  solid' : coverageEstimate >= 50 ? '\u{1F6E1}\uFE0F  decent' : 'sparse';
+    const covColor =
+      coverageEstimate >= 80 ? chalk.green : coverageEstimate >= 50 ? chalk.yellow : chalk.red;
+    const covStatus =
+      coverageEstimate >= 80
+        ? '\u{1F6E1}\uFE0F  solid'
+        : coverageEstimate >= 50
+          ? '\u{1F6E1}\uFE0F  decent'
+          : 'sparse';
     console.log(
       B('\u2551') +
-        `  COVERAGE    [` + covColor(makeBar(coverageEstimate, 100, 10)) + `] ` +
-        Math.round(coverageEstimate).toString().padStart(2) + `%      ` +
+        `  COVERAGE    [` +
+        covColor(makeBar(coverageEstimate, 100, 10)) +
+        `] ` +
+        Math.round(coverageEstimate).toString().padStart(2) +
+        `%      ` +
         covColor(covStatus) +
         ' '.repeat(4) +
         B('\u2551')
@@ -1254,15 +1331,27 @@ program
     console.log(B(`\u2560${'\u2550'.repeat(W)}\u2563`));
 
     // Heartbeat sparkline
-    console.log(B('\u2551') + `  \u{1F493} HEARTBEAT (last 30 scans)` + ' '.repeat(23) + B('\u2551'));
+    console.log(
+      `${B('\u2551')}  \u{1F493} HEARTBEAT (last 30 scans)${' '.repeat(23)}${B('\u2551')}`
+    );
 
     if (heartbeatData.length >= 2) {
       const sparkline = coloredSparkline(heartbeatData, true);
       // Sparkline length varies, pad to fill the box
       const sparklineVisibleLen = sparkline.replace(/\x1b\[[0-9;]*m/g, '').length;
-      console.log(B('\u2551') + `  ${sparkline}` + ' '.repeat(Math.max(0, W - sparklineVisibleLen - 2)) + B('\u2551'));
+      console.log(
+        B('\u2551') +
+          `  ${sparkline}` +
+          ' '.repeat(Math.max(0, W - sparklineVisibleLen - 2)) +
+          B('\u2551')
+      );
     } else {
-      console.log(B('\u2551') + chalk.dim('  (need more scans for heartbeat data)') + ' '.repeat(11) + B('\u2551'));
+      console.log(
+        B('\u2551') +
+          chalk.dim('  (need more scans for heartbeat data)') +
+          ' '.repeat(11) +
+          B('\u2551')
+      );
     }
 
     console.log(B(`\u2560${'\u2550'.repeat(W)}\u2563`));
@@ -1286,10 +1375,12 @@ program
     }
 
     const diagPadding = Math.max(0, W - 14 - diagnosis.length);
-    console.log(B('\u2551') + `  DIAGNOSIS: ${diagnosis}` + ' '.repeat(diagPadding) + B('\u2551'));
+    console.log(`${B('\u2551')}  DIAGNOSIS: ${diagnosis}${' '.repeat(diagPadding)}${B('\u2551')}`);
 
     const rxPadding = Math.max(0, W - 6 - prescription.length);
-    console.log(B('\u2551') + chalk.dim(`  Rx: ${prescription}`) + ' '.repeat(rxPadding) + B('\u2551'));
+    console.log(
+      B('\u2551') + chalk.dim(`  Rx: ${prescription}`) + ' '.repeat(rxPadding) + B('\u2551')
+    );
 
     console.log(B(`\u255A${'\u2550'.repeat(W)}\u255D`));
     console.log();
@@ -1303,6 +1394,7 @@ program
   .description('Generate a dating profile for your codebase')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
   .option('--png <file>', 'Export as PNG image for sharing')
+  .option('--social', 'Optimize PNG for Twitter/LinkedIn (1200x630)')
   .option('--qr', 'Add QR code linking to repo (with --png)')
   .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
@@ -1345,7 +1437,10 @@ program
 
     // Calculate age from first file modification (approximation using scan time)
     const scannedAt = new Date(graph.metadata.scannedAt);
-    const ageMonths = Math.max(1, Math.floor((Date.now() - scannedAt.getTime()) / (30 * 24 * 60 * 60 * 1000)));
+    const ageMonths = Math.max(
+      1,
+      Math.floor((Date.now() - scannedAt.getTime()) / (30 * 24 * 60 * 60 * 1000))
+    );
 
     // Check for common "red flag" files
     const hasHelpers = Object.values(graph.nodes).some(
@@ -1507,10 +1602,17 @@ program
 
     // Name and basic info
     const nameLine = `  \u{1F4C1} ${projectName}/`;
-    lines.push(chalk.dim('\u2502') + chalk.bold.cyan(nameLine) + ' '.repeat(W - nameLine.length + 2) + chalk.dim('\u2502'));
+    lines.push(
+      chalk.dim('\u2502') +
+        chalk.bold.cyan(nameLine) +
+        ' '.repeat(W - nameLine.length + 2) +
+        chalk.dim('\u2502')
+    );
 
     const infoLine = `  ${stats.fileCount} files \u2022 ${primaryLang} \u2022 Looking for devs`;
-    lines.push(chalk.dim('\u2502') + infoLine + ' '.repeat(W - infoLine.length + 2) + chalk.dim('\u2502'));
+    lines.push(
+      chalk.dim('\u2502') + infoLine + ' '.repeat(W - infoLine.length + 2) + chalk.dim('\u2502')
+    );
 
     lines.push(chalk.dim('\u2502') + ' '.repeat(W) + chalk.dim('\u2502'));
     lines.push(chalk.dim('\u2502') + chalk.dim(`\u2500`.repeat(W)) + chalk.dim('\u2502'));
@@ -1518,23 +1620,39 @@ program
 
     // Basic stats
     const ageLine = `  \u{1F382} Age: ${ageMonths} month${ageMonths !== 1 ? 's' : ''} (estimated)`;
-    lines.push(chalk.dim('\u2502') + ageLine + ' '.repeat(W - ageLine.length + 2) + chalk.dim('\u2502'));
+    lines.push(
+      chalk.dim('\u2502') + ageLine + ' '.repeat(W - ageLine.length + 2) + chalk.dim('\u2502')
+    );
 
     const locLine = `  \u{1F4CD} Location: ${rootDir.slice(0, 30)}${rootDir.length > 30 ? '...' : ''}`;
-    lines.push(chalk.dim('\u2502') + locLine + ' '.repeat(Math.max(0, W - locLine.length + 2)) + chalk.dim('\u2502'));
+    lines.push(
+      chalk.dim('\u2502') +
+        locLine +
+        ' '.repeat(Math.max(0, W - locLine.length + 2)) +
+        chalk.dim('\u2502')
+    );
 
     const jobLine = `  \u{1F4BC} Occupation: ${primaryLang} Codebase`;
-    lines.push(chalk.dim('\u2502') + jobLine + ' '.repeat(W - jobLine.length + 2) + chalk.dim('\u2502'));
+    lines.push(
+      chalk.dim('\u2502') + jobLine + ' '.repeat(W - jobLine.length + 2) + chalk.dim('\u2502')
+    );
 
     lines.push(chalk.dim('\u2502') + ' '.repeat(W) + chalk.dim('\u2502'));
     lines.push(chalk.dim('\u2502') + chalk.dim(`\u2500`.repeat(W)) + chalk.dim('\u2502'));
     lines.push(chalk.dim('\u2502') + ' '.repeat(W) + chalk.dim('\u2502'));
 
     // Bio
-    lines.push(chalk.dim('\u2502') + chalk.bold('  \u{1F4DD} Bio:') + ' '.repeat(W - 9) + chalk.dim('\u2502'));
+    lines.push(
+      chalk.dim('\u2502') + chalk.bold('  \u{1F4DD} Bio:') + ' '.repeat(W - 9) + chalk.dim('\u2502')
+    );
     for (const bioContent of generateBio()) {
       const bioLine = `  ${bioContent}`;
-      lines.push(chalk.dim('\u2502') + bioLine + ' '.repeat(Math.max(0, W - bioLine.length + 2)) + chalk.dim('\u2502'));
+      lines.push(
+        chalk.dim('\u2502') +
+          bioLine +
+          ' '.repeat(Math.max(0, W - bioLine.length + 2)) +
+          chalk.dim('\u2502')
+      );
     }
 
     lines.push(chalk.dim('\u2502') + ' '.repeat(W) + chalk.dim('\u2502'));
@@ -1542,19 +1660,39 @@ program
     lines.push(chalk.dim('\u2502') + ' '.repeat(W) + chalk.dim('\u2502'));
 
     // Green flags
-    lines.push(chalk.dim('\u2502') + chalk.bold.green('  \u{1F7E2} Green Flags:') + ' '.repeat(W - 17) + chalk.dim('\u2502'));
+    lines.push(
+      chalk.dim('\u2502') +
+        chalk.bold.green('  \u{1F7E2} Green Flags:') +
+        ' '.repeat(W - 17) +
+        chalk.dim('\u2502')
+    );
     for (const flag of greenFlags.slice(0, 4)) {
       const flagLine = `  \u2022 ${flag}`;
-      lines.push(chalk.dim('\u2502') + chalk.green(flagLine) + ' '.repeat(Math.max(0, W - flagLine.length + 2)) + chalk.dim('\u2502'));
+      lines.push(
+        chalk.dim('\u2502') +
+          chalk.green(flagLine) +
+          ' '.repeat(Math.max(0, W - flagLine.length + 2)) +
+          chalk.dim('\u2502')
+      );
     }
 
     lines.push(chalk.dim('\u2502') + ' '.repeat(W) + chalk.dim('\u2502'));
 
     // Red flags
-    lines.push(chalk.dim('\u2502') + chalk.bold.red('  \u{1F6A9} Red Flags:') + ' '.repeat(W - 16) + chalk.dim('\u2502'));
+    lines.push(
+      chalk.dim('\u2502') +
+        chalk.bold.red('  \u{1F6A9} Red Flags:') +
+        ' '.repeat(W - 16) +
+        chalk.dim('\u2502')
+    );
     for (const flag of redFlags.slice(0, 4)) {
       const flagLine = `  \u2022 ${flag}`;
-      lines.push(chalk.dim('\u2502') + chalk.red(flagLine) + ' '.repeat(Math.max(0, W - flagLine.length + 2)) + chalk.dim('\u2502'));
+      lines.push(
+        chalk.dim('\u2502') +
+          chalk.red(flagLine) +
+          ' '.repeat(Math.max(0, W - flagLine.length + 2)) +
+          chalk.dim('\u2502')
+      );
     }
 
     lines.push(chalk.dim('\u2502') + ' '.repeat(W) + chalk.dim('\u2502'));
@@ -1562,10 +1700,20 @@ program
     lines.push(chalk.dim('\u2502') + ' '.repeat(W) + chalk.dim('\u2502'));
 
     // Conversation starters
-    lines.push(chalk.dim('\u2502') + chalk.bold('  \u{1F4AC} Conversation starters:') + ' '.repeat(W - 27) + chalk.dim('\u2502'));
+    lines.push(
+      chalk.dim('\u2502') +
+        chalk.bold('  \u{1F4AC} Conversation starters:') +
+        ' '.repeat(W - 27) +
+        chalk.dim('\u2502')
+    );
     for (const starter of starters) {
       const starterLine = `  ${starter}`;
-      lines.push(chalk.dim('\u2502') + chalk.italic(starterLine) + ' '.repeat(Math.max(0, W - starterLine.length + 2)) + chalk.dim('\u2502'));
+      lines.push(
+        chalk.dim('\u2502') +
+          chalk.italic(starterLine) +
+          ' '.repeat(Math.max(0, W - starterLine.length + 2)) +
+          chalk.dim('\u2502')
+      );
     }
 
     lines.push(chalk.dim('\u2502') + ' '.repeat(W) + chalk.dim('\u2502'));
@@ -1584,7 +1732,9 @@ program
     if (options.png) {
       const pngAvailable = await isPngExportAvailable();
       if (!pngAvailable) {
-        console.log(chalk.red('PNG export requires the canvas package. Install with: npm install canvas'));
+        console.log(
+          chalk.red('PNG export requires the canvas package. Install with: npm install canvas')
+        );
         return;
       }
 
@@ -1592,7 +1742,10 @@ program
       spinner.start();
 
       const qrUrl = options.qr ? await getRepoUrl(rootDir) : undefined;
-      const outputPath = await exportToPng(output, options.png, { qrUrl: qrUrl || undefined });
+      const outputPath = await exportToPng(output, options.png, {
+        qrUrl: qrUrl || undefined,
+        socialFormat: options.social,
+      });
 
       spinner.succeed(`Image saved to ${outputPath}`);
       showShareLinks('tinder', qrUrl);
@@ -1629,6 +1782,7 @@ program
   .description('Get a comedic roast of your codebase')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
   .option('--png <file>', 'Export as PNG image for sharing')
+  .option('--social', 'Optimize PNG for Twitter/LinkedIn (1200x630)')
   .option('--qr', 'Add QR code linking to repo (with --png)')
   .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
@@ -1677,13 +1831,23 @@ program
     lines.push('');
     lines.push(chalk.bold.red('  \u{1F525} CODEBASE ROAST \u{1F525}'));
     lines.push('');
-    lines.push(chalk.italic("  Oh, you want feedback? Alright, let's see what we're working with..."));
+    lines.push(
+      chalk.italic("  Oh, you want feedback? Alright, let's see what we're working with...")
+    );
     lines.push('');
 
     // Stats roast
     lines.push(chalk.bold.cyan('  \u{1F4CA} The Stats:'));
-    lines.push(chalk.white(`  You have ${stats.fileCount} files. That's ${stats.fileCount} opportunities for bugs. Congratulations.`));
-    lines.push(chalk.white(`  ${stats.totalLines.toLocaleString()} lines of code. That's a lot of places to hide mistakes.`));
+    lines.push(
+      chalk.white(
+        `  You have ${stats.fileCount} files. That's ${stats.fileCount} opportunities for bugs. Congratulations.`
+      )
+    );
+    lines.push(
+      chalk.white(
+        `  ${stats.totalLines.toLocaleString()} lines of code. That's a lot of places to hide mistakes.`
+      )
+    );
     lines.push('');
 
     // Hotspots roast
@@ -1694,7 +1858,7 @@ program
         let roastLine = '';
 
         if (fileName.includes('helper') || fileName.includes('util')) {
-          roastLine = `Ah yes, the junk drawer of code. ${hotspot.complexity > 1 ? `${Object.values(graph.nodes).filter(n => n.filePath === hotspot.filePath && n.type === 'function').length} functions, 0 purpose.` : ''}`;
+          roastLine = `Ah yes, the junk drawer of code. ${hotspot.complexity > 1 ? `${Object.values(graph.nodes).filter((n) => n.filePath === hotspot.filePath && n.type === 'function').length} functions, 0 purpose.` : ''}`;
         } else if (fileName === 'index.ts' || fileName === 'index.js') {
           roastLine = `The "I'll organize this later" file. We both know you won't.`;
         } else if (hotspot.complexity > 20) {
@@ -1714,7 +1878,11 @@ program
     // Dead code roast
     if (deadCode.totalCount > 0) {
       lines.push(chalk.bold.gray('  \u{1F480} Dead Code:'));
-      lines.push(chalk.white(`  You have ${deadCode.totalCount} unused exports. They're not dead, they're just waiting for someone to care.`));
+      lines.push(
+        chalk.white(
+          `  You have ${deadCode.totalCount} unused exports. They're not dead, they're just waiting for someone to care.`
+        )
+      );
       lines.push(chalk.dim("  They'll keep waiting."));
       lines.push('');
     }
@@ -1724,23 +1892,38 @@ program
       const topOwner = busFactor.topOwners[0];
       lines.push(chalk.bold.magenta('  \u{1F47B} Bus Factor:'));
       if (topOwner.percentage > 60) {
-        lines.push(chalk.white(`  ${topOwner.name} owns ${topOwner.percentage}% of your codebase.`));
+        lines.push(
+          chalk.white(`  ${topOwner.name} owns ${topOwner.percentage}% of your codebase.`)
+        );
         lines.push(chalk.dim('  Hope they like their job here. Forever.'));
       } else if (busFactor.overallBusFactor < 2) {
-        lines.push(chalk.white(`  Overall bus factor: ${busFactor.overallBusFactor}. That's dangerously low.`));
+        lines.push(
+          chalk.white(
+            `  Overall bus factor: ${busFactor.overallBusFactor}. That's dangerously low.`
+          )
+        );
         lines.push(chalk.dim('  One sick day and it all falls apart.'));
       } else {
-        lines.push(chalk.white(`  Bus factor ${busFactor.overallBusFactor}. At least ${Math.ceil(busFactor.overallBusFactor)} people need to win the lottery for this to be a problem.`));
+        lines.push(
+          chalk.white(
+            `  Bus factor ${busFactor.overallBusFactor}. At least ${Math.ceil(busFactor.overallBusFactor)} people need to win the lottery for this to be a problem.`
+          )
+        );
       }
       lines.push('');
     }
 
     // Naming roasts
     const suspiciousFiles = Object.values(graph.nodes)
-      .filter(n => n.type === 'file')
-      .filter(n => {
+      .filter((n) => n.type === 'file')
+      .filter((n) => {
         const name = n.filePath.split('/').pop() || '';
-        return name.includes('helper') || name.includes('util') || name.includes('misc') || name.includes('stuff');
+        return (
+          name.includes('helper') ||
+          name.includes('util') ||
+          name.includes('misc') ||
+          name.includes('stuff')
+        );
       });
 
     if (suspiciousFiles.length > 0) {
@@ -1749,7 +1932,9 @@ program
         const name = file.filePath.split('/').pop();
         lines.push(chalk.white(`  \u{2022} ${file.filePath}`));
         if (name?.includes('helper')) {
-          lines.push(chalk.dim('    "Helpers" - the universal sign for "I gave up on naming things"'));
+          lines.push(
+            chalk.dim('    "Helpers" - the universal sign for "I gave up on naming things"')
+          );
         } else if (name?.includes('util')) {
           lines.push(chalk.dim('    "Utils" - where functions go to be forgotten'));
         } else if (name?.includes('misc')) {
@@ -1764,7 +1949,9 @@ program
     // Complexity distribution roast
     if (report.distribution.veryHigh > 0) {
       lines.push(chalk.bold.red('  \u{1F4A3} Complexity Crimes:'));
-      lines.push(chalk.white(`  ${report.distribution.veryHigh} functions have complexity over 20.`));
+      lines.push(
+        chalk.white(`  ${report.distribution.veryHigh} functions have complexity over 20.`)
+      );
       lines.push(chalk.dim("  These aren't functions, they're escape rooms."));
       lines.push('');
     }
@@ -1779,7 +1966,9 @@ program
     if (options.png) {
       const pngAvailable = await isPngExportAvailable();
       if (!pngAvailable) {
-        console.log(chalk.red('PNG export requires the canvas package. Install with: npm install canvas'));
+        console.log(
+          chalk.red('PNG export requires the canvas package. Install with: npm install canvas')
+        );
         return;
       }
 
@@ -1787,7 +1976,10 @@ program
       spinner.start();
 
       const qrUrl = options.qr ? await getRepoUrl(rootDir) : undefined;
-      const outputPath = await exportToPng(output, options.png, { qrUrl: qrUrl || undefined });
+      const outputPath = await exportToPng(output, options.png, {
+        qrUrl: qrUrl || undefined,
+        socialFormat: options.social,
+      });
 
       spinner.succeed(`Image saved to ${outputPath}`);
       showShareLinks('roast', qrUrl);
@@ -1837,8 +2029,8 @@ program
     }
     if (!fileNode) {
       // Search for partial match
-      const matchingKey = Object.keys(graph.nodes).find(k =>
-        k.endsWith(file) || k.endsWith('/' + file)
+      const matchingKey = Object.keys(graph.nodes).find(
+        (k) => k.endsWith(file) || k.endsWith(`/${file}`)
       );
       if (matchingKey) {
         fileNode = graph.nodes[matchingKey];
@@ -1859,12 +2051,12 @@ program
 
     // Get symbols in this file
     const fileSymbols = Object.values(graph.nodes).filter(
-      n => n.filePath === filePath && n.type !== 'file'
+      (n) => n.filePath === filePath && n.type !== 'file'
     );
 
     // Calculate sins
     const complexity = fileNode.complexity || 0;
-    const functionCount = fileSymbols.filter(n => n.type === 'function').length;
+    const functionCount = fileSymbols.filter((n) => n.type === 'function').length;
     const exportCount = relationships.exports.length;
     const importedByCount = relationships.importedBy.length;
 
@@ -1878,7 +2070,7 @@ program
         }
       }
     }
-    const unusedExports = relationships.exports.filter(e => !importedSymbols.has(e.name));
+    const unusedExports = relationships.exports.filter((e) => !importedSymbols.has(e.name));
 
     // Calculate days since last change
     let daysSinceChange = 0;
@@ -1891,9 +2083,10 @@ program
     const commitCount = fileNode.modificationCount || 0;
 
     // Check for tests
-    const hasTests = Object.keys(graph.nodes).some(k =>
-      (k.includes('.test.') || k.includes('.spec.') || k.includes('__tests__')) &&
-      k.includes(fileNode.name.replace(/\.[^.]+$/, ''))
+    const hasTests = Object.keys(graph.nodes).some(
+      (k) =>
+        (k.includes('.test.') || k.includes('.spec.') || k.includes('__tests__')) &&
+        k.includes(fileNode.name.replace(/\.[^.]+$/, ''))
     );
 
     // JSON output for CI/CD
@@ -1932,34 +2125,64 @@ program
 
     // Function count sin
     if (functionCount > 10) {
-      console.log(chalk.white(`  \u{2022} I harbor ${functionCount} functions that probably don't all belong together.`));
+      console.log(
+        chalk.white(
+          `  \u{2022} I harbor ${functionCount} functions that probably don't all belong together.`
+        )
+      );
     } else if (functionCount > 0) {
-      console.log(chalk.white(`  \u{2022} I contain ${functionCount} function${functionCount > 1 ? 's' : ''}.`));
+      console.log(
+        chalk.white(
+          `  \u{2022} I contain ${functionCount} function${functionCount > 1 ? 's' : ''}.`
+        )
+      );
     }
 
     // Import sin
     if (importedByCount > 10) {
-      console.log(chalk.white(`  \u{2022} I am imported by ${importedByCount} files who don't know what they want from me.`));
+      console.log(
+        chalk.white(
+          `  \u{2022} I am imported by ${importedByCount} files who don't know what they want from me.`
+        )
+      );
     } else if (importedByCount > 5) {
-      console.log(chalk.white(`  \u{2022} I am imported by ${importedByCount} files. I carry their burdens.`));
+      console.log(
+        chalk.white(`  \u{2022} I am imported by ${importedByCount} files. I carry their burdens.`)
+      );
     } else if (importedByCount === 0 && exportCount > 0) {
-      console.log(chalk.white(`  \u{2022} I export ${exportCount} things, but nobody imports them. I am alone.`));
+      console.log(
+        chalk.white(
+          `  \u{2022} I export ${exportCount} things, but nobody imports them. I am alone.`
+        )
+      );
     } else if (importedByCount > 0) {
-      console.log(chalk.white(`  \u{2022} ${importedByCount} file${importedByCount > 1 ? 's' : ''} depend${importedByCount === 1 ? 's' : ''} on me.`));
+      console.log(
+        chalk.white(
+          `  \u{2022} ${importedByCount} file${importedByCount > 1 ? 's' : ''} depend${importedByCount === 1 ? 's' : ''} on me.`
+        )
+      );
     }
 
     // Dead code sin
     if (unusedExports.length > 0) {
-      console.log(chalk.white(`  \u{2022} I have ${unusedExports.length} export${unusedExports.length > 1 ? 's' : ''} that ${unusedExports.length > 1 ? 'are' : 'is'} never used by anyone.`));
+      console.log(
+        chalk.white(
+          `  \u{2022} I have ${unusedExports.length} export${unusedExports.length > 1 ? 's' : ''} that ${unusedExports.length > 1 ? 'are' : 'is'} never used by anyone.`
+        )
+      );
     }
 
     // Complexity sin
     if (complexity > 20) {
-      console.log(chalk.white(`  \u{2022} My complexity has reached ${complexity}. I am deeply ashamed.`));
+      console.log(
+        chalk.white(`  \u{2022} My complexity has reached ${complexity}. I am deeply ashamed.`)
+      );
     } else if (complexity > 10) {
       console.log(chalk.white(`  \u{2022} My complexity is ${complexity}. I could be simpler.`));
     } else if (complexity > 0) {
-      console.log(chalk.white(`  \u{2022} My complexity is ${complexity}. At least I have that going for me.`));
+      console.log(
+        chalk.white(`  \u{2022} My complexity is ${complexity}. At least I have that going for me.`)
+      );
     }
 
     // Test sin
@@ -1969,9 +2192,17 @@ program
 
     // Staleness sin
     if (daysSinceChange > 365) {
-      console.log(chalk.white(`  \u{2022} I have not been touched in ${Math.floor(daysSinceChange / 365)} year${Math.floor(daysSinceChange / 365) > 1 ? 's' : ''}. I am forgotten.`));
+      console.log(
+        chalk.white(
+          `  \u{2022} I have not been touched in ${Math.floor(daysSinceChange / 365)} year${Math.floor(daysSinceChange / 365) > 1 ? 's' : ''}. I am forgotten.`
+        )
+      );
     } else if (daysSinceChange > 180) {
-      console.log(chalk.white(`  \u{2022} I have not been touched in ${Math.floor(daysSinceChange / 30)} months. The dust gathers.`));
+      console.log(
+        chalk.white(
+          `  \u{2022} I have not been touched in ${Math.floor(daysSinceChange / 30)} months. The dust gathers.`
+        )
+      );
     }
 
     console.log();
@@ -1993,6 +2224,109 @@ program
     console.log();
     console.log(chalk.bold.magenta('  Amen. \u{1F64F}'));
     console.log();
+  });
+
+/**
+ * Obituary command - generate an obituary for a file
+ */
+program
+  .command('obituary <file>')
+  .description('Generate an obituary for a file about to be deleted')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('--json', 'Output as JSON for CI/CD integration')
+  .action(async (file: string, options) => {
+    const rootDir = path.resolve(options.dir);
+
+    const graph = await loadGraph(rootDir);
+
+    if (!graph) {
+      if (options.json) {
+        outputJsonError('obituary', 'No graph found. Run `specter scan` first.');
+      }
+      console.log(chalk.yellow('No graph found. Run `specter scan` first.'));
+      return;
+    }
+
+    // Normalize the file path
+    let filePath = file;
+    if (!filePath.startsWith(rootDir)) {
+      filePath = path.resolve(rootDir, file);
+    }
+
+    const { generateObituary } = await import('./obituary.js');
+    const output = generateObituary(filePath, graph, rootDir);
+
+    if (options.json) {
+      outputJson('obituary', { file: filePath, output });
+      return;
+    }
+
+    console.log(output);
+  });
+
+/**
+ * Blame Game command - gamified blame with awards
+ */
+program
+  .command('blame-game')
+  .alias('blame')
+  .description('Gamified blame analysis with awards for contributors')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('--json', 'Output as JSON for CI/CD integration')
+  .action(async (options) => {
+    const rootDir = path.resolve(options.dir);
+
+    const graph = await loadGraph(rootDir);
+
+    if (!graph) {
+      if (options.json) {
+        outputJsonError('blame-game', 'No graph found. Run `specter scan` first.');
+      }
+      console.log(chalk.yellow('No graph found. Run `specter scan` first.'));
+      return;
+    }
+
+    const { generateBlameGame } = await import('./blame-game.js');
+    const output = generateBlameGame(graph, rootDir);
+
+    if (options.json) {
+      outputJson('blame-game', { output });
+      return;
+    }
+
+    console.log(output);
+  });
+
+/**
+ * Meme command - generate memes from code metrics
+ */
+program
+  .command('meme')
+  .description('Generate a meme based on your codebase metrics')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('--json', 'Output as JSON for CI/CD integration')
+  .action(async (options) => {
+    const rootDir = path.resolve(options.dir);
+
+    const graph = await loadGraph(rootDir);
+
+    if (!graph) {
+      if (options.json) {
+        outputJsonError('meme', 'No graph found. Run `specter scan` first.');
+      }
+      console.log(chalk.yellow('No graph found. Run `specter scan` first.'));
+      return;
+    }
+
+    const { generateMeme } = await import('./meme.js');
+    const output = generateMeme(graph);
+
+    if (options.json) {
+      outputJson('meme', { output });
+      return;
+    }
+
+    console.log(output);
   });
 
 /**
@@ -2058,6 +2392,7 @@ program
   .description('View your codebase achievements')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
   .option('--png <file>', 'Export as PNG image for sharing')
+  .option('--social', 'Optimize PNG for Twitter/LinkedIn (1200x630)')
   .option('--qr', 'Add QR code linking to repo (with --png)')
   .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
@@ -2105,7 +2440,9 @@ program
     if (options.png) {
       const pngAvailable = await isPngExportAvailable();
       if (!pngAvailable) {
-        console.log(chalk.red('PNG export requires the canvas package. Install with: npm install canvas'));
+        console.log(
+          chalk.red('PNG export requires the canvas package. Install with: npm install canvas')
+        );
         return;
       }
 
@@ -2114,7 +2451,10 @@ program
 
       const content = formatAchievementsForExport(unlocked, locked, achievements.length);
       const qrUrl = options.qr ? await getRepoUrl(rootDir) : undefined;
-      const outputPath = await exportToPng(content, options.png, { qrUrl: qrUrl || undefined });
+      const outputPath = await exportToPng(content, options.png, {
+        qrUrl: qrUrl || undefined,
+        socialFormat: options.social,
+      });
 
       spinner.succeed(`Image saved to ${outputPath}`);
       showShareLinks('achievements', qrUrl);
@@ -2129,7 +2469,9 @@ program
 
     // Unlocked achievements
     console.log(chalk.bold(`\u250c${'\u2500'.repeat(W)}\u2510`));
-    console.log(chalk.bold('\u2502') + chalk.green.bold(' UNLOCKED'.padEnd(W - 1)) + chalk.bold('\u2502'));
+    console.log(
+      chalk.bold('\u2502') + chalk.green.bold(' UNLOCKED'.padEnd(W - 1)) + chalk.bold('\u2502')
+    );
     console.log(chalk.bold(`\u251c${'\u2500'.repeat(W)}\u2524`));
 
     if (unlocked.length === 0) {
@@ -2148,7 +2490,9 @@ program
 
     // Locked achievements
     console.log(chalk.bold(`\u250c${'\u2500'.repeat(W)}\u2510`));
-    console.log(chalk.bold('\u2502') + chalk.dim(' \ud83d\udd12 LOCKED'.padEnd(W - 1)) + chalk.bold('\u2502'));
+    console.log(
+      chalk.bold('\u2502') + chalk.dim(' \ud83d\udd12 LOCKED'.padEnd(W - 1)) + chalk.bold('\u2502')
+    );
     console.log(chalk.bold(`\u251c${'\u2500'.repeat(W)}\u2524`));
 
     if (locked.length === 0) {
@@ -2158,7 +2502,9 @@ program
       for (const achievement of locked) {
         const line = ` ${achievement.emoji} ${achievement.name} - ${achievement.description}`;
         const truncated = line.slice(0, W - 1);
-        console.log(chalk.bold('\u2502') + chalk.dim(truncated.padEnd(W - 1)) + chalk.bold('\u2502'));
+        console.log(
+          chalk.bold('\u2502') + chalk.dim(truncated.padEnd(W - 1)) + chalk.bold('\u2502')
+        );
       }
     }
     console.log(chalk.bold(`\u2514${'\u2500'.repeat(W)}\u2518`));
@@ -2211,7 +2557,7 @@ program
 
     console.log();
     // Add some mystical styling
-    console.log(chalk.bold.magenta('  ' + '\u2500'.repeat(50)));
+    console.log(chalk.bold.magenta(`  ${'\u2500'.repeat(50)}`));
     for (const line of output.split('\n')) {
       if (line.startsWith('\ud83d\udd2e')) {
         console.log(chalk.bold.magenta(`  ${line}`));
@@ -2221,7 +2567,13 @@ program
         console.log(chalk.bold.yellow(`  ${line}`));
       } else if (line.startsWith('"')) {
         console.log(chalk.italic.green(`  ${line}`));
-      } else if (line.includes('\ud83d\udcab') || line.includes('\u26a0\ufe0f') || line.includes('\ud83c\udfaf') || line.includes('\ud83d\udc95') || line.includes('\ud83d\udeab')) {
+      } else if (
+        line.includes('\ud83d\udcab') ||
+        line.includes('\u26a0\ufe0f') ||
+        line.includes('\ud83c\udfaf') ||
+        line.includes('\ud83d\udc95') ||
+        line.includes('\ud83d\udeab')
+      ) {
         console.log(chalk.white(`  ${line}`));
       } else if (line.startsWith("Today's affirmation:")) {
         console.log(chalk.bold.yellow(`  ${line}`));
@@ -2229,7 +2581,7 @@ program
         console.log(chalk.white(`  ${line}`));
       }
     }
-    console.log(chalk.bold.magenta('  ' + '\u2500'.repeat(50)));
+    console.log(chalk.bold.magenta(`  ${'\u2500'.repeat(50)}`));
     console.log();
   });
 
@@ -2300,18 +2652,27 @@ program
   .option('--quarter <n>', 'Quarter number (1-4) when period is quarter')
   .option('--month <n>', 'Month number (1-12) when period is month')
   .option('--png <file>', 'Export as PNG image for sharing')
+  .option('--social', 'Optimize PNG for Twitter/LinkedIn (1200x630)')
   .option('--qr', 'Add QR code linking to repo (with --png)')
   .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
     const year = options.year ? parseInt(options.year, 10) : undefined;
     const period = (options.period || 'year') as WrappedPeriod;
-    const periodNum = options.quarter ? parseInt(options.quarter, 10) :
-                      options.month ? parseInt(options.month, 10) : undefined;
+    const periodNum = options.quarter
+      ? parseInt(options.quarter, 10)
+      : options.month
+        ? parseInt(options.month, 10)
+        : undefined;
 
-    const periodLabel = period === 'year' ? 'year' :
-                        period === 'quarter' ? `Q${periodNum || Math.ceil((new Date().getMonth() + 1) / 3)}` :
-                        period === 'month' ? 'month' : 'week';
+    const periodLabel =
+      period === 'year'
+        ? 'year'
+        : period === 'quarter'
+          ? `Q${periodNum || Math.ceil((new Date().getMonth() + 1) / 3)}`
+          : period === 'month'
+            ? 'month'
+            : 'week';
     const spinner = options.json ? null : createSpinner(`Unwrapping your ${periodLabel}...`);
     spinner?.start();
 
@@ -2340,7 +2701,9 @@ program
     if (options.png) {
       const pngAvailable = await isPngExportAvailable();
       if (!pngAvailable) {
-        console.log(chalk.red('PNG export requires the canvas package. Install with: npm install canvas'));
+        console.log(
+          chalk.red('PNG export requires the canvas package. Install with: npm install canvas')
+        );
         return;
       }
 
@@ -2348,7 +2711,10 @@ program
       pngSpinner.start();
 
       const qrUrl = options.qr ? await getRepoUrl(rootDir) : undefined;
-      const outputPath = await exportToPng(output, options.png, { qrUrl: qrUrl || undefined });
+      const outputPath = await exportToPng(output, options.png, {
+        qrUrl: qrUrl || undefined,
+        socialFormat: options.social,
+      });
 
       pngSpinner.succeed(`Image saved to ${outputPath}`);
       showShareLinks('wrapped', qrUrl);
@@ -2442,9 +2808,16 @@ program
 
     if (!query) {
       if (options.json) {
-        outputJsonError('seance', 'Please provide a file name to search for, or use --list to see recently deleted files.');
+        outputJsonError(
+          'seance',
+          'Please provide a file name to search for, or use --list to see recently deleted files.'
+        );
       }
-      console.log(chalk.yellow('Please provide a file name to search for, or use --list to see recently deleted files.'));
+      console.log(
+        chalk.yellow(
+          'Please provide a file name to search for, or use --list to see recently deleted files.'
+        )
+      );
       console.log(chalk.dim('Example: specter seance utils.ts'));
       return;
     }
@@ -2474,11 +2847,22 @@ program
         console.log(chalk.bold.magenta(`  ${line}`));
       } else if (line.includes('👻') && line.includes('│')) {
         console.log(chalk.bold.cyan(`  ${line}`));
-      } else if (line.includes('┌') || line.includes('┐') || line.includes('├') || line.includes('┤') || line.includes('└') || line.includes('┘')) {
+      } else if (
+        line.includes('┌') ||
+        line.includes('┐') ||
+        line.includes('├') ||
+        line.includes('┤') ||
+        line.includes('└') ||
+        line.includes('┘')
+      ) {
         console.log(chalk.dim.cyan(`  ${line}`));
       } else if (line.includes('Passed on:') || line.includes('Deleted by:')) {
         console.log(chalk.red(`  ${line}`));
-      } else if (line.includes('Born:') || line.includes('Created by:') || line.includes('Lived:')) {
+      } else if (
+        line.includes('Born:') ||
+        line.includes('Created by:') ||
+        line.includes('Lived:')
+      ) {
         console.log(chalk.green(`  ${line}`));
       } else if (line.includes('Last words:')) {
         console.log(chalk.italic.yellow(`  ${line}`));
@@ -2534,13 +2918,26 @@ program
         console.log(chalk.bold.magenta(`  ${line}`));
       } else if (line.includes('═')) {
         console.log(chalk.dim.magenta(`  ${line}`));
-      } else if (line.startsWith('Reading for:') || line.startsWith('Date:') || line.startsWith('Spread:')) {
+      } else if (
+        line.startsWith('Reading for:') ||
+        line.startsWith('Date:') ||
+        line.startsWith('Spread:')
+      ) {
         console.log(chalk.cyan(`  ${line}`));
-      } else if (line.includes('┌') || line.includes('┐') || line.includes('└') || line.includes('┘')) {
+      } else if (
+        line.includes('┌') ||
+        line.includes('┐') ||
+        line.includes('└') ||
+        line.includes('┘')
+      ) {
         console.log(chalk.dim.yellow(`  ${line}`));
       } else if (line.includes('│─') || (line.includes('│') && line.includes('─'))) {
         console.log(chalk.dim.yellow(`  ${line}`));
-      } else if (line.match(/^│\s+(0|I|II|III|IV|V|VI|VII|VIII|IX|X|XI|XII|XIII|XIV|XV|XVI|XVII|XVIII|XIX|XX|XXI)\./)) {
+      } else if (
+        line.match(
+          /^│\s+(0|I|II|III|IV|V|VI|VII|VIII|IX|X|XI|XII|XIII|XIV|XV|XVI|XVII|XVIII|XIX|XX|XXI)\./
+        )
+      ) {
         console.log(chalk.bold.yellow(`  ${line}`));
       } else if (line.includes('THE ') && line.includes('│')) {
         console.log(chalk.bold.cyan(`  ${line}`));
@@ -2598,7 +2995,9 @@ program
     if (options.png) {
       const pngAvailable = await isPngExportAvailable();
       if (!pngAvailable) {
-        console.log(chalk.red('PNG export requires the canvas package. Install with: npm install canvas'));
+        console.log(
+          chalk.red('PNG export requires the canvas package. Install with: npm install canvas')
+        );
         return;
       }
 
@@ -2621,11 +3020,26 @@ program
         console.log(chalk.dim.cyan(`  ${line}`));
       } else if (line.startsWith('  Specimen:') || line.startsWith('  Sequence:')) {
         console.log(chalk.yellow(`  ${line}`));
-      } else if (line.includes('DOUBLE HELIX') || line.includes('GENETIC TRAITS') || line.includes('GENOME SIGNATURE')) {
+      } else if (
+        line.includes('DOUBLE HELIX') ||
+        line.includes('GENETIC TRAITS') ||
+        line.includes('GENOME SIGNATURE')
+      ) {
         console.log(chalk.bold.magenta(`  ${line}`));
-      } else if (line.includes('┌') || line.includes('┐') || line.includes('└') || line.includes('┘') || line.includes('│')) {
+      } else if (
+        line.includes('┌') ||
+        line.includes('┐') ||
+        line.includes('└') ||
+        line.includes('┘') ||
+        line.includes('│')
+      ) {
         console.log(chalk.dim.blue(`  ${line}`));
-      } else if (line.includes('▓') || line.includes('░') || line.includes('─') || line.includes('┄')) {
+      } else if (
+        line.includes('▓') ||
+        line.includes('░') ||
+        line.includes('─') ||
+        line.includes('┄')
+      ) {
         console.log(chalk.cyan(`  ${line}`));
       } else if (line.includes('unique to your codebase') || line.includes('No two projects')) {
         console.log(chalk.italic.green(`  ${line}`));
@@ -2676,7 +3090,11 @@ program
         console.log(chalk.bold.cyan(`  ${line}`));
       } else if (line.includes('═')) {
         console.log(chalk.dim.cyan(`  ${line}`));
-      } else if (line.startsWith('OVERVIEW') || line.startsWith('ARCHITECTURE') || line.includes('QUICK START')) {
+      } else if (
+        line.startsWith('OVERVIEW') ||
+        line.startsWith('ARCHITECTURE') ||
+        line.includes('QUICK START')
+      ) {
         console.log(chalk.bold.yellow(`  ${line}`));
       } else if (line.startsWith('📍')) {
         console.log(chalk.bold.magenta(`  ${line}`));
@@ -2739,7 +3157,11 @@ program
         console.log(chalk.dim.cyan(`  ${line}`));
       } else if (line.startsWith('File:')) {
         console.log(chalk.yellow(`  ${line}`));
-      } else if (line.startsWith('EXPERTS') || line.startsWith('RELATED') || line.startsWith('SUGGESTIONS')) {
+      } else if (
+        line.startsWith('EXPERTS') ||
+        line.startsWith('RELATED') ||
+        line.startsWith('SUGGESTIONS')
+      ) {
         console.log(chalk.bold.magenta(`  ${line}`));
       } else if (line.startsWith('─')) {
         console.log(chalk.dim(`  ${line}`));
@@ -2803,7 +3225,14 @@ program
         console.log(chalk.bold.cyan(`  ${line}`));
       } else if (line.startsWith('File:')) {
         console.log(chalk.yellow(`  ${line}`));
-      } else if (line.startsWith('ORIGIN') || line.startsWith('AUTHOR') || line.startsWith('CONNECTIONS') || line.startsWith('PATTERNS') || line.startsWith('MAJOR') || line.startsWith('SUGGESTIONS')) {
+      } else if (
+        line.startsWith('ORIGIN') ||
+        line.startsWith('AUTHOR') ||
+        line.startsWith('CONNECTIONS') ||
+        line.startsWith('PATTERNS') ||
+        line.startsWith('MAJOR') ||
+        line.startsWith('SUGGESTIONS')
+      ) {
         console.log(chalk.bold.magenta(`  ${line}`));
       } else if (line.startsWith('-'.repeat(10)) || line.startsWith('='.repeat(10))) {
         console.log(chalk.dim(`  ${line}`));
@@ -2968,14 +3397,23 @@ program
         console.log(chalk.bold.yellow(`  ${line}`));
       } else if (line.includes('═')) {
         console.log(chalk.dim.yellow(`  ${line}`));
-      } else if (line.startsWith('CODEBASE') || line.startsWith('LAST 24') || line.startsWith('HOT FILES') || line.startsWith("TODAY'S")) {
+      } else if (
+        line.startsWith('CODEBASE') ||
+        line.startsWith('LAST 24') ||
+        line.startsWith('HOT FILES') ||
+        line.startsWith("TODAY'S")
+      ) {
         console.log(chalk.bold.cyan(`  ${line}`));
       } else if (line.includes('⚠️  ALERTS')) {
         console.log(chalk.bold.red(`  ${line}`));
       } else if (line.startsWith('─')) {
         console.log(chalk.dim(`  ${line}`));
       } else if (line.includes('💚') || line.includes('💛') || line.includes('❤️')) {
-        const color = line.includes('💚') ? chalk.green : line.includes('💛') ? chalk.yellow : chalk.red;
+        const color = line.includes('💚')
+          ? chalk.green
+          : line.includes('💛')
+            ? chalk.yellow
+            : chalk.red;
         console.log(color(`  ${line}`));
       } else if (line.includes('🔥')) {
         console.log(chalk.red(`  ${line}`));
@@ -3030,7 +3468,11 @@ program
     for (const line of output.split('\n')) {
       if (line.includes('\u250F') || line.includes('\u2517') || line.includes('\u2503')) {
         console.log(chalk.bold.cyan(`  ${line}`));
-      } else if (line.startsWith('YESTERDAY') || line.startsWith('TODAY') || line.startsWith('BLOCKERS')) {
+      } else if (
+        line.startsWith('YESTERDAY') ||
+        line.startsWith('TODAY') ||
+        line.startsWith('BLOCKERS')
+      ) {
         console.log(chalk.bold.yellow(`  ${line}`));
       } else if (line.startsWith('\u2500')) {
         console.log(chalk.dim(`  ${line}`));
@@ -3040,7 +3482,11 @@ program
         console.log(chalk.green(`  ${line}`));
       } else if (line.includes('\u26A0')) {
         console.log(chalk.red(`  ${line}`));
-      } else if (line.includes('\uD83D\uDCDD') || line.includes('\uD83C\uDFAF') || line.includes('\uD83D\uDCA1')) {
+      } else if (
+        line.includes('\uD83D\uDCDD') ||
+        line.includes('\uD83C\uDFAF') ||
+        line.includes('\uD83D\uDCA1')
+      ) {
         console.log(chalk.white(`  ${line}`));
       } else if (line.includes('\uD83D\uDCC5')) {
         console.log(chalk.cyan(`  ${line}`));
@@ -3230,8 +3676,11 @@ program
     for (const line of output.split('\n')) {
       if (line.includes('┏') || line.includes('┗') || line.includes('┃')) {
         const color =
-          result.status === 'pass' ? chalk.bold.green :
-          result.status === 'warn' ? chalk.bold.yellow : chalk.bold.red;
+          result.status === 'pass'
+            ? chalk.bold.green
+            : result.status === 'warn'
+              ? chalk.bold.yellow
+              : chalk.bold.red;
         console.log(color(`  ${line}`));
       } else if (line.includes('HIGH RISK')) {
         console.log(chalk.bold.red(`  ${line}`));
@@ -3255,6 +3704,34 @@ program
     if (exitCode && result.status === 'fail') {
       process.exit(1);
     }
+  });
+
+/**
+ * Watch command - Real-time code analysis
+ */
+program
+  .command('watch')
+  .description('Watch files and provide real-time analysis feedback')
+  .option('-d, --dir <path>', 'Directory to watch', '.')
+  .option(
+    '-p, --personality <mode>',
+    'Output personality: roast, noir, zen, pirate, motivational, sage, hacker, poet, valley, default',
+    'default'
+  )
+  .option('--debounce <ms>', 'Debounce delay in milliseconds', '500')
+  .option('--all', 'Show all changes, not just significant ones')
+  .action(async (options) => {
+    const rootDir = path.resolve(options.dir);
+    const mode = options.personality as PersonalityMode;
+    const debounceMs = parseInt(options.debounce, 10);
+    const showAll = options.all;
+
+    await startWatch({
+      rootDir,
+      mode,
+      debounceMs,
+      showAll,
+    });
   });
 
 /**
@@ -3297,18 +3774,34 @@ program
     for (const line of output.split('\n')) {
       if (line.includes('PR HEALTH CHECK')) {
         const color =
-          result.riskLevel === 'safe' ? chalk.bold.green :
-          result.riskLevel === 'caution' ? chalk.bold.yellow : chalk.bold.red;
+          result.riskLevel === 'safe'
+            ? chalk.bold.green
+            : result.riskLevel === 'caution'
+              ? chalk.bold.yellow
+              : chalk.bold.red;
         console.log(color(`  ${line}`));
       } else if (line.startsWith('\u2500')) {
         console.log(chalk.dim(`  ${line}`));
-      } else if (line.includes('\u{1F4C8}') || line.includes('\u{1F389}') || line.includes('\u{1F7E2}')) {
+      } else if (
+        line.includes('\u{1F4C8}') ||
+        line.includes('\u{1F389}') ||
+        line.includes('\u{1F7E2}')
+      ) {
         console.log(chalk.green(`  ${line}`));
-      } else if (line.includes('\u{1F4C9}') || line.includes('\u{1F525}') || line.includes('\u{1F534}') || line.includes('\u{1F6A8}')) {
+      } else if (
+        line.includes('\u{1F4C9}') ||
+        line.includes('\u{1F525}') ||
+        line.includes('\u{1F534}') ||
+        line.includes('\u{1F6A8}')
+      ) {
         console.log(chalk.red(`  ${line}`));
       } else if (line.includes('\u26A0\uFE0F')) {
         console.log(chalk.yellow(`  ${line}`));
-      } else if (line.includes('\u{1F4C1}') || line.includes('\u{1F3AF}') || line.includes('\u{1F4AC}')) {
+      } else if (
+        line.includes('\u{1F4C1}') ||
+        line.includes('\u{1F3AF}') ||
+        line.includes('\u{1F4AC}')
+      ) {
         console.log(chalk.cyan(`  ${line}`));
       } else {
         console.log(`  ${line}`);
@@ -3320,6 +3813,154 @@ program
     if (options.exitCode && result.riskLevel === 'danger') {
       process.exit(1);
     }
+  });
+
+/**
+ * Review command - AI-powered PR review with GitHub integration
+ */
+program
+  .command('review')
+  .description('Review a GitHub pull request with risk analysis and suggestions')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('--pr <number>', 'Pull request number')
+  .option('--token <token>', 'GitHub token (or use GITHUB_TOKEN env var)')
+  .option('--owner <owner>', 'Repository owner')
+  .option('--repo <repo>', 'Repository name')
+  .option('-p, --personality <mode>', 'Personality mode', 'default')
+  .option('--inline', 'Post inline comments on high-risk files')
+  .option('--json', 'Output as JSON for CI/CD integration')
+  .action(async (options) => {
+    const rootDir = path.resolve(options.dir);
+
+    if (!options.pr) {
+      console.log(chalk.red('\n  ❌ No PR specified. Use --pr <number>\n'));
+      return;
+    }
+
+    const token = options.token || process.env.GITHUB_TOKEN;
+    if (!token) {
+      console.log(chalk.red('\n  ❌ No GitHub token. Use --token or set GITHUB_TOKEN env var\n'));
+      return;
+    }
+
+    const prNumber = parseInt(options.pr, 10);
+    const owner = options.owner || process.env.GITHUB_REPOSITORY_OWNER || '';
+    const repo = options.repo || process.env.GITHUB_REPOSITORY?.split('/')[1] || '';
+
+    if (!owner || !repo) {
+      console.log(chalk.red('\n  ❌ Repository info required. Use --owner and --repo\n'));
+      return;
+    }
+
+    const spinner = options.json
+      ? null
+      : createSpinner(`Reviewing PR #${prNumber} in ${owner}/${repo}...`);
+    spinner?.start();
+
+    const graph = await loadGraph(rootDir);
+
+    if (!graph) {
+      spinner?.fail('No graph found. Run `specter scan` first.');
+      if (options.json) {
+        outputJsonError('review', 'No graph found. Run `specter scan` first.');
+      }
+      return;
+    }
+
+    try {
+      const result = await reviewPullRequest(rootDir, graph, {
+        token,
+        owner,
+        repo,
+        pullNumber: prNumber,
+        mode: options.personality as PersonalityMode,
+        postInlineComments: options.inline,
+      });
+
+      spinner?.succeed(`Posted review on PR #${prNumber}`);
+
+      // JSON output for CI/CD
+      if (options.json) {
+        outputJson('review', result);
+        return;
+      }
+
+      console.log();
+      console.log(chalk.bold.green(`  ✅ Review posted successfully!`));
+      console.log();
+      console.log(chalk.cyan(`  Review ID: ${result.reviewId}`));
+      console.log(chalk.dim(`  Comments posted: ${result.commentsPosted}`));
+      console.log(chalk.dim(`  Risk level: ${result.riskLevel}`));
+      console.log();
+      console.log(chalk.dim(`  View: https://github.com/${owner}/${repo}/pull/${prNumber}`));
+      console.log();
+    } catch (error) {
+      spinner?.fail('Failed to post review');
+      console.error(
+        chalk.red(`\n  Error: ${error instanceof Error ? error.message : String(error)}\n`)
+      );
+      if (options.json) {
+        outputJsonError('review', error instanceof Error ? error.message : String(error));
+      }
+    }
+  });
+
+/**
+ * AI Ask command - AI-powered codebase Q&A
+ */
+program
+  .command('ai-ask <question>')
+  .description('Ask questions about your codebase using AI (powered by GitHub Copilot CLI)')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('-c, --context <type>', 'Focus on specific context (hotspots, complexity, dependencies)')
+  .option('-v, --verbose', 'Show detailed context used for the answer')
+  .action(async (question: string, options) => {
+    const rootDir = path.resolve(options.dir);
+    await askQuestion(question, rootDir, options);
+  });
+
+/**
+ * Explain hotspot command - AI-powered hotspot explanations
+ */
+program
+  .command('explain-hotspot <file>')
+  .description('Explain why a file is a hotspot using AI (powered by GitHub Copilot CLI)')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('-l, --lines <range>', 'Explain specific lines (e.g., 10-50)')
+  .option('-s, --suggestions', 'Include refactoring suggestions')
+  .action(async (file: string, options) => {
+    const rootDir = path.resolve(options.dir);
+    await explainHotspot(file, rootDir, options);
+  });
+
+/**
+ * AI commit command - Generate smart commit messages
+ */
+program
+  .command('ai-commit')
+  .description('Generate AI-powered commit messages (powered by GitHub Copilot CLI)')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('-a, --apply', 'Automatically apply the generated commit message')
+  .option('-v, --verbose', 'Show detailed diff information')
+  .option('-t, --type <type>', 'Specify commit type (feat, fix, docs, etc.)')
+  .action(async (options) => {
+    const rootDir = path.resolve(options.dir);
+    await generateCommitMessage(rootDir, options);
+  });
+
+/**
+ * Suggest refactor command - AI-powered refactoring suggestions
+ */
+program
+  .command('suggest-refactor <file>')
+  .description('Get AI-powered refactoring suggestions (powered by GitHub Copilot CLI)')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('-f, --focus <area>', 'Focus on specific area (e.g., "error handling", "performance")')
+  .option('-p, --priority <type>', 'Priority: complexity, coupling, testability, or all', 'all')
+  .option('--format <type>', 'Output format: steps, diff, or explanation', 'steps')
+  .action(async (file: string, options) => {
+    const rootDir = path.resolve(options.dir);
+    await suggestRefactoring(file, rootDir, options);
   });
 
 /**
@@ -3354,7 +3995,10 @@ program
 
     if (result.entries.length === 0) {
       if (options.json) {
-        outputJson('changelog', { entries: [], message: 'No commits found in the specified range.' });
+        outputJson('changelog', {
+          entries: [],
+          message: 'No commits found in the specified range.',
+        });
         return;
       }
       console.log(chalk.yellow('\n  No commits found in the specified range.\n'));
@@ -3493,7 +4137,11 @@ program
     for (const line of output.split('\n')) {
       if (line.includes('┏') || line.includes('┗') || line.includes('┃')) {
         console.log(chalk.bold.magenta(`  ${line}`));
-      } else if (line.startsWith('DRIFT SCORE') || line.includes('VIOLATIONS') || line.includes('ISSUES')) {
+      } else if (
+        line.startsWith('DRIFT SCORE') ||
+        line.includes('VIOLATIONS') ||
+        line.includes('ISSUES')
+      ) {
         console.log(chalk.bold.cyan(`  ${line}`));
       } else if (line.includes('RECOMMENDATIONS')) {
         console.log(chalk.bold.green(`  ${line}`));
@@ -3560,7 +4208,11 @@ program
     for (const line of output.split('\n')) {
       if (line.includes('┏') || line.includes('┗') || line.includes('┃')) {
         console.log(chalk.bold.magenta(`  ${line}`));
-      } else if (line.startsWith('SUMMARY') || line.includes('SEVERITY CYCLES') || line.includes('WORST CYCLE')) {
+      } else if (
+        line.startsWith('SUMMARY') ||
+        line.includes('SEVERITY CYCLES') ||
+        line.includes('WORST CYCLE')
+      ) {
         console.log(chalk.bold.cyan(`  ${line}`));
       } else if (line.includes('SUGGESTIONS')) {
         console.log(chalk.bold.green(`  ${line}`));
@@ -3794,7 +4446,12 @@ program
         console.log(chalk.dim(`  ${line}`));
       } else if (line.startsWith('  •')) {
         console.log(chalk.white(`  ${line}`));
-      } else if (line.includes('░') || line.includes('▒') || line.includes('▓') || line.includes('█')) {
+      } else if (
+        line.includes('░') ||
+        line.includes('▒') ||
+        line.includes('▓') ||
+        line.includes('█')
+      ) {
         // Heatmap cells - use default coloring
         console.log(chalk.white(`  ${line}`));
       } else {
@@ -3811,11 +4468,7 @@ program
   .command('diagram')
   .description('Generate architecture diagram from the knowledge graph')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
-  .option(
-    '-f, --format <format>',
-    'Output format: mermaid, d2, or ascii',
-    'mermaid'
-  )
+  .option('-f, --format <format>', 'Output format: mermaid, d2, or ascii', 'mermaid')
   .option('--depth <n>', 'Directory depth to show', '2')
   .option('--focus <path>', 'Focus on specific file or directory')
   .option('--complexity', 'Show complexity indicators')
@@ -3876,7 +4529,11 @@ program
     for (const line of output.split('\n')) {
       if (line.includes('┏') || line.includes('┗') || line.includes('┃')) {
         console.log(chalk.bold.magenta(`  ${line}`));
-      } else if (line.startsWith('Format:') || line.startsWith('Nodes:') || line.startsWith('Edges:')) {
+      } else if (
+        line.startsWith('Format:') ||
+        line.startsWith('Nodes:') ||
+        line.startsWith('Edges:')
+      ) {
         console.log(chalk.cyan(`  ${line}`));
       } else if (line.startsWith('Saved:')) {
         console.log(chalk.green(`  ${line}`));
@@ -3888,7 +4545,12 @@ program
         console.log(chalk.dim(`  ${line}`));
       } else if (line.includes('Paste into') || line.includes('Render with')) {
         console.log(chalk.dim.italic(`  ${line}`));
-      } else if (line.includes('┌') || line.includes('└') || line.includes('│') || line.includes('├')) {
+      } else if (
+        line.includes('┌') ||
+        line.includes('└') ||
+        line.includes('│') ||
+        line.includes('├')
+      ) {
         console.log(chalk.white(`  ${line}`));
       } else {
         console.log(chalk.white(`  ${line}`));
@@ -3973,9 +4635,7 @@ program
     console.log();
     console.log(chalk.bold('┌─────────────────────────────────────────────┐'));
     console.log(
-      chalk.bold('│') +
-        chalk.cyan('  🧠 EMBEDDING INDEX READY'.padEnd(44)) +
-        chalk.bold('│')
+      chalk.bold('│') + chalk.cyan('  🧠 EMBEDDING INDEX READY'.padEnd(44)) + chalk.bold('│')
     );
     console.log(chalk.bold('├─────────────────────────────────────────────┤'));
     console.log(
@@ -4046,7 +4706,10 @@ program
         if (mode === 'semantic') {
           spinner?.fail('No embedding index found. Run `specter index` first for semantic search.');
           if (options.json) {
-            outputJsonError('search', 'No embedding index found. Run `specter index` first for semantic search.');
+            outputJsonError(
+              'search',
+              'No embedding index found. Run `specter index` first for semantic search.'
+            );
           }
           return;
         }
@@ -4082,7 +4745,11 @@ program
         console.log(chalk.yellow(`  ${line}`));
       } else if (line.startsWith('Found:')) {
         console.log(chalk.dim(`  ${line}`));
-      } else if (line.startsWith('TOP MATCHES') || line.startsWith('GOOD MATCHES') || line.startsWith('OTHER MATCHES')) {
+      } else if (
+        line.startsWith('TOP MATCHES') ||
+        line.startsWith('GOOD MATCHES') ||
+        line.startsWith('OTHER MATCHES')
+      ) {
         console.log(chalk.bold.magenta(`  ${line}`));
       } else if (line.startsWith('SUGGESTIONS')) {
         console.log(chalk.bold.yellow(`  ${line}`));
@@ -4155,12 +4822,16 @@ program
 
     // JSON output for CI/CD
     if (options.json) {
-      outputJson('ask', {
-        question,
-        answer: result.answer,
-        confidence: result.confidence,
-        relevantFiles: result.relevantFiles,
-      }, { personality });
+      outputJson(
+        'ask',
+        {
+          question,
+          answer: result.answer,
+          confidence: result.confidence,
+          relevantFiles: result.relevantFiles,
+        },
+        { personality }
+      );
       return;
     }
 
@@ -4209,7 +4880,9 @@ program
 program
   .command('bus-factor')
   .alias('bus')
-  .description('Surface bus factor risks - which parts of the codebase are at risk if someone leaves')
+  .description(
+    'Surface bus factor risks - which parts of the codebase are at risk if someone leaves'
+  )
   .option('-d, --dir <path>', 'Directory to analyze', '.')
   .option('--critical-only', 'Only show critical risks')
   .option('--json', 'Output as JSON for CI/CD integration')
@@ -4263,7 +4936,11 @@ program
         } else {
           console.log(chalk.bold.green(`  ${line}`));
         }
-      } else if (line.startsWith('CRITICAL RISKS') || line.startsWith('[!]') || line.startsWith('[!!]')) {
+      } else if (
+        line.startsWith('CRITICAL RISKS') ||
+        line.startsWith('[!]') ||
+        line.startsWith('[!!]')
+      ) {
         console.log(chalk.bold.red(`  ${line}`));
       } else if (line.startsWith('MODERATE RISKS') || line.startsWith('[~]')) {
         console.log(chalk.yellow(`  ${line}`));
@@ -4285,7 +4962,11 @@ program
         console.log(chalk.white(`  ${line}`));
       } else if (line.includes('... and')) {
         console.log(chalk.dim(`  ${line}`));
-      } else if (line.includes('Files with single owner') || line.includes('Lines at risk') || line.includes('Percentage of codebase')) {
+      } else if (
+        line.includes('Files with single owner') ||
+        line.includes('Lines at risk') ||
+        line.includes('Percentage of codebase')
+      ) {
         console.log(chalk.white(`  ${line}`));
       } else {
         console.log(chalk.white(`  ${line}`));
@@ -4343,7 +5024,11 @@ program
     for (const line of output.split('\n')) {
       if (line.includes('\u250F') || line.includes('\u2517') || line.includes('\u2503')) {
         console.log(chalk.bold.red(`  ${line}`));
-      } else if (line.startsWith('SCATTER PLOT') || line.startsWith('QUADRANT') || line.startsWith('TOP HOTSPOTS')) {
+      } else if (
+        line.startsWith('SCATTER PLOT') ||
+        line.startsWith('QUADRANT') ||
+        line.startsWith('TOP HOTSPOTS')
+      ) {
         console.log(chalk.bold.magenta(`  ${line}`));
       } else if (line.startsWith('SUMMARY') || line.startsWith('RECOMMENDATIONS')) {
         console.log(chalk.bold.cyan(`  ${line}`));
@@ -4369,9 +5054,18 @@ program
         console.log(chalk.dim(`  ${line}`));
       } else if (line.includes('Estimated effort:')) {
         console.log(chalk.dim.yellow(`  ${line}`));
-      } else if (line.includes('\uD83D\uDEA8') || line.includes('\u26A0\uFE0F') || line.includes('\uD83D\uDCCA')) {
+      } else if (
+        line.includes('\uD83D\uDEA8') ||
+        line.includes('\u26A0\uFE0F') ||
+        line.includes('\uD83D\uDCCA')
+      ) {
         console.log(chalk.italic.yellow(`  ${line}`));
-      } else if (line.includes('\u25B2') || line.includes('\u25B6') || line.includes('\u2502') || line.includes('\u2514')) {
+      } else if (
+        line.includes('\u25B2') ||
+        line.includes('\u25B6') ||
+        line.includes('\u2502') ||
+        line.includes('\u2514')
+      ) {
         // Scatter plot
         console.log(chalk.white(`  ${line}`));
       } else if (line.includes('\u25CF') || line.includes('\u25CB') || line.includes('\u25E6')) {
@@ -4427,7 +5121,9 @@ program
       if (options.png) {
         const pngAvailable = await isPngExportAvailable();
         if (!pngAvailable) {
-          console.log(chalk.red('PNG export requires the canvas package. Install with: npm install canvas'));
+          console.log(
+            chalk.red('PNG export requires the canvas package. Install with: npm install canvas')
+          );
           return;
         }
 
@@ -4435,7 +5131,7 @@ program
         pngSpinner.start();
 
         const qrUrl = options.qr ? await getRepoUrl(rootDir) : undefined;
-      const outputPath = await exportToPng(output, options.png, { qrUrl: qrUrl || undefined });
+        const outputPath = await exportToPng(output, options.png, { qrUrl: qrUrl || undefined });
 
         pngSpinner.succeed(`Image saved to ${outputPath}`);
         showShareLinks('dora', qrUrl);
@@ -4552,7 +5248,9 @@ program
       if (options.png) {
         const pngAvailable = await isPngExportAvailable();
         if (!pngAvailable) {
-          console.log(chalk.red('PNG export requires the canvas package. Install with: npm install canvas'));
+          console.log(
+            chalk.red('PNG export requires the canvas package. Install with: npm install canvas')
+          );
           return;
         }
 
@@ -4560,7 +5258,7 @@ program
         pngSpinner.start();
 
         const qrUrl = options.qr ? await getRepoUrl(rootDir) : undefined;
-      const outputPath = await exportToPng(output, options.png, { qrUrl: qrUrl || undefined });
+        const outputPath = await exportToPng(output, options.png, { qrUrl: qrUrl || undefined });
 
         pngSpinner.succeed(`Image saved to ${outputPath}`);
         showShareLinks('cost', qrUrl);
@@ -4573,7 +5271,12 @@ program
           console.log(chalk.bold.cyan(`  ${line}`));
         } else if (line.startsWith('Total Tech Debt:')) {
           console.log(chalk.bold.red(`  ${line}`));
-        } else if (line.startsWith('COST BREAKDOWN') || line.startsWith('TOP 5') || line.startsWith('QUICK WINS') || line.startsWith('RECOMMENDATIONS')) {
+        } else if (
+          line.startsWith('COST BREAKDOWN') ||
+          line.startsWith('TOP 5') ||
+          line.startsWith('QUICK WINS') ||
+          line.startsWith('RECOMMENDATIONS')
+        ) {
           console.log(chalk.bold.white(`  ${line}`));
         } else if (line.includes('\u{1F534}')) {
           console.log(chalk.red(`  ${line}`));
@@ -4583,7 +5286,12 @@ program
           console.log(chalk.yellow(`  ${line}`));
         } else if (line.includes('\u{1F7E2}')) {
           console.log(chalk.green(`  ${line}`));
-        } else if (line.includes('\u{1F3AF}') || line.includes('\u26A1') || line.includes('\u{1F4CA}') || line.includes('\u{1F4A1}')) {
+        } else if (
+          line.includes('\u{1F3AF}') ||
+          line.includes('\u26A1') ||
+          line.includes('\u{1F4CA}') ||
+          line.includes('\u{1F4A1}')
+        ) {
           console.log(chalk.cyan(`  ${line}`));
         } else if (line.startsWith('\u2500')) {
           console.log(chalk.dim(`  ${line}`));
@@ -4610,7 +5318,7 @@ program
  */
 program
   .command('leaderboard')
-  .description('Show team gamification stats - who\'s improving the codebase?')
+  .description("Show team gamification stats - who's improving the codebase?")
   .option('-d, --dir <path>', 'Directory to analyze', '.')
   .option('--since <date>', 'Start date (e.g., "30 days ago", "2024-01-01")', '30 days ago')
   .option('--limit <n>', 'Number of contributors to show', '10')
@@ -4656,7 +5364,9 @@ program
       if (options.png) {
         const pngAvailable = await isPngExportAvailable();
         if (!pngAvailable) {
-          console.log(chalk.red('PNG export requires the canvas package. Install with: npm install canvas'));
+          console.log(
+            chalk.red('PNG export requires the canvas package. Install with: npm install canvas')
+          );
           return;
         }
 
@@ -4664,7 +5374,7 @@ program
         pngSpinner.start();
 
         const qrUrl = options.qr ? await getRepoUrl(rootDir) : undefined;
-      const outputPath = await exportToPng(output, options.png, { qrUrl: qrUrl || undefined });
+        const outputPath = await exportToPng(output, options.png, { qrUrl: qrUrl || undefined });
 
         pngSpinner.succeed(`Image saved to ${outputPath}`);
         showShareLinks('leaderboard', qrUrl);
@@ -4771,7 +5481,10 @@ program
     for (const line of output.split('\n')) {
       if (line.includes('\u250F') || line.includes('\u2517') || line.includes('\u2503')) {
         console.log(chalk.bold.cyan(`  ${line}`));
-      } else if (line.startsWith('\uD83D\uDD34 HIDDEN') || line.startsWith('\uD83D\uDD34 SUSPICIOUS')) {
+      } else if (
+        line.startsWith('\uD83D\uDD34 HIDDEN') ||
+        line.startsWith('\uD83D\uDD34 SUSPICIOUS')
+      ) {
         console.log(chalk.bold.red(`  ${line}`));
       } else if (line.startsWith('\uD83D\uDFE1 HIDDEN')) {
         console.log(chalk.bold.yellow(`  ${line}`));
@@ -4789,7 +5502,10 @@ program
         console.log(chalk.italic.cyan(`  ${line}`));
       } else if (line.startsWith('   \u2194')) {
         console.log(chalk.magenta(`  ${line}`));
-      } else if (line.startsWith('RECOMMENDATIONS') || line.startsWith('\uD83D\uDD34 HIDDEN COUPLINGS')) {
+      } else if (
+        line.startsWith('RECOMMENDATIONS') ||
+        line.startsWith('\uD83D\uDD34 HIDDEN COUPLINGS')
+      ) {
         console.log(chalk.bold.white(`  ${line}`));
       } else if (line.startsWith('\u2500')) {
         console.log(chalk.dim(`  ${line}`));
@@ -4846,7 +5562,7 @@ program
         includeHotspots: options.hotspots !== false,
         includeBusFactor: options.busFactor !== false,
         includeTrajectory: options.trajectory !== false,
-        format: options.json ? 'json' as const : 'markdown' as const,
+        format: options.json ? ('json' as const) : ('markdown' as const),
         quick: options.quick || false,
       };
 
@@ -4912,7 +5628,7 @@ program
             } else if (line.includes(':warning:')) {
               console.log(chalk.yellow(line.replace(/:warning:/g, '\u26A0\uFE0F')));
             } else if (line.includes(':arrow_')) {
-              let processed = line
+              const processed = line
                 .replace(/:arrow_upper_right:/g, '\u2197\uFE0F')
                 .replace(/:arrow_lower_right:/g, '\u2198\uFE0F')
                 .replace(/:arrow_right:/g, '\u2192')
@@ -5006,7 +5722,8 @@ program
           console.log(chalk.cyan(`    Files: ${result.fileCount}`));
           console.log(chalk.cyan(`    Symbols: ${result.nodeCount}`));
           if (result.healthScore !== undefined) {
-            const healthEmoji = result.healthScore >= 70 ? '🟢' : result.healthScore >= 40 ? '🟡' : '🔴';
+            const healthEmoji =
+              result.healthScore >= 70 ? '🟢' : result.healthScore >= 40 ? '🟡' : '🔴';
             console.log(chalk.cyan(`    Health: ${healthEmoji} ${result.healthScore}/100`));
           }
         }
@@ -5033,6 +5750,8 @@ program
   .description('Suggest actionable fixes for detected issues in a file or all files')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
   .option('--all', 'Analyze all files with issues')
+  .option('-i, --interactive', 'Interactive mode - apply fixes step-by-step')
+  .option('--auto-apply', 'Auto-apply safe fixes in interactive mode')
   .option('-s, --severity <level>', 'Minimum severity: critical, warning, info', 'info')
   .option('--json', 'Output as JSON for CI/CD integration')
   .action(async (file, options) => {
@@ -5114,6 +5833,24 @@ program
       const result = await generateFix(fileNode.filePath, rootDir, graph, { severity });
       spinner?.stop();
 
+      // Interactive mode
+      if (options.interactive) {
+        const session = await runInteractiveFix(result, {
+          autoApply: options.autoApply,
+          skipInfo: severity !== 'info',
+        });
+
+        // If we applied any fixes, offer to rescan
+        if (session.applied > 0) {
+          console.log(
+            chalk.cyan('  🔄 Fixes applied! Run `specter scan` to update the knowledge graph.')
+          );
+          console.log();
+        }
+
+        return;
+      }
+
       // JSON output for CI/CD (single file)
       if (options.json) {
         outputJson('fix', {
@@ -5142,7 +5879,10 @@ program
           console.log(chalk.green(`${line}`));
         } else if (line.includes('\u2500')) {
           console.log(chalk.dim(`${line}`));
-        } else if (line.startsWith('     ') && (line.includes('Extract') || line.includes('Lines'))) {
+        } else if (
+          line.startsWith('     ') &&
+          (line.includes('Extract') || line.includes('Lines'))
+        ) {
           console.log(chalk.cyan(`${line}`));
         } else if (line.includes('Expected result:')) {
           console.log(chalk.green(`${line}`));
@@ -5155,6 +5895,67 @@ program
         }
       }
     }
+  });
+
+/**
+ * Demo command - guided showcase of Specter features
+ */
+program
+  .command('demo')
+  .description('Run a guided demo showcasing Specter features (perfect for recordings)')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option(
+    '-s, --speed <speed>',
+    'Demo speed: slow, normal, fast',
+    'normal'
+  )
+  .option(
+    '--steps <steps>',
+    `Demo steps to run: ${formatDemoSteps()}`,
+    'health,roast,horoscope,hotspots,teaser'
+  )
+  .option(
+    '-p, --personality <mode>',
+    'Personality mode for demo',
+    'default'
+  )
+  .action(async (options) => {
+    const rootDir = path.resolve(options.dir);
+
+    // Check for existing graph
+    const hasGraph = await graphExists(rootDir);
+    if (!hasGraph) {
+      console.log(chalk.yellow('No knowledge graph found. Running quick scan...'));
+      const spinner = createSpinner('Scanning codebase...');
+      spinner.start();
+
+      try {
+        const result = await buildKnowledgeGraph({ rootDir, includeGitHistory: true });
+        await saveGraph(result.graph, rootDir);
+        spinner.succeed('Scan complete');
+      } catch (error) {
+        spinner.fail('Scan failed');
+        console.error(chalk.red(error instanceof Error ? error.message : String(error)));
+        process.exit(1);
+      }
+    }
+
+    // Load graph
+    const graph = await loadGraph(rootDir);
+    if (!graph) {
+      console.error(chalk.red('Failed to load knowledge graph'));
+      process.exit(1);
+    }
+
+    // Parse steps
+    const steps = options.steps.split(',').map((s: string) => s.trim());
+
+    // Run demo
+    await runDemo(graph, rootDir, {
+      personality: options.personality as PersonalityMode,
+      speed: options.speed as 'slow' | 'normal' | 'fast',
+      steps,
+    });
   });
 
 /**
@@ -5187,7 +5988,7 @@ program
 
     console.log();
     console.log(chalk.bold.magenta('  Setting up Specter Git Hooks'));
-    console.log(chalk.dim('  ' + '─'.repeat(40)));
+    console.log(chalk.dim(`  ${'─'.repeat(40)}`));
     console.log();
 
     if (options.husky) {
@@ -5219,7 +6020,6 @@ specter precommit --exit-code
       console.log();
       console.log(chalk.bold('  Specter will now check every commit!'));
       console.log(chalk.dim('  High-risk commits will be blocked.'));
-
     } else if (options.simple) {
       // Simple git hook
       const hooksDir = path.join(gitDir, 'hooks');
@@ -5230,7 +6030,9 @@ specter precommit --exit-code
         const existing = fs.readFileSync(preCommitPath, 'utf-8');
         if (!existing.includes('specter')) {
           // Append to existing hook
-          const updatedHook = existing + `
+          const updatedHook =
+            existing +
+            `
 # Specter pre-commit check
 specter precommit --exit-code || exit 1
 `;
@@ -5254,7 +6056,6 @@ specter precommit --exit-code || exit 1
       console.log();
       console.log(chalk.bold('  Specter will now check every commit!'));
       console.log(chalk.dim('  High-risk commits will be blocked.'));
-
     } else if (options.preCommit) {
       // Pre-commit framework setup
       const configPath = path.join(rootDir, '.pre-commit-config.yaml');
@@ -5286,7 +6087,6 @@ repos:
         console.log(chalk.dim('  Install hooks with:'));
         console.log(chalk.cyan('    pre-commit install'));
       }
-
     } else {
       // Show options
       console.log('  Choose a hook setup method:');

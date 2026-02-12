@@ -115,13 +115,31 @@ specter cost
 
 ---
 
-## ACT 4: INTEGRATION (2:15 - 2:45)
+## ACT 4: COPILOT CLI INTEGRATION (2:15 - 2:45)
 
-**[Show PR comment or CI output]**
+**[Show Copilot CLI in action]**
 
-> "Specter integrates everywhere."
+> "Here's the magic - Specter works directly with GitHub Copilot CLI."
 
-**[Show GitHub Action comment]**
+```bash
+copilot -p "Use specter to find the complexity hotspots" --allow-all-tools
+```
+
+**[Show Copilot using Specter MCP tools]**
+
+> "14 tools exposed via Model Context Protocol. Ask questions naturally."
+
+```bash
+copilot -p "What's the bus factor risk in this codebase?" --allow-all-tools
+```
+
+> "AI-powered analysis with full codebase context."
+
+```bash
+specter ai-ask "Why is src/cli.ts so complex?"
+```
+
+**[Show GitHub Action]**
 
 ```yaml
 - uses: forbiddenlink/specter@v1
@@ -129,21 +147,13 @@ specter cost
     personality: noir
 ```
 
-> "Every PR gets analyzed. 12 personality modes. Your pick."
-
-**[Quick flash of personalities]**
-
-```bash
-specter health --personality roast
-specter health --personality therapist
-specter health --personality noir
-```
+> "Every PR analyzed automatically. 12 personality modes."
 
 ---
 
 ## CLOSE (2:45 - 3:00)
 
-> "51 commands. 12 personalities. One ghost."
+> "63 commands. 14 MCP tools. 12 personalities. One ghost."
 
 ```bash
 specter achievements
@@ -157,8 +167,8 @@ specter achievements
 
 ```
 github.com/forbiddenlink/specter
-npm install -g specter-mcp
-npx specter-roast
+npm install -g @purplegumdropz/specter
+npx @purplegumdropz/specter-roast
 ```
 
 ---
@@ -167,16 +177,21 @@ npx specter-roast
 
 1. **Terminal setup**: Use a clean theme, large font (18pt+), dark background
 2. **Pre-scan**: Run `specter scan` before recording so commands are instant
-3. **Cut the waits**: Edit out any loading time
-4. **Music**: Upbeat but not distracting (optional)
-5. **Screen recording**: QuickTime or OBS at 1080p
+3. **Use `specter demo`**: Auto-runs showcase with typing effects (perfect for recordings)
+   ```bash
+   specter demo              # Normal speed
+   specter demo --speed slow # Slower for dramatic effect
+   ```
+4. **Cut the waits**: Edit out any loading time
+5. **Music**: Upbeat but not distracting (optional)
+6. **Screen recording**: QuickTime or OBS at 1080p
 
 ## KEY MESSAGES TO HIT
 
 - "Give your codebase a voice" (tagline)
 - First-person perspective is unique
 - Fun AND useful (not just a toy)
-- 51 commands, 12 personalities
+- 63 commands, 12 personalities
 - Works in CI/CD (GitHub Action)
 - `npx specter-roast` - zero install
 
