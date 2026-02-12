@@ -6,7 +6,7 @@
 
 <p align="center">
   A haunted code analysis tool that speaks <em>as</em> your codebase in first person.<br/>
-  44 commands. 11 personality modes. One ghost.
+  45 commands. 11 personality modes. One ghost.
 </p>
 
 ```
@@ -60,7 +60,7 @@ specter scan && specter health && specter morning
 |----------|----------|--------------|
 | **Fun/Viral** | `roast`, `tinder`, `horoscope`, `wrapped`, `achievements`, `seance`, `dna`, `origin`, `confess`, `fortune`, `vitals` | Shareable, personality-driven entertainment |
 | **Daily Workflow** | `morning`, `precommit`, `tour`, `who`, `safe`, `danger`, `predict`, `reviewers`, `why`, `standup` | Practical tools for everyday development |
-| **Deep Intelligence** | `drift`, `cycles`, `velocity`, `trajectory`, `knowledge-map`, `search`, `diagram`, `hotspots`, `bus-factor`, `dora`, `coupling`, `report`, `index`, `ask` | Advanced analysis and metrics |
+| **Deep Intelligence** | `drift`, `cycles`, `velocity`, `trajectory`, `knowledge-map`, `search`, `diagram`, `hotspots`, `bus-factor`, `dora`, `coupling`, `report`, `index`, `ask`, `cost` | Advanced analysis and metrics |
 | **Setup & Core** | `init`, `init-hooks`, `scan`, `status`, `health`, `trends`, `risk`, `dashboard`, `clean` | Foundation commands |
 
 ---
@@ -631,6 +631,51 @@ specter report --json             # JSON format for CI
 specter report --quick            # Executive summary only
 ```
 
+### `specter cost`
+Estimate tech debt in dollar terms - the command that makes managers pay attention.
+
+```
+$ specter cost
+
+  💰 TECH DEBT COST ANALYSIS
+
+  Estimated Annual Cost: $47,520
+
+  ═══════════════════════════════════════════════════════════
+
+  TOP 5 MOST EXPENSIVE FILES:
+
+  1. src/utils/helpers.ts                           $8,640/year
+     │ Complexity: 28  │ Bus Factor: 1  │ Churn: High
+     └─ Maintenance: $4,320  │ Risk: $2,880  │ Training: $1,440
+
+  2. src/graph/parser.ts                            $6,480/year
+     │ Complexity: 22  │ Bus Factor: 2  │ Churn: Medium
+     └─ Maintenance: $3,240  │ Risk: $2,160  │ Training: $1,080
+
+  3. src/core/engine.ts                             $5,760/year
+     ...
+
+  ═══════════════════════════════════════════════════════════
+
+  QUICK WINS (Best ROI):
+
+  │ File                    │ Fix Cost │ Annual Savings │ ROI  │
+  ├─────────────────────────┼──────────┼────────────────┼──────┤
+  │ src/utils/helpers.ts    │ $2,400   │ $8,640         │ 260% │
+  │ src/legacy/auth.ts      │ $1,600   │ $4,320         │ 170% │
+
+  Methodology: Based on $75/hr developer rate, industry benchmarks
+  for maintenance overhead, bug introduction rates, and onboarding costs.
+```
+
+```bash
+specter cost                    # Default $75/hr rate
+specter cost --rate 100         # Custom hourly rate
+specter cost --currency EUR     # Euro currency
+specter cost --png cost.png     # Export for presentations
+```
+
 ---
 
 ## Core Commands
@@ -813,7 +858,7 @@ Interactive features:
 | Command | Description | Key Options |
 |---------|-------------|-------------|
 | `status` | Graph status | `--dir` |
-| `health` | Health report | `--limit`, `--personality`, `--exit-code`, `--threshold` |
+| `health` | Health report | `--limit`, `--personality`, `--exit-code`, `--threshold`, `--png` |
 | `trends` | Historical trends | `--period`, `--personality` |
 | `risk` | Staged changes risk | `--branch`, `--commit`, `--personality` |
 | `dashboard` | Web visualization | `--port`, `--no-open` |
@@ -846,15 +891,16 @@ Interactive features:
 | `diagram` | Architecture diagrams | `--format`, `--output`, `--focus`, `--depth` |
 | `hotspots` | Complexity x Churn | `--top`, `--since` |
 | `bus-factor` | Bus factor risks | `--critical-only` |
-| `dora` | DORA metrics | `--since` |
+| `dora` | DORA metrics | `--since`, `--png` |
 | `coupling` | Hidden couplings | `--hidden-only`, `--min-strength` |
 | `report` | Full markdown report | `--output`, `--json`, `--quick` |
+| `cost` | Tech debt in dollars | `--rate`, `--currency`, `--png` |
 
 ### Fun Commands
 | Command | Description | Key Options |
 |---------|-------------|-------------|
-| `roast` | Comedic critique | `--dir` |
-| `tinder` | Dating profile | `--dir` |
+| `roast` | Comedic critique | `--dir`, `--png` |
+| `tinder` | Dating profile | `--dir`, `--png` |
 | `horoscope` | Daily fortune | `--dir` |
 | `wrapped` | Yearly summary | `--png` |
 | `achievements` | Gamified badges | `--png` |

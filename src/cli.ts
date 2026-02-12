@@ -321,6 +321,7 @@ program
   )
   .option('--exit-code', 'Exit with code 1 if health score is below threshold')
   .option('--threshold <n>', 'Health score threshold for --exit-code (default: 50)', '50')
+  .option('--png <file>', 'Export as PNG image for sharing')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
     const limit = parseInt(options.limit, 10);
@@ -365,33 +366,35 @@ program
 
     const W = 60; // inner width
 
-    console.log();
-    console.log(chalk.bold(`╔${'═'.repeat(W)}╗`));
-    console.log(
+    // Build output as array of lines
+    const lines: string[] = [];
+    lines.push('');
+    lines.push(chalk.bold(`╔${'═'.repeat(W)}╗`));
+    lines.push(
       chalk.bold('║') +
         '  👻 ' +
         chalk.bold.white('SPECTER HEALTH REPORT') +
         ' '.repeat(W - 27) +
         chalk.bold('║')
     );
-    console.log(chalk.bold(`╠${'═'.repeat(W)}╣`));
+    lines.push(chalk.bold(`╠${'═'.repeat(W)}╣`));
 
     // Health score with large display
     const scoreDisplay = `${Math.round(healthScore)}`.padStart(3);
     const scoreLine = `  ${scoreEmoji} Health Score: ${scoreDisplay}/100`;
-    console.log(
+    lines.push(
       chalk.bold('║') + scoreLine + ' '.repeat(W - scoreLine.length + 4) + chalk.bold('║')
     );
     const barLine = `     ${progressBar(healthScore, 100, 40, scoreColor)}`;
-    console.log(chalk.bold('║') + barLine + ' '.repeat(W - 45) + chalk.bold('║'));
-    console.log(chalk.bold(`╠${'═'.repeat(W)}╣`));
+    lines.push(chalk.bold('║') + barLine + ' '.repeat(W - 45) + chalk.bold('║'));
+    lines.push(chalk.bold(`╠${'═'.repeat(W)}╣`));
 
     // Complexity distribution with bars
     const distTitle = '  📊 Complexity Distribution';
-    console.log(
+    lines.push(
       chalk.bold('║') + distTitle + ' '.repeat(W - distTitle.length + 2) + chalk.bold('║')
     );
-    console.log(chalk.bold('║') + chalk.dim(`  ${'─'.repeat(W - 4)}`) + chalk.bold('║'));
+    lines.push(chalk.bold('║') + chalk.dim(`  ${'─'.repeat(W - 4)}`) + chalk.bold('║'));
 
     const formatRow = (
       emoji: string,
@@ -405,20 +408,20 @@ program
       return chalk.bold('║') + line + ' '.repeat(W - line.length + 6) + chalk.bold('║');
     };
 
-    console.log(formatRow('🟢', 'Low (1-5)', report.distribution.low, chalk.green));
-    console.log(formatRow('🟡', 'Medium (6-10)', report.distribution.medium, chalk.yellow));
-    console.log(formatRow('🟠', 'High (11-20)', report.distribution.high, chalk.hex('#FFA500')));
-    console.log(formatRow('🔴', 'Critical (21+)', report.distribution.veryHigh, chalk.red));
+    lines.push(formatRow('🟢', 'Low (1-5)', report.distribution.low, chalk.green));
+    lines.push(formatRow('🟡', 'Medium (6-10)', report.distribution.medium, chalk.yellow));
+    lines.push(formatRow('🟠', 'High (11-20)', report.distribution.high, chalk.hex('#FFA500')));
+    lines.push(formatRow('🔴', 'Critical (21+)', report.distribution.veryHigh, chalk.red));
 
-    console.log(chalk.bold(`╠${'═'.repeat(W)}╣`));
+    lines.push(chalk.bold(`╠${'═'.repeat(W)}╣`));
 
     // Hotspots
     if (report.hotspots.length > 0) {
       const hotspotTitle = `  🔥 Top ${Math.min(limit, report.hotspots.length)} Complexity Hotspots`;
-      console.log(
+      lines.push(
         chalk.bold('║') + hotspotTitle + ' '.repeat(W - hotspotTitle.length + 2) + chalk.bold('║')
       );
-      console.log(chalk.bold('║') + chalk.dim(`  ${'─'.repeat(W - 4)}`) + chalk.bold('║'));
+      lines.push(chalk.bold('║') + chalk.dim(`  ${'─'.repeat(W - 4)}`) + chalk.bold('║'));
 
       for (const hotspot of report.hotspots.slice(0, limit)) {
         const emoji = getComplexityEmoji(hotspot.complexity);
@@ -427,12 +430,12 @@ program
         const complexity = String(hotspot.complexity).padStart(2);
 
         const line1 = `  ${emoji} ${location}`;
-        console.log(
+        lines.push(
           chalk.bold('║') + chalk.cyan(line1) + ' '.repeat(W - line1.length + 2) + chalk.bold('║')
         );
         const line2 = `     ${info}`;
         const cplx = `C:${complexity}`;
-        console.log(
+        lines.push(
           chalk.bold('║') +
             chalk.dim(line2) +
             ' '.repeat(W - line2.length - cplx.length - 1) +
@@ -443,7 +446,7 @@ program
       }
     } else {
       const noHotspots = '  ✨ No complexity hotspots found! Great job!';
-      console.log(
+      lines.push(
         chalk.bold('║') +
           chalk.green(noHotspots) +
           ' '.repeat(W - noHotspots.length) +
@@ -451,18 +454,40 @@ program
       );
     }
 
-    console.log(chalk.bold(`╚${'═'.repeat(W)}╝`));
+    lines.push(chalk.bold(`╚${'═'.repeat(W)}╝`));
 
     // Summary line with personality
-    console.log();
+    lines.push('');
     const healthComment = formatHealthComment(healthScore, personality);
     if (healthScore >= 80) {
-      console.log(chalk.green(`  ${healthComment}`));
+      lines.push(chalk.green(`  ${healthComment}`));
     } else if (healthScore >= 60) {
-      console.log(chalk.yellow(`  ${healthComment}`));
+      lines.push(chalk.yellow(`  ${healthComment}`));
     } else {
-      console.log(chalk.red(`  ${healthComment}`));
+      lines.push(chalk.red(`  ${healthComment}`));
     }
+
+    const output = lines.join('\n');
+
+    // PNG export
+    if (options.png) {
+      const pngAvailable = await isPngExportAvailable();
+      if (!pngAvailable) {
+        console.log(chalk.red('PNG export requires the canvas package. Install with: npm install canvas'));
+        return;
+      }
+
+      const spinner = createSpinner('Generating shareable health report image...');
+      spinner.start();
+
+      const outputPath = await exportToPng(output, options.png);
+
+      spinner.succeed(`Image saved to ${outputPath}`);
+      console.log(chalk.dim('  Share your health report on social media! #SpecterHealth'));
+      return;
+    }
+
+    console.log(output);
 
     // Exit with error code if health is below threshold
     if (exitCode && healthScore < threshold) {
@@ -1085,6 +1110,7 @@ program
   .command('tinder')
   .description('Generate a dating profile for your codebase')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('--png <file>', 'Export as PNG image for sharing')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
     const projectName = path.basename(rootDir);
@@ -1254,84 +1280,108 @@ program
     // Build the display
     const W = 45;
 
-    console.log();
-    console.log(chalk.magenta('\u{1F495} CODEBASE DATING PROFILE \u{1F495}'));
-    console.log();
-    console.log(chalk.dim(`\u250C${'\u2500'.repeat(W)}\u2510`));
-    console.log(chalk.dim('\u2502') + ' '.repeat(W) + chalk.dim('\u2502'));
+    // Build output as array of lines
+    const lines: string[] = [];
+    lines.push('');
+    lines.push(chalk.magenta('\u{1F495} CODEBASE DATING PROFILE \u{1F495}'));
+    lines.push('');
+    lines.push(chalk.dim(`\u250C${'\u2500'.repeat(W)}\u2510`));
+    lines.push(chalk.dim('\u2502') + ' '.repeat(W) + chalk.dim('\u2502'));
 
     // Name and basic info
     const nameLine = `  \u{1F4C1} ${projectName}/`;
-    console.log(chalk.dim('\u2502') + chalk.bold.cyan(nameLine) + ' '.repeat(W - nameLine.length + 2) + chalk.dim('\u2502'));
+    lines.push(chalk.dim('\u2502') + chalk.bold.cyan(nameLine) + ' '.repeat(W - nameLine.length + 2) + chalk.dim('\u2502'));
 
     const infoLine = `  ${stats.fileCount} files \u2022 ${primaryLang} \u2022 Looking for devs`;
-    console.log(chalk.dim('\u2502') + infoLine + ' '.repeat(W - infoLine.length + 2) + chalk.dim('\u2502'));
+    lines.push(chalk.dim('\u2502') + infoLine + ' '.repeat(W - infoLine.length + 2) + chalk.dim('\u2502'));
 
-    console.log(chalk.dim('\u2502') + ' '.repeat(W) + chalk.dim('\u2502'));
-    console.log(chalk.dim('\u2502') + chalk.dim(`\u2500`.repeat(W)) + chalk.dim('\u2502'));
-    console.log(chalk.dim('\u2502') + ' '.repeat(W) + chalk.dim('\u2502'));
+    lines.push(chalk.dim('\u2502') + ' '.repeat(W) + chalk.dim('\u2502'));
+    lines.push(chalk.dim('\u2502') + chalk.dim(`\u2500`.repeat(W)) + chalk.dim('\u2502'));
+    lines.push(chalk.dim('\u2502') + ' '.repeat(W) + chalk.dim('\u2502'));
 
     // Basic stats
     const ageLine = `  \u{1F382} Age: ${ageMonths} month${ageMonths !== 1 ? 's' : ''} (estimated)`;
-    console.log(chalk.dim('\u2502') + ageLine + ' '.repeat(W - ageLine.length + 2) + chalk.dim('\u2502'));
+    lines.push(chalk.dim('\u2502') + ageLine + ' '.repeat(W - ageLine.length + 2) + chalk.dim('\u2502'));
 
     const locLine = `  \u{1F4CD} Location: ${rootDir.slice(0, 30)}${rootDir.length > 30 ? '...' : ''}`;
-    console.log(chalk.dim('\u2502') + locLine + ' '.repeat(Math.max(0, W - locLine.length + 2)) + chalk.dim('\u2502'));
+    lines.push(chalk.dim('\u2502') + locLine + ' '.repeat(Math.max(0, W - locLine.length + 2)) + chalk.dim('\u2502'));
 
     const jobLine = `  \u{1F4BC} Occupation: ${primaryLang} Codebase`;
-    console.log(chalk.dim('\u2502') + jobLine + ' '.repeat(W - jobLine.length + 2) + chalk.dim('\u2502'));
+    lines.push(chalk.dim('\u2502') + jobLine + ' '.repeat(W - jobLine.length + 2) + chalk.dim('\u2502'));
 
-    console.log(chalk.dim('\u2502') + ' '.repeat(W) + chalk.dim('\u2502'));
-    console.log(chalk.dim('\u2502') + chalk.dim(`\u2500`.repeat(W)) + chalk.dim('\u2502'));
-    console.log(chalk.dim('\u2502') + ' '.repeat(W) + chalk.dim('\u2502'));
+    lines.push(chalk.dim('\u2502') + ' '.repeat(W) + chalk.dim('\u2502'));
+    lines.push(chalk.dim('\u2502') + chalk.dim(`\u2500`.repeat(W)) + chalk.dim('\u2502'));
+    lines.push(chalk.dim('\u2502') + ' '.repeat(W) + chalk.dim('\u2502'));
 
     // Bio
-    console.log(chalk.dim('\u2502') + chalk.bold('  \u{1F4DD} Bio:') + ' '.repeat(W - 9) + chalk.dim('\u2502'));
-    for (const line of generateBio()) {
-      const bioLine = `  ${line}`;
-      console.log(chalk.dim('\u2502') + bioLine + ' '.repeat(Math.max(0, W - bioLine.length + 2)) + chalk.dim('\u2502'));
+    lines.push(chalk.dim('\u2502') + chalk.bold('  \u{1F4DD} Bio:') + ' '.repeat(W - 9) + chalk.dim('\u2502'));
+    for (const bioContent of generateBio()) {
+      const bioLine = `  ${bioContent}`;
+      lines.push(chalk.dim('\u2502') + bioLine + ' '.repeat(Math.max(0, W - bioLine.length + 2)) + chalk.dim('\u2502'));
     }
 
-    console.log(chalk.dim('\u2502') + ' '.repeat(W) + chalk.dim('\u2502'));
-    console.log(chalk.dim('\u2502') + chalk.dim(`\u2500`.repeat(W)) + chalk.dim('\u2502'));
-    console.log(chalk.dim('\u2502') + ' '.repeat(W) + chalk.dim('\u2502'));
+    lines.push(chalk.dim('\u2502') + ' '.repeat(W) + chalk.dim('\u2502'));
+    lines.push(chalk.dim('\u2502') + chalk.dim(`\u2500`.repeat(W)) + chalk.dim('\u2502'));
+    lines.push(chalk.dim('\u2502') + ' '.repeat(W) + chalk.dim('\u2502'));
 
     // Green flags
-    console.log(chalk.dim('\u2502') + chalk.bold.green('  \u{1F7E2} Green Flags:') + ' '.repeat(W - 17) + chalk.dim('\u2502'));
+    lines.push(chalk.dim('\u2502') + chalk.bold.green('  \u{1F7E2} Green Flags:') + ' '.repeat(W - 17) + chalk.dim('\u2502'));
     for (const flag of greenFlags.slice(0, 4)) {
       const flagLine = `  \u2022 ${flag}`;
-      console.log(chalk.dim('\u2502') + chalk.green(flagLine) + ' '.repeat(Math.max(0, W - flagLine.length + 2)) + chalk.dim('\u2502'));
+      lines.push(chalk.dim('\u2502') + chalk.green(flagLine) + ' '.repeat(Math.max(0, W - flagLine.length + 2)) + chalk.dim('\u2502'));
     }
 
-    console.log(chalk.dim('\u2502') + ' '.repeat(W) + chalk.dim('\u2502'));
+    lines.push(chalk.dim('\u2502') + ' '.repeat(W) + chalk.dim('\u2502'));
 
     // Red flags
-    console.log(chalk.dim('\u2502') + chalk.bold.red('  \u{1F6A9} Red Flags:') + ' '.repeat(W - 16) + chalk.dim('\u2502'));
+    lines.push(chalk.dim('\u2502') + chalk.bold.red('  \u{1F6A9} Red Flags:') + ' '.repeat(W - 16) + chalk.dim('\u2502'));
     for (const flag of redFlags.slice(0, 4)) {
       const flagLine = `  \u2022 ${flag}`;
-      console.log(chalk.dim('\u2502') + chalk.red(flagLine) + ' '.repeat(Math.max(0, W - flagLine.length + 2)) + chalk.dim('\u2502'));
+      lines.push(chalk.dim('\u2502') + chalk.red(flagLine) + ' '.repeat(Math.max(0, W - flagLine.length + 2)) + chalk.dim('\u2502'));
     }
 
-    console.log(chalk.dim('\u2502') + ' '.repeat(W) + chalk.dim('\u2502'));
-    console.log(chalk.dim('\u2502') + chalk.dim(`\u2500`.repeat(W)) + chalk.dim('\u2502'));
-    console.log(chalk.dim('\u2502') + ' '.repeat(W) + chalk.dim('\u2502'));
+    lines.push(chalk.dim('\u2502') + ' '.repeat(W) + chalk.dim('\u2502'));
+    lines.push(chalk.dim('\u2502') + chalk.dim(`\u2500`.repeat(W)) + chalk.dim('\u2502'));
+    lines.push(chalk.dim('\u2502') + ' '.repeat(W) + chalk.dim('\u2502'));
 
     // Conversation starters
-    console.log(chalk.dim('\u2502') + chalk.bold('  \u{1F4AC} Conversation starters:') + ' '.repeat(W - 27) + chalk.dim('\u2502'));
+    lines.push(chalk.dim('\u2502') + chalk.bold('  \u{1F4AC} Conversation starters:') + ' '.repeat(W - 27) + chalk.dim('\u2502'));
     for (const starter of starters) {
       const starterLine = `  ${starter}`;
-      console.log(chalk.dim('\u2502') + chalk.italic(starterLine) + ' '.repeat(Math.max(0, W - starterLine.length + 2)) + chalk.dim('\u2502'));
+      lines.push(chalk.dim('\u2502') + chalk.italic(starterLine) + ' '.repeat(Math.max(0, W - starterLine.length + 2)) + chalk.dim('\u2502'));
     }
 
-    console.log(chalk.dim('\u2502') + ' '.repeat(W) + chalk.dim('\u2502'));
-    console.log(chalk.dim(`\u2514${'\u2500'.repeat(W)}\u2518`));
+    lines.push(chalk.dim('\u2502') + ' '.repeat(W) + chalk.dim('\u2502'));
+    lines.push(chalk.dim(`\u2514${'\u2500'.repeat(W)}\u2518`));
 
     // Swipe buttons
-    console.log();
+    lines.push('');
     const passBtn = chalk.red.bold('[\u{1F44E} PASS]');
     const mergeBtn = chalk.green.bold('[\u{1F49A} MERGE]');
-    console.log(`        ${passBtn}     ${mergeBtn}`);
-    console.log();
+    lines.push(`        ${passBtn}     ${mergeBtn}`);
+    lines.push('');
+
+    const output = lines.join('\n');
+
+    // PNG export
+    if (options.png) {
+      const pngAvailable = await isPngExportAvailable();
+      if (!pngAvailable) {
+        console.log(chalk.red('PNG export requires the canvas package. Install with: npm install canvas'));
+        return;
+      }
+
+      const spinner = createSpinner('Generating shareable dating profile image...');
+      spinner.start();
+
+      const outputPath = await exportToPng(output, options.png);
+
+      spinner.succeed(`Image saved to ${outputPath}`);
+      console.log(chalk.dim('  Share your codebase profile on social media! #SpecterTinder'));
+      return;
+    }
+
+    console.log(output);
   });
 
 /**
