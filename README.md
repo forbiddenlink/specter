@@ -58,8 +58,8 @@ specter scan && specter health && specter morning
 
 | Category | Commands | What They Do |
 |----------|----------|--------------|
-| **Fun/Viral** | `roast`, `tinder`, `horoscope`, `wrapped`, `achievements`, `seance`, `dna`, `origin`, `confess`, `fortune`, `vitals` | Shareable, personality-driven entertainment |
-| **Daily Workflow** | `morning`, `precommit`, `tour`, `who`, `safe`, `danger`, `predict`, `reviewers`, `why`, `standup` | Practical tools for everyday development |
+| **Fun/Viral** | `roast`, `tinder`, `horoscope`, `wrapped`, `achievements`, `seance`, `dna`, `origin`, `confess`, `fortune`, `vitals`, `leaderboard` | Shareable, personality-driven entertainment + gamification |
+| **Daily Workflow** | `morning`, `precommit`, `tour`, `who`, `safe`, `danger`, `predict`, `reviewers`, `why`, `standup`, `fix` | Practical tools for everyday development |
 | **Deep Intelligence** | `drift`, `cycles`, `velocity`, `trajectory`, `knowledge-map`, `search`, `diagram`, `hotspots`, `bus-factor`, `dora`, `coupling`, `report`, `index`, `ask`, `cost` | Advanced analysis and metrics |
 | **Setup & Core** | `init`, `init-hooks`, `scan`, `status`, `health`, `trends`, `risk`, `dashboard`, `clean` | Foundation commands |
 
@@ -216,6 +216,50 @@ $ specter vitals
   ║  DEAD CODE   [█░░░░░░░░░]  5       haunted       ║
   ║  COVERAGE    [██████░░░░] 62%      decent        ║
   ╚═══════════════════════════════════════════════════╝
+```
+
+### `specter leaderboard`
+Team gamification - who's improving the codebase?
+
+```
+$ specter leaderboard
+
+  🏆 SPECTER LEADERBOARD
+
+  Who's improving the codebase?
+
+  ════════════════════════════════════════════════════════
+
+  🥇 #1  Alice Smith                              +320 pts
+      ████████████████████ Health Hero
+      12 commits │ -15 complexity │ +2 bus factor
+
+  🥈 #2  Bob Johnson                              +180 pts
+      ██████████░░░░░░░░░░ Code Guardian
+      8 commits │ -5 complexity │ +1 bus factor
+
+  🥉 #3  Charlie Brown                            +90 pts
+      █████░░░░░░░░░░░░░░░ Rising Star
+      6 commits │ +3 complexity │ 0 bus factor
+
+  ────────────────────────────────────────────────────────
+
+  📊 Team Stats (1/15/2026 - 2/12/2026):
+     Total commits: 26
+     Net complexity: -17 (improving!) 📈
+     Active contributors: 5
+```
+
+**Scoring:**
+- +10 pts per commit
+- +5 pts per complexity point reduced
+- -5 pts per complexity point added
+- +50 pts per bus factor improvement
+
+```bash
+specter leaderboard               # Last 30 days (default)
+specter leaderboard --since "7 days ago"
+specter leaderboard --limit 5     # Top 5 only
 ```
 
 ---
@@ -400,6 +444,78 @@ $ specter standup
 
   TODAY'S FOCUS:
   Review new payment service before merging to main.
+```
+
+### `specter fix [file]`
+Actionable fix suggestions for detected issues - the bridge from analysis to action.
+
+```
+$ specter fix src/utils/helpers.ts
+
+  🔧 SPECTER FIX SUGGESTIONS
+
+  Analyzing: src/utils/helpers.ts
+
+  ══════════════════════════════════════════════════════════
+
+  🔴 CRITICAL: Function too complex (complexity: 28)
+
+     Function: processData() at line 45
+
+     Suggested fix:
+     Extract these code blocks into separate functions:
+
+     1. Lines 52-68: Extract to handleValidation()
+        Conditional block (if data.type === ...)
+     2. Lines 75-92: Extract to processItems()
+        Loop block with substantial logic
+     3. Lines 98-115: Extract to handleErrors()
+        Error handling block
+
+     Expected result: Complexity 28 -> ~7 per function
+
+  ──────────────────────────────────────────────────────────
+
+  🟡 WARNING: Low bus factor (1)
+
+     Only Alice has touched this file (95% of commits).
+
+     Suggested fix:
+       - Schedule a pairing session to share knowledge
+       - Add inline documentation for complex logic
+       - Create a README in this directory
+       - Consider code review rotations
+
+  ──────────────────────────────────────────────────────────
+
+  💀 INFO: Unused exports detected
+
+     These exports are never imported elsewhere:
+
+       - formatLegacy (line 142)
+       - helperV1 (line 203)
+
+     Suggested fix:
+       - Remove if truly unused, or
+       - Mark as @public if part of external API
+       - Add to index.ts if meant to be re-exported
+
+  ──────────────────────────────────────────────────────────
+
+  Summary: 3 suggestions (1 critical, 1 warning, 1 info)
+```
+
+**Detects and suggests fixes for:**
+- High complexity functions (with extractable code blocks)
+- Large files (with split suggestions)
+- Circular dependencies (with break strategies)
+- Dead/unused exports
+- Low bus factor (knowledge concentration)
+
+```bash
+specter fix src/utils/helpers.ts    # Single file
+specter fix                         # All files with issues
+specter fix --severity critical     # Only critical issues
 ```
 
 ---
@@ -876,6 +992,7 @@ Interactive features:
 | `reviewers` | Suggest reviewers | `--dir` |
 | `why <file>` | Explain why code exists | `--dir` |
 | `standup` | Daily standup summary | `--dir` |
+| `fix [file]` | Actionable fix suggestions | `--severity` |
 
 ### Deep Analysis Commands
 | Command | Description | Key Options |
@@ -910,6 +1027,7 @@ Interactive features:
 | `confess <file>` | File confessions | `--dir` |
 | `fortune` | Tarot predictions | `--dir` |
 | `vitals` | Real-time dashboard | `--live` |
+| `leaderboard` | Team gamification | `--since`, `--limit` |
 
 ---
 
