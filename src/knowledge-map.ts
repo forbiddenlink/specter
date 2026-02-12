@@ -6,7 +6,7 @@
  * silos and bus factor risks.
  */
 
-import { simpleGit, type SimpleGit } from 'simple-git';
+import { type SimpleGit, simpleGit } from 'simple-git';
 import type { KnowledgeGraph } from './graph/types.js';
 
 export interface ContributorExpertise {
@@ -83,19 +83,14 @@ export async function generateKnowledgeMap(
 
   try {
     // Get commit log with numstat for line counts
-    const log = await git.log({
+    const _log = await git.log({
       maxCount: 500,
       '--numstat': null,
       '--format': '%H|%an|%ae|%aI',
     });
 
     // Parse the raw output to get file-level stats
-    const rawLog = await git.raw([
-      'log',
-      '--numstat',
-      '--format=%H|%an|%aI',
-      '-500',
-    ]);
+    const rawLog = await git.raw(['log', '--numstat', '--format=%H|%an|%aI', '-500']);
 
     let currentAuthor = '';
     let currentDate = new Date();
@@ -157,7 +152,10 @@ export async function generateKnowledgeMap(
           commit.hash,
         ]);
 
-        const files = filesRaw.trim().split('\n').filter((f) => f);
+        const files = filesRaw
+          .trim()
+          .split('\n')
+          .filter((f) => f);
 
         for (const file of files) {
           const area = getAreaForFile(file, areaFiles);
@@ -189,7 +187,7 @@ export async function generateKnowledgeMap(
 
   // Build contributor expertise map
   const contributorMap = new Map<string, ContributorExpertise>();
-  const allAreas = [...areaContributions.keys()];
+  const _allAreas = [...areaContributions.keys()];
 
   for (const [area, contributors] of areaContributions.entries()) {
     const totalContributions = [...contributors.values()].reduce(
@@ -237,9 +235,13 @@ export async function generateKnowledgeMap(
     const experts = [...contributors.entries()]
       .map(([name, stats]) => ({
         name,
-        score: Math.min(100, Math.round(
-          ((stats.commits + (stats.linesAdded + stats.linesRemoved) / 10) / totalContributions) * 100
-        )),
+        score: Math.min(
+          100,
+          Math.round(
+            ((stats.commits + (stats.linesAdded + stats.linesRemoved) / 10) / totalContributions) *
+              100
+          )
+        ),
       }))
       .sort((a, b) => b.score - a.score);
 
@@ -272,23 +274,18 @@ export async function generateKnowledgeMap(
   knowledgeAreas.sort((a, b) => a.busFactor - b.busFactor);
 
   // Calculate overall bus factor
-  const overallBusFactor = knowledgeAreas.length > 0
-    ? Math.round(
-        (knowledgeAreas.reduce((sum, a) => sum + a.busFactor, 0) / knowledgeAreas.length) * 10
-      ) / 10
-    : 0;
+  const overallBusFactor =
+    knowledgeAreas.length > 0
+      ? Math.round(
+          (knowledgeAreas.reduce((sum, a) => sum + a.busFactor, 0) / knowledgeAreas.length) * 10
+        ) / 10
+      : 0;
 
   // Identify risk areas (bus factor = 1)
-  const riskAreas = knowledgeAreas
-    .filter((a) => a.busFactor === 1)
-    .map((a) => a.path);
+  const riskAreas = knowledgeAreas.filter((a) => a.busFactor === 1).map((a) => a.path);
 
   // Generate suggestions
-  const suggestions = generateSuggestions(
-    [...contributorMap.values()],
-    knowledgeAreas,
-    riskAreas
-  );
+  const suggestions = generateSuggestions([...contributorMap.values()], knowledgeAreas, riskAreas);
 
   // Sort contributors by total contributions
   const contributors = [...contributorMap.values()].sort(
@@ -373,9 +370,7 @@ function generateSuggestions(
   // Risk area suggestions
   if (riskAreas.length > 0) {
     const topRisk = riskAreas.slice(0, 3);
-    suggestions.push(
-      `Consider pair programming on: ${topRisk.join(', ')} (single expert)`
-    );
+    suggestions.push(`Consider pair programming on: ${topRisk.join(', ')} (single expert)`);
   }
 
   // Knowledge concentration suggestions
@@ -401,9 +396,7 @@ function generateSuggestions(
   // Distributed praise
   const distributedAreas = areas.filter((a) => a.coverage === 'distributed');
   if (distributedAreas.length > 0) {
-    suggestions.push(
-      `Great job! ${distributedAreas.length} area(s) have distributed knowledge.`
-    );
+    suggestions.push(`Great job! ${distributedAreas.length} area(s) have distributed knowledge.`);
   }
 
   if (suggestions.length === 0) {
@@ -437,8 +430,7 @@ export function formatKnowledgeMap(result: KnowledgeMapResult): string {
   }
 
   // Overall stats
-  const busEmoji = result.overallBusFactor >= 3 ? '🟢' :
-                   result.overallBusFactor >= 2 ? '🟡' : '🔴';
+  const busEmoji = result.overallBusFactor >= 3 ? '🟢' : result.overallBusFactor >= 2 ? '🟡' : '🔴';
   lines.push(`OVERALL BUS FACTOR: ${busEmoji} ${result.overallBusFactor}`);
   lines.push(`Risk Areas: ${result.riskAreas.length > 0 ? result.riskAreas.length : 'None'}`);
   lines.push('');
@@ -569,5 +561,5 @@ function getCoverageEmoji(coverage: KnowledgeArea['coverage']): string {
  */
 function truncate(str: string, maxLen: number): string {
   if (str.length <= maxLen) return str;
-  return str.slice(0, maxLen - 2) + '..';
+  return `${str.slice(0, maxLen - 2)}..`;
 }

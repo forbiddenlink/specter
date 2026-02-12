@@ -5,9 +5,9 @@
  * using the knowledge graph structure for intelligent matching.
  */
 
+import type { EmbeddingIndex } from './embeddings.js';
+import { searchEmbeddingIndex } from './embeddings.js';
 import type { KnowledgeGraph, NodeType } from './graph/types.js';
-import type { EmbeddingIndex, CodeChunk } from './embeddings.js';
-import { searchEmbeddingIndex, cosineSimilarity, generateTFIDFVector } from './embeddings.js';
 
 /**
  * Search mode for the search operation
@@ -117,9 +117,7 @@ function parseQuery(query: string): string[] {
   const normalizedQuery = query.toLowerCase().trim();
 
   // Split by common separators
-  const words = normalizedQuery
-    .split(/[\s,._\-/]+/)
-    .filter((w) => w.length > 1);
+  const words = normalizedQuery.split(/[\s,._\-/]+/).filter((w) => w.length > 1);
 
   // Expand with synonyms
   const expanded = new Set<string>();
@@ -154,7 +152,7 @@ function calculateRelevance(
   name: string,
   filePath: string,
   keywords: string[],
-  nodeType: NodeType,
+  _nodeType: NodeType,
   graph: KnowledgeGraph,
   nodeId: string
 ): { score: number; reason: string } {
@@ -222,8 +220,15 @@ function calculateRelevance(
  * Generate context for a search result
  */
 function generateContext(
-  node: { name: string; type: NodeType; filePath: string; lineStart: number; lineEnd: number; documentation?: string },
-  graph: KnowledgeGraph
+  node: {
+    name: string;
+    type: NodeType;
+    filePath: string;
+    lineStart: number;
+    lineEnd: number;
+    documentation?: string;
+  },
+  _graph: KnowledgeGraph
 ): string {
   // Use documentation if available
   if (node.documentation) {
@@ -233,7 +238,11 @@ function generateContext(
   // Generate context based on type
   switch (node.type) {
     case 'function': {
-      const funcNode = node as { parameters?: string[]; returnType?: string; isAsync?: boolean } & typeof node;
+      const funcNode = node as {
+        parameters?: string[];
+        returnType?: string;
+        isAsync?: boolean;
+      } & typeof node;
       const params = funcNode.parameters?.join(', ') || '';
       const returnType = funcNode.returnType ? `: ${funcNode.returnType}` : '';
       const asyncPrefix = funcNode.isAsync ? 'async ' : '';
@@ -329,7 +338,7 @@ export function searchCodebase(query: string, graph: KnowledgeGraph): SearchResp
  */
 function generateSuggestions(
   originalQuery: string,
-  keywords: string[],
+  _keywords: string[],
   results: SearchResult[]
 ): string[] {
   const suggestions: string[] = [];
@@ -581,10 +590,7 @@ export function semanticSearch(
       if (resultMap.has(key)) {
         // Boost score if found by both methods
         const existing = resultMap.get(key)!;
-        const boostedScore = Math.min(
-          100,
-          Math.max(existing.relevance, semanticRelevance) + 10
-        );
+        const boostedScore = Math.min(100, Math.max(existing.relevance, semanticRelevance) + 10);
         existing.relevance = boostedScore;
         existing.matchReason += ` + Semantic match`;
       } else {
@@ -637,10 +643,7 @@ export function semanticSearch(
 /**
  * Format search results with mode indicator
  */
-export function formatSearchWithMode(
-  response: SearchResponse,
-  limit = 10
-): string {
+export function formatSearchWithMode(response: SearchResponse, limit = 10): string {
   const lines: string[] = [];
 
   // Header with mode indicator
@@ -652,7 +655,7 @@ export function formatSearchWithMode(
         : '🔤 KEYWORD';
 
   lines.push('┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓');
-  lines.push(`┃  🔍 CODE SEARCH (${modeLabel})`.padEnd(52) + '┃');
+  lines.push(`${`┃  🔍 CODE SEARCH (${modeLabel})`.padEnd(52)}┃`);
   lines.push('┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛');
   lines.push('');
   lines.push(`Query: "${response.query}"`);
@@ -674,9 +677,7 @@ export function formatSearchWithMode(
 
   // Group results by relevance tiers
   const topResults = response.results.filter((r) => r.relevance >= 80);
-  const goodResults = response.results.filter(
-    (r) => r.relevance >= 50 && r.relevance < 80
-  );
+  const goodResults = response.results.filter((r) => r.relevance >= 50 && r.relevance < 80);
   const otherResults = response.results.filter((r) => r.relevance < 50);
 
   let shown = 0;

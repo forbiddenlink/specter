@@ -8,7 +8,7 @@
  * - Bus factor improvements (knowledge sharing)
  */
 
-import { simpleGit, type SimpleGit } from 'simple-git';
+import { type SimpleGit, simpleGit } from 'simple-git';
 import type { KnowledgeGraph } from './graph/types.js';
 
 export interface ContributorStats {
@@ -118,7 +118,7 @@ function parseSince(since: string): Date {
   } else {
     // Try to parse as ISO date
     const parsed = new Date(since);
-    if (!isNaN(parsed.getTime())) {
+    if (!Number.isNaN(parsed.getTime())) {
       return parsed;
     }
   }
@@ -161,7 +161,7 @@ function calculateBusFactorContribution(
   for (const file of contributorFiles) {
     // Count how many other contributors work on this file
     let otherContributors = 0;
-    for (const [email, files] of allContributorFiles) {
+    for (const [_email, files] of allContributorFiles) {
       if (files.has(file) && files !== contributorFiles) {
         otherContributors++;
       }
@@ -390,9 +390,9 @@ export function formatLeaderboard(result: LeaderboardResult): string {
   lines.push('');
   lines.push('  \uD83C\uDFC6 SPECTER LEADERBOARD');
   lines.push('');
-  lines.push('  Who\'s improving the codebase?');
+  lines.push("  Who's improving the codebase?");
   lines.push('');
-  lines.push('  ' + '\u2550'.repeat(W));
+  lines.push(`  ${'\u2550'.repeat(W)}`);
   lines.push('');
 
   if (result.entries.length === 0) {
@@ -409,9 +409,7 @@ export function formatLeaderboard(result: LeaderboardResult): string {
     const rankStr = `#${entry.rank}`.padEnd(4);
 
     // Format name (truncate if too long)
-    const displayName = entry.name.length > 30
-      ? entry.name.substring(0, 27) + '...'
-      : entry.name;
+    const displayName = entry.name.length > 30 ? `${entry.name.substring(0, 27)}...` : entry.name;
 
     // Format points
     const pointsStr = `+${entry.points} pts`.padStart(10);
@@ -424,31 +422,33 @@ export function formatLeaderboard(result: LeaderboardResult): string {
 
     // Third line: stats
     const commitStr = `${entry.commits} commits`;
-    const complexityStr = entry.complexityDelta <= 0
-      ? `${entry.complexityDelta} complexity`
-      : `+${entry.complexityDelta} complexity`;
-    const busFactorStr = entry.busFactor > 0
-      ? `+${entry.busFactor} bus factor`
-      : `${entry.busFactor} bus factor`;
+    const complexityStr =
+      entry.complexityDelta <= 0
+        ? `${entry.complexityDelta} complexity`
+        : `+${entry.complexityDelta} complexity`;
+    const busFactorStr =
+      entry.busFactor > 0 ? `+${entry.busFactor} bus factor` : `${entry.busFactor} bus factor`;
 
     lines.push(`      ${commitStr} \u2502 ${complexityStr} \u2502 ${busFactorStr}`);
     lines.push('');
   }
 
   // Divider
-  lines.push('  ' + '\u2500'.repeat(W));
+  lines.push(`  ${'\u2500'.repeat(W)}`);
   lines.push('');
 
   // Team stats
-  const trendEmoji = result.teamStats.trend === 'improving'
-    ? '\uD83D\uDCC8'
-    : result.teamStats.trend === 'declining'
-      ? '\uD83D\uDCC9'
-      : '\u2796';
+  const trendEmoji =
+    result.teamStats.trend === 'improving'
+      ? '\uD83D\uDCC8'
+      : result.teamStats.trend === 'declining'
+        ? '\uD83D\uDCC9'
+        : '\u2796';
 
-  const trendText = result.teamStats.netComplexity <= 0
-    ? `${result.teamStats.netComplexity} (improving!)`
-    : `+${result.teamStats.netComplexity} (needs attention)`;
+  const trendText =
+    result.teamStats.netComplexity <= 0
+      ? `${result.teamStats.netComplexity} (improving!)`
+      : `+${result.teamStats.netComplexity} (needs attention)`;
 
   // Format date range
   const fromDate = result.timeRange.since.toLocaleDateString();

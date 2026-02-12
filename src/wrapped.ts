@@ -96,7 +96,11 @@ interface PeriodRange {
 /**
  * Calculate date range for a given period
  */
-function calculatePeriodRange(period: WrappedPeriod, year?: number, periodNum?: number): PeriodRange {
+function calculatePeriodRange(
+  period: WrappedPeriod,
+  year?: number,
+  periodNum?: number
+): PeriodRange {
   const now = new Date();
   const targetYear = year || now.getFullYear();
 
@@ -122,7 +126,6 @@ function calculatePeriodRange(period: WrappedPeriod, year?: number, periodNum?: 
       const end = new Date(targetYear, startMonth + 3, 0);
       return { start, end, label: `Q${quarter} ${targetYear}` };
     }
-    case 'year':
     default: {
       const start = new Date(targetYear, 0, 1);
       const end = new Date(targetYear, 11, 31);
@@ -150,10 +153,10 @@ export async function gatherWrappedData(
   const periodEnd = range.end.toISOString().split('T')[0];
 
   // Check if git repo
-  let isGitRepo = false;
+  let _isGitRepo = false;
   try {
     await git.status();
-    isGitRepo = true;
+    _isGitRepo = true;
   } catch {
     return createEmptyWrappedData(codebaseName, targetYear, graph, range.label);
   }
@@ -242,7 +245,10 @@ export async function gatherWrappedData(
     const hour = date.getHours();
 
     monthCounts.set(month, (monthCounts.get(month) || 0) + 1);
-    dayCounts.set(date.toISOString().split('T')[0], (dayCounts.get(date.toISOString().split('T')[0]) || 0) + 1);
+    dayCounts.set(
+      date.toISOString().split('T')[0],
+      (dayCounts.get(date.toISOString().split('T')[0]) || 0) + 1
+    );
     hourCounts.set(hour, (hourCounts.get(hour) || 0) + 1);
 
     if (hour >= 0 && hour < 5) lateNightCommits++;
@@ -362,7 +368,7 @@ function createEmptyWrappedData(
 
 function calculateStreaks(
   commitDays: Set<string>,
-  year: number
+  _year: number
 ): { longestStreak: number; currentStreak: number } {
   const sortedDays = [...commitDays].sort();
   let longestStreak = 0;
@@ -373,9 +379,7 @@ function calculateStreaks(
   for (const day of sortedDays) {
     const date = new Date(day);
     if (prevDate) {
-      const diffDays = Math.floor(
-        (date.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24)
-      );
+      const diffDays = Math.floor((date.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
       if (diffDays === 1) {
         streak++;
       } else {
@@ -412,9 +416,13 @@ function generateFunFacts(data: {
   if (data.lateNightCommits > 0) {
     const percentage = Math.round((data.lateNightCommits / data.totalCommits) * 100);
     if (percentage > 20) {
-      facts.push(`You're a night owl! ${percentage}% of commits happened between midnight and 5am.`);
+      facts.push(
+        `You're a night owl! ${percentage}% of commits happened between midnight and 5am.`
+      );
     } else if (percentage > 5) {
-      facts.push(`${data.lateNightCommits} commits were made in the dead of night. Sleep is for the weak.`);
+      facts.push(
+        `${data.lateNightCommits} commits were made in the dead of night. Sleep is for the weak.`
+      );
     }
   }
 
@@ -426,7 +434,9 @@ function generateFunFacts(data: {
   }
 
   if (data.topContributor && data.topContributor.percentage > 80) {
-    facts.push(`${data.topContributor.name} carried the team with ${data.topContributor.percentage}% of all commits.`);
+    facts.push(
+      `${data.topContributor.name} carried the team with ${data.topContributor.percentage}% of all commits.`
+    );
   }
 
   if (data.topFile) {
@@ -482,12 +492,8 @@ export function formatWrapped(data: WrappedData): string {
 
   // Lines changed
   if (data.totalLinesAdded > 0 || data.totalLinesRemoved > 0) {
-    lines.push(
-      `   +${data.totalLinesAdded.toLocaleString()} lines added`
-    );
-    lines.push(
-      `   -${data.totalLinesRemoved.toLocaleString()} lines removed`
-    );
+    lines.push(`   +${data.totalLinesAdded.toLocaleString()} lines added`);
+    lines.push(`   -${data.totalLinesRemoved.toLocaleString()} lines removed`);
     lines.push('');
   }
 

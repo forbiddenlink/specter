@@ -6,14 +6,13 @@
  * stakeholder updates, and audits.
  */
 
-import type { KnowledgeGraph } from './graph/types.js';
-import { getGraphStats } from './graph/builder.js';
 import { generateComplexityReport, getComplexityEmoji } from './analyzers/complexity.js';
-import { analyzeKnowledgeDistribution } from './analyzers/knowledge.js';
-import { detectDrift, type DriftResult } from './drift.js';
-import { detectCycles, type CyclesResult } from './cycles.js';
-import { analyzeHotspots, type HotspotsResult } from './hotspots.js';
 import { analyzeBusFactor, type BusFactorResult } from './bus-factor.js';
+import { type CyclesResult, detectCycles } from './cycles.js';
+import { type DriftResult, detectDrift } from './drift.js';
+import { getGraphStats } from './graph/builder.js';
+import type { KnowledgeGraph } from './graph/types.js';
+import { analyzeHotspots, type HotspotsResult } from './hotspots.js';
 import { projectTrajectory, type TrajectoryResult } from './trajectory.js';
 import { analyzeVelocity, type VelocityResult } from './velocity.js';
 import { analyzeZones, type ZoneMap } from './zones.js';
@@ -177,12 +176,14 @@ export async function generateReport(
     busFactor: {
       overall: analysisData.busFactor?.overallBusFactor ?? 0,
       riskLevel: analysisData.busFactor?.riskLevel ?? 'unknown',
-      criticalAreas: analysisData.busFactor?.risks.filter((r) => r.criticality === 'critical').length ?? 0,
+      criticalAreas:
+        analysisData.busFactor?.risks.filter((r) => r.criticality === 'critical').length ?? 0,
     },
     trajectory: {
       trend: analysisData.trajectory?.trend ?? 'unknown',
       rateOfChange: analysisData.trajectory?.rateOfChange ?? 0,
-      projectedOneMonth: analysisData.trajectory?.projections.oneMonth.projectedHealth ?? healthScore,
+      projectedOneMonth:
+        analysisData.trajectory?.projections.oneMonth.projectedHealth ?? healthScore,
     },
     hotspots: {
       criticalCount: analysisData.hotspots?.summary.criticalCount ?? 0,
@@ -226,12 +227,7 @@ export async function generateReport(
   sections.push({
     id: 'executive-summary',
     title: 'Executive Summary',
-    content: buildExecutiveSummary(
-      healthScore,
-      healthGrade,
-      analysisData,
-      stats
-    ),
+    content: buildExecutiveSummary(healthScore, healthGrade, analysisData, stats),
   });
 
   if (options.quick) {
@@ -259,11 +255,7 @@ export async function generateReport(
     sections.push({
       id: 'top-risks',
       title: 'Top Risks',
-      content: buildRisksSection(
-        analysisData.drift,
-        analysisData.cycles,
-        analysisData.hotspots
-      ),
+      content: buildRisksSection(analysisData.drift, analysisData.cycles, analysisData.hotspots),
     });
   }
 
@@ -381,13 +373,23 @@ function buildExecutiveSummary(
   const busFactor = data.busFactor as BusFactorResult | undefined;
   const drift = data.drift as DriftResult | undefined;
 
-  const trendEmoji = trajectory?.trend === 'improving' ? ':arrow_upper_right:' :
-    trajectory?.trend === 'declining' ? ':arrow_lower_right:' :
-    trajectory?.trend === 'critical' ? ':arrow_double_down:' : ':arrow_right:';
+  const trendEmoji =
+    trajectory?.trend === 'improving'
+      ? ':arrow_upper_right:'
+      : trajectory?.trend === 'declining'
+        ? ':arrow_lower_right:'
+        : trajectory?.trend === 'critical'
+          ? ':arrow_double_down:'
+          : ':arrow_right:';
 
-  const riskEmoji = busFactor?.riskLevel === 'healthy' ? ':green_circle:' :
-    busFactor?.riskLevel === 'concerning' ? ':yellow_circle:' :
-    busFactor?.riskLevel === 'dangerous' ? ':orange_circle:' : ':red_circle:';
+  const riskEmoji =
+    busFactor?.riskLevel === 'healthy'
+      ? ':green_circle:'
+      : busFactor?.riskLevel === 'concerning'
+        ? ':yellow_circle:'
+        : busFactor?.riskLevel === 'dangerous'
+          ? ':orange_circle:'
+          : ':red_circle:';
 
   const lines: string[] = [
     '## Executive Summary',
@@ -402,7 +404,9 @@ function buildExecutiveSummary(
   }
 
   if (busFactor) {
-    lines.push(`| **Bus Factor** | ${busFactor.overallBusFactor.toFixed(1)} | ${riskEmoji} ${busFactor.riskLevel} |`);
+    lines.push(
+      `| **Bus Factor** | ${busFactor.overallBusFactor.toFixed(1)} | ${riskEmoji} ${busFactor.riskLevel} |`
+    );
   }
 
   if (trajectory) {
@@ -410,7 +414,9 @@ function buildExecutiveSummary(
   }
 
   lines.push('');
-  lines.push(`> **${stats.fileCount}** files | **${stats.totalLines.toLocaleString()}** lines | **${stats.nodeCount}** symbols`);
+  lines.push(
+    `> **${stats.fileCount}** files | **${stats.totalLines.toLocaleString()}** lines | **${stats.nodeCount}** symbols`
+  );
 
   return lines.join('\n');
 }
@@ -424,8 +430,11 @@ function buildHealthOverview(
   healthScore: number,
   grade: string
 ): string {
-  const totalFunctions = report.distribution.low + report.distribution.medium +
-    report.distribution.high + report.distribution.veryHigh;
+  const totalFunctions =
+    report.distribution.low +
+    report.distribution.medium +
+    report.distribution.high +
+    report.distribution.veryHigh;
 
   const lines: string[] = [
     '## Health Overview',
@@ -477,10 +486,7 @@ function buildRisksSection(
   cycles?: CyclesResult,
   hotspots?: HotspotsResult
 ): string {
-  const lines: string[] = [
-    '## Top Risks',
-    '',
-  ];
+  const lines: string[] = ['## Top Risks', ''];
 
   if (drift && drift.violations.length > 0) {
     lines.push('### Architecture Drift');
@@ -492,10 +498,16 @@ function buildRisksSection(
 
     const topViolations = drift.violations.slice(0, 10);
     for (const v of topViolations) {
-      const severityEmoji = v.severity === 'high' ? ':red_circle:' :
-        v.severity === 'medium' ? ':yellow_circle:' : ':green_circle:';
-      const shortFile = v.file.length > 40 ? '...' + v.file.slice(-37) : v.file;
-      lines.push(`| ${severityEmoji} ${v.severity} | ${v.type} | \`${shortFile}\` | ${v.message} |`);
+      const severityEmoji =
+        v.severity === 'high'
+          ? ':red_circle:'
+          : v.severity === 'medium'
+            ? ':yellow_circle:'
+            : ':green_circle:';
+      const shortFile = v.file.length > 40 ? `...${v.file.slice(-37)}` : v.file;
+      lines.push(
+        `| ${severityEmoji} ${v.severity} | ${v.type} | \`${shortFile}\` | ${v.message} |`
+      );
     }
 
     if (drift.violations.length > 10) {
@@ -505,7 +517,7 @@ function buildRisksSection(
     lines.push('');
   }
 
-  if (cycles && cycles.cycles && cycles.cycles.length > 0) {
+  if (cycles?.cycles && cycles.cycles.length > 0) {
     lines.push('### Circular Dependencies');
     lines.push('');
     lines.push(`**${cycles.cycles.length}** circular dependency chains detected.`);
@@ -513,7 +525,7 @@ function buildRisksSection(
 
     const topCycles = cycles.cycles.slice(0, 5);
     for (const cycle of topCycles) {
-      const cycleStr = cycle.files.map(f => `\`${f.split('/').pop()}\``).join(' -> ');
+      const cycleStr = cycle.files.map((f) => `\`${f.split('/').pop()}\``).join(' -> ');
       lines.push(`- ${cycleStr}`);
     }
 
@@ -573,7 +585,9 @@ function buildTeamDynamicsSection(busFactor: BusFactorResult): string {
     lines.push('|------|------------|-------|-------|');
 
     for (const risk of criticalRisks.slice(0, 5)) {
-      lines.push(`| \`${risk.area}\` | ${risk.busFactor} | ${risk.soleOwner || '-'} | ${risk.linesOfCode.toLocaleString()} |`);
+      lines.push(
+        `| \`${risk.area}\` | ${risk.busFactor} | ${risk.soleOwner || '-'} | ${risk.linesOfCode.toLocaleString()} |`
+      );
     }
     lines.push('');
   }
@@ -593,19 +607,18 @@ function buildTeamDynamicsSection(busFactor: BusFactorResult): string {
 /**
  * Build metrics section (DORA-like)
  */
-function buildMetricsSection(
-  velocity?: VelocityResult,
-  trajectory?: TrajectoryResult
-): string {
-  const lines: string[] = [
-    '## Development Metrics',
-    '',
-  ];
+function buildMetricsSection(velocity?: VelocityResult, trajectory?: TrajectoryResult): string {
+  const lines: string[] = ['## Development Metrics', ''];
 
   if (velocity) {
-    const trendEmoji = velocity.trend === 'improving' ? ':green_circle:' :
-      velocity.trend === 'stable' ? ':yellow_circle:' :
-      velocity.trend === 'degrading' ? ':orange_circle:' : ':red_circle:';
+    const trendEmoji =
+      velocity.trend === 'improving'
+        ? ':green_circle:'
+        : velocity.trend === 'stable'
+          ? ':yellow_circle:'
+          : velocity.trend === 'degrading'
+            ? ':orange_circle:'
+            : ':red_circle:';
 
     lines.push('### Complexity Velocity');
     lines.push('');
@@ -613,7 +626,9 @@ function buildMetricsSection(
     lines.push('');
     lines.push('| Metric | Value |');
     lines.push('|--------|-------|');
-    lines.push(`| Weekly change | ${velocity.overallVelocity >= 0 ? '+' : ''}${velocity.overallVelocity} complexity/week |`);
+    lines.push(
+      `| Weekly change | ${velocity.overallVelocity >= 0 ? '+' : ''}${velocity.overallVelocity} complexity/week |`
+    );
     lines.push(`| Total complexity | ${velocity.currentMetrics.totalComplexity} |`);
     lines.push(`| 30-day projection | ${velocity.projectedDebtIn30Days} |`);
     lines.push(`| Snapshot count | ${velocity.snapshotCount} |`);
@@ -624,7 +639,7 @@ function buildMetricsSection(
       lines.push('#### Fastest Growing (Needs Attention)');
       lines.push('');
       for (const f of velocity.fastestGrowing.slice(0, 3)) {
-        const shortPath = f.path.length > 50 ? '...' + f.path.slice(-47) : f.path;
+        const shortPath = f.path.length > 50 ? `...${f.path.slice(-47)}` : f.path;
         lines.push(`- \`${shortPath}\` (+${f.velocityPerWeek}/week)`);
       }
       lines.push('');
@@ -645,9 +660,15 @@ function buildMetricsSection(
     const delta1M = proj1M.projectedHealth - trajectory.currentHealth;
     const delta3M = proj3M.projectedHealth - trajectory.currentHealth;
 
-    lines.push(`| 1 week | ${proj1W.projectedHealth}/100 | ${delta1W >= 0 ? '+' : ''}${delta1W} | ${proj1W.confidence}% |`);
-    lines.push(`| 1 month | ${proj1M.projectedHealth}/100 | ${delta1M >= 0 ? '+' : ''}${delta1M} | ${proj1M.confidence}% |`);
-    lines.push(`| 3 months | ${proj3M.projectedHealth}/100 | ${delta3M >= 0 ? '+' : ''}${delta3M} | ${proj3M.confidence}% |`);
+    lines.push(
+      `| 1 week | ${proj1W.projectedHealth}/100 | ${delta1W >= 0 ? '+' : ''}${delta1W} | ${proj1W.confidence}% |`
+    );
+    lines.push(
+      `| 1 month | ${proj1M.projectedHealth}/100 | ${delta1M >= 0 ? '+' : ''}${delta1M} | ${proj1M.confidence}% |`
+    );
+    lines.push(
+      `| 3 months | ${proj3M.projectedHealth}/100 | ${delta3M >= 0 ? '+' : ''}${delta3M} | ${proj3M.confidence}% |`
+    );
     lines.push('');
   }
 
@@ -689,11 +710,18 @@ function buildHotspotsSection(hotspots: HotspotsResult): string {
     lines.push('|----------|------|-------|------------|-------|');
 
     for (const h of hotspots.hotspots.slice(0, 10)) {
-      const priorityEmoji = h.priority === 'critical' ? ':red_circle:' :
-        h.priority === 'high' ? ':orange_circle:' :
-        h.priority === 'medium' ? ':yellow_circle:' : ':green_circle:';
-      const shortFile = h.file.length > 40 ? '...' + h.file.slice(-37) : h.file;
-      lines.push(`| ${priorityEmoji} ${h.priority} | \`${shortFile}\` | ${h.hotspotScore}/100 | ${h.complexity}% | ${h.churn}% |`);
+      const priorityEmoji =
+        h.priority === 'critical'
+          ? ':red_circle:'
+          : h.priority === 'high'
+            ? ':orange_circle:'
+            : h.priority === 'medium'
+              ? ':yellow_circle:'
+              : ':green_circle:';
+      const shortFile = h.file.length > 40 ? `...${h.file.slice(-37)}` : h.file;
+      lines.push(
+        `| ${priorityEmoji} ${h.priority} | \`${shortFile}\` | ${h.hotspotScore}/100 | ${h.complexity}% | ${h.churn}% |`
+      );
     }
     lines.push('');
   }
@@ -705,30 +733,45 @@ function buildHotspotsSection(hotspots: HotspotsResult): string {
  * Build trajectory section
  */
 function buildTrajectorySection(trajectory: TrajectoryResult): string {
-  const lines: string[] = [
-    '## Health Trajectory',
-    '',
-  ];
+  const lines: string[] = ['## Health Trajectory', ''];
 
   if (trajectory.snapshotCount < 2) {
-    lines.push('*Insufficient data for trajectory analysis. Run `specter scan` regularly to build history.*');
+    lines.push(
+      '*Insufficient data for trajectory analysis. Run `specter scan` regularly to build history.*'
+    );
     return lines.join('\n');
   }
 
-  const trendEmoji = trajectory.trend === 'improving' ? ':arrow_upper_right:' :
-    trajectory.trend === 'stable' ? ':arrow_right:' :
-    trajectory.trend === 'declining' ? ':arrow_lower_right:' : ':arrow_double_down:';
+  const trendEmoji =
+    trajectory.trend === 'improving'
+      ? ':arrow_upper_right:'
+      : trajectory.trend === 'stable'
+        ? ':arrow_right:'
+        : trajectory.trend === 'declining'
+          ? ':arrow_lower_right:'
+          : ':arrow_double_down:';
 
   lines.push(`**Current Health:** ${trajectory.currentHealth}/100`);
   lines.push('');
   lines.push(`**Trend:** ${trendEmoji} ${trajectory.trend.toUpperCase()}`);
   lines.push('');
-  lines.push(`**Rate of Change:** ${trajectory.rateOfChange >= 0 ? '+' : ''}${trajectory.rateOfChange} points/week`);
+  lines.push(
+    `**Rate of Change:** ${trajectory.rateOfChange >= 0 ? '+' : ''}${trajectory.rateOfChange} points/week`
+  );
   lines.push('');
 
   if (trajectory.healthHistory.length > 1) {
     // Simple ASCII sparkline for markdown
-    const sparkChars = ['\u2581', '\u2582', '\u2583', '\u2584', '\u2585', '\u2586', '\u2587', '\u2588'];
+    const sparkChars = [
+      '\u2581',
+      '\u2582',
+      '\u2583',
+      '\u2584',
+      '\u2585',
+      '\u2586',
+      '\u2587',
+      '\u2588',
+    ];
     const min = Math.min(...trajectory.healthHistory);
     const max = Math.max(...trajectory.healthHistory);
     const range = max - min || 1;
@@ -740,7 +783,7 @@ function buildTrajectorySection(trajectory: TrajectoryResult): string {
       })
       .join('');
 
-    lines.push('**History:** ' + sparkline);
+    lines.push(`**History:** ${sparkline}`);
     lines.push('');
   }
 
@@ -759,16 +802,8 @@ function buildTrajectorySection(trajectory: TrajectoryResult): string {
 /**
  * Build recommendations section
  */
-function buildRecommendationsSection(
-  data: Record<string, unknown>,
-  healthScore: number
-): string {
-  const lines: string[] = [
-    '## Recommendations',
-    '',
-    '### Prioritized Action Items',
-    '',
-  ];
+function buildRecommendationsSection(data: Record<string, unknown>, healthScore: number): string {
+  const lines: string[] = ['## Recommendations', '', '### Prioritized Action Items', ''];
 
   const recommendations: { priority: number; text: string }[] = [];
 
@@ -857,7 +892,7 @@ function buildRecommendationsSection(
 
   // Cycles recommendations
   const cycles = data.cycles as CyclesResult | undefined;
-  if (cycles && cycles.cycles && cycles.cycles.length > 3) {
+  if (cycles?.cycles && cycles.cycles.length > 3) {
     recommendations.push({
       priority: 2,
       text: `:orange_circle: **HIGH:** ${cycles.cycles.length} circular dependencies detected - break dependency cycles`,
@@ -940,7 +975,7 @@ function buildAppendixSection(
 
     for (const h of report.hotspots.slice(0, 15)) {
       const emoji = getComplexityEmoji(h.complexity);
-      const shortPath = h.filePath.length > 35 ? '...' + h.filePath.slice(-32) : h.filePath;
+      const shortPath = h.filePath.length > 35 ? `...${h.filePath.slice(-32)}` : h.filePath;
       lines.push(`| \`${shortPath}\` | ${h.name} | ${emoji} ${h.complexity} |`);
     }
     lines.push('');
@@ -976,8 +1011,12 @@ export function formatReportSummary(result: ReportResult): string {
 
   if (result.data) {
     lines.push('  KEY METRICS:');
-    lines.push(`    Health Score: ${result.data.health.score}/100 (Grade ${result.data.health.grade})`);
-    lines.push(`    Bus Factor: ${result.data.busFactor.overall.toFixed(1)} (${result.data.busFactor.riskLevel})`);
+    lines.push(
+      `    Health Score: ${result.data.health.score}/100 (Grade ${result.data.health.grade})`
+    );
+    lines.push(
+      `    Bus Factor: ${result.data.busFactor.overall.toFixed(1)} (${result.data.busFactor.riskLevel})`
+    );
     lines.push(`    Trajectory: ${result.data.trajectory.trend}`);
     lines.push(`    Critical Hotspots: ${result.data.hotspots.criticalCount}`);
     lines.push('');

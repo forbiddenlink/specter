@@ -5,7 +5,7 @@
  * against best practices and identifying patterns that have drifted.
  */
 
-import type { KnowledgeGraph, GraphNode } from './graph/types.js';
+import type { KnowledgeGraph } from './graph/types.js';
 
 // Types
 export type DriftType = 'complexity' | 'dependency' | 'layering' | 'coupling';
@@ -66,12 +66,9 @@ function detectComplexityDrift(graph: KnowledgeGraph): DriftViolation[] {
   const fileNodes = Object.values(graph.nodes).filter((n) => n.type === 'file');
 
   // Calculate average complexity
-  const complexities = fileNodes
-    .map((n) => n.complexity ?? 0)
-    .filter((c) => c > 0);
-  const avgComplexity = complexities.length > 0
-    ? complexities.reduce((a, b) => a + b, 0) / complexities.length
-    : 5;
+  const complexities = fileNodes.map((n) => n.complexity ?? 0).filter((c) => c > 0);
+  const avgComplexity =
+    complexities.length > 0 ? complexities.reduce((a, b) => a + b, 0) / complexities.length : 5;
 
   for (const node of fileNodes) {
     const complexity = node.complexity ?? 0;
@@ -115,10 +112,7 @@ function detectDependencyDrift(graph: KnowledgeGraph): DriftViolation[] {
       const targetNode = graph.nodes[edge.target];
 
       if (sourceNode?.filePath) {
-        importCounts.set(
-          sourceNode.filePath,
-          (importCounts.get(sourceNode.filePath) ?? 0) + 1
-        );
+        importCounts.set(sourceNode.filePath, (importCounts.get(sourceNode.filePath) ?? 0) + 1);
       }
       if (targetNode?.filePath) {
         dependentCounts.set(
@@ -173,7 +167,7 @@ function detectLayeringDrift(graph: KnowledgeGraph): DriftViolation[] {
   const violations: DriftViolation[] = [];
 
   // Build a map of file paths to their layers
-  function getLayer(filePath: string): typeof LAYER_RULES[0] | undefined {
+  function getLayer(filePath: string): (typeof LAYER_RULES)[0] | undefined {
     for (const rule of LAYER_RULES) {
       if (rule.patterns.some((p) => p.test(filePath))) {
         return rule;
@@ -256,10 +250,7 @@ function detectLayeringDrift(graph: KnowledgeGraph): DriftViolation[] {
 /**
  * Main function to detect all types of drift
  */
-export async function detectDrift(
-  _rootDir: string,
-  graph: KnowledgeGraph
-): Promise<DriftResult> {
+export async function detectDrift(_rootDir: string, graph: KnowledgeGraph): Promise<DriftResult> {
   const violations: DriftViolation[] = [];
 
   // Run all drift detectors
@@ -300,10 +291,7 @@ export async function detectDrift(
 
   // Calculate drift score (100 = perfect, 0 = drifted)
   // Weight: high = 10, medium = 5, low = 2
-  const totalPenalty =
-    bySeverity.high * 10 +
-    bySeverity.medium * 5 +
-    bySeverity.low * 2;
+  const totalPenalty = bySeverity.high * 10 + bySeverity.medium * 5 + bySeverity.low * 2;
 
   // Max penalty is based on file count
   const maxPenalty = Math.max(fileNodes.length * 5, 100);
@@ -343,9 +331,7 @@ export function formatDrift(result: DriftResult): string {
 
   // Score display
   const scoreEmoji =
-    result.score >= 80 ? '🟢' :
-    result.score >= 60 ? '🟡' :
-    result.score >= 40 ? '🟠' : '🔴';
+    result.score >= 80 ? '🟢' : result.score >= 60 ? '🟡' : result.score >= 40 ? '🟠' : '🔴';
 
   lines.push('DRIFT SCORE');
   lines.push('─'.repeat(50));
@@ -390,9 +376,7 @@ export function formatDrift(result: DriftResult): string {
     lines.push('─'.repeat(50));
 
     for (const v of typeViolations.slice(0, 5)) {
-      const severityIcon =
-        v.severity === 'high' ? '🔴' :
-        v.severity === 'medium' ? '🟡' : '🟢';
+      const severityIcon = v.severity === 'high' ? '🔴' : v.severity === 'medium' ? '🟡' : '🟢';
 
       lines.push(`${severityIcon} ${v.file}`);
       lines.push(`   ${v.message}`);

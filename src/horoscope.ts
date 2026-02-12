@@ -51,7 +51,7 @@ const starSuggests = [
 ];
 
 // Lucky/unlucky file patterns
-const luckyFilePatterns = [
+const _luckyFilePatterns = [
   'src/index',
   'src/main',
   'src/app',
@@ -95,7 +95,7 @@ const compatibilities = [
 
 // Things to avoid
 const avoidances = [
-  'Developers who don\'t write tests',
+  "Developers who don't write tests",
   'Force pushes to main',
   'Uncommitted changes on Fridays',
   'Dependencies with no maintenance',

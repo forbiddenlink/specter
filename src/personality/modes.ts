@@ -141,7 +141,7 @@ export const personalities: Record<PersonalityMode, PersonalityConfig> = {
       greeting:
         "Hello. I'm here to help you understand your codebase. How are you feeling about it today?",
       positive: [
-        'That\'s healthy code. You should feel good about this.',
+        "That's healthy code. You should feel good about this.",
         "I sense you've been taking care of this area.",
       ],
       negative: [

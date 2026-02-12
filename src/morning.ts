@@ -32,10 +32,10 @@ export interface MorningBriefing {
 }
 
 const greetings = [
-  'Good morning! Here\'s your codebase briefing.',
-  'Rise and shine! Let\'s check on the code.',
-  'Coffee time? Here\'s what\'s happening in the codebase.',
-  'Ready to code? Here\'s your daily digest.',
+  "Good morning! Here's your codebase briefing.",
+  "Rise and shine! Let's check on the code.",
+  "Coffee time? Here's what's happening in the codebase.",
+  "Ready to code? Here's your daily digest.",
   'Welcome back! Quick update on the codebase.',
 ];
 
@@ -76,7 +76,13 @@ export async function generateMorning(
       contributors.add(commit.author_name);
 
       try {
-        const diff = await git.raw(['diff-tree', '--no-commit-id', '--name-only', '-r', commit.hash]);
+        const diff = await git.raw([
+          'diff-tree',
+          '--no-commit-id',
+          '--name-only',
+          '-r',
+          commit.hash,
+        ]);
         for (const file of diff.trim().split('\n').filter(Boolean)) {
           filesChanged.add(file);
         }
@@ -105,7 +111,13 @@ export async function generateMorning(
     const fileChanges = new Map<string, number>();
     for (const commit of weekLog.all.slice(0, 50)) {
       try {
-        const diff = await git.raw(['diff-tree', '--no-commit-id', '--name-only', '-r', commit.hash]);
+        const diff = await git.raw([
+          'diff-tree',
+          '--no-commit-id',
+          '--name-only',
+          '-r',
+          commit.hash,
+        ]);
         for (const file of diff.trim().split('\n').filter(Boolean)) {
           if (file.match(/\.(ts|tsx|js|jsx)$/)) {
             fileChanges.set(file, (fileChanges.get(file) || 0) + 1);
@@ -116,9 +128,7 @@ export async function generateMorning(
       }
     }
 
-    const sorted = [...fileChanges.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 3);
+    const sorted = [...fileChanges.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3);
 
     for (const [path, changes] of sorted) {
       let reason = 'Active development';
@@ -136,9 +146,8 @@ export async function generateMorning(
   const complexities = nodes
     .filter((n) => n.complexity !== undefined)
     .map((n) => n.complexity as number);
-  const avgComplexity = complexities.length > 0
-    ? complexities.reduce((a, b) => a + b, 0) / complexities.length
-    : 0;
+  const avgComplexity =
+    complexities.length > 0 ? complexities.reduce((a, b) => a + b, 0) / complexities.length : 0;
 
   const healthScore = Math.max(0, Math.min(100, 100 - avgComplexity * 2));
   const healthTrend: 'improving' | 'stable' | 'declining' =
@@ -219,10 +228,10 @@ export function formatMorning(briefing: MorningBriefing): string {
   lines.push('');
 
   // Health
-  const healthEmoji = briefing.health.score >= 70 ? '💚' :
-                      briefing.health.score >= 40 ? '💛' : '❤️';
-  const healthBar = '█'.repeat(Math.floor(briefing.health.score / 10)) +
-                    '░'.repeat(10 - Math.floor(briefing.health.score / 10));
+  const healthEmoji = briefing.health.score >= 70 ? '💚' : briefing.health.score >= 40 ? '💛' : '❤️';
+  const healthBar =
+    '█'.repeat(Math.floor(briefing.health.score / 10)) +
+    '░'.repeat(10 - Math.floor(briefing.health.score / 10));
 
   lines.push('CODEBASE HEALTH');
   lines.push('─'.repeat(50));

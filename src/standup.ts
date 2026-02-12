@@ -7,8 +7,8 @@
  * - Blockers (high-risk files, circular dependencies)
  */
 
-import { simpleGit, type SimpleGit } from 'simple-git';
-import type { KnowledgeGraph, GraphNode } from './graph/types.js';
+import { type SimpleGit, simpleGit } from 'simple-git';
+import type { GraphNode, KnowledgeGraph } from './graph/types.js';
 
 export interface StandupResult {
   period: { start: Date; end: Date };
@@ -31,7 +31,10 @@ export interface StandupResult {
 /**
  * Calculate risk score for a file node
  */
-function calculateRiskScore(node: GraphNode, graph: KnowledgeGraph): { risk: number; reason: string } {
+function calculateRiskScore(
+  node: GraphNode,
+  graph: KnowledgeGraph
+): { risk: number; reason: string } {
   let risk = 0;
   const reasons: string[] = [];
 
@@ -180,7 +183,9 @@ export async function generateStandup(
   const git: SimpleGit = simpleGit(rootDir);
 
   // Parse the since parameter
-  const sinceDate = options.since ? parseRelativeTime(options.since) : new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const sinceDate = options.since
+    ? parseRelativeTime(options.since)
+    : new Date(Date.now() - 24 * 60 * 60 * 1000);
   const now = new Date();
 
   // Yesterday's activity
@@ -199,7 +204,13 @@ export async function generateStandup(
 
     for (const commit of recentLog.all) {
       try {
-        const diff = await git.raw(['diff-tree', '--no-commit-id', '--name-only', '-r', commit.hash]);
+        const diff = await git.raw([
+          'diff-tree',
+          '--no-commit-id',
+          '--name-only',
+          '-r',
+          commit.hash,
+        ]);
         for (const file of diff.trim().split('\n').filter(Boolean)) {
           if (file.match(/\.(ts|tsx|js|jsx)$/)) {
             filesChanged.add(file);
@@ -326,9 +337,9 @@ export function formatStandup(result: StandupResult): string {
   });
 
   // Header
-  lines.push('\u250F' + '\u2501'.repeat(51) + '\u2513');
+  lines.push(`\u250F${'\u2501'.repeat(51)}\u2513`);
   lines.push('\u2503  \uD83D\uDCCB STANDUP SUMMARY                               \u2503');
-  lines.push('\u2517' + '\u2501'.repeat(51) + '\u251B');
+  lines.push(`\u2517${'\u2501'.repeat(51)}\u251B`);
   lines.push('');
   lines.push(`\uD83D\uDCC5 ${date}`);
   lines.push('');
@@ -347,7 +358,9 @@ export function formatStandup(result: StandupResult): string {
       const tests = result.yesterday.filesChanged.filter((f) => f.includes('test'));
 
       if (modified.length > 0) {
-        lines.push(`  \u2713 Modified: ${modified.slice(0, 3).join(', ')}${modified.length > 3 ? ` (+${modified.length - 3} more)` : ''}`);
+        lines.push(
+          `  \u2713 Modified: ${modified.slice(0, 3).join(', ')}${modified.length > 3 ? ` (+${modified.length - 3} more)` : ''}`
+        );
       }
       if (tests.length > 0) {
         lines.push(`  \u2713 Tests: ${tests.length} test file(s) updated`);
@@ -371,7 +384,9 @@ export function formatStandup(result: StandupResult): string {
   }
 
   if (result.today.hotspots.length > 0) {
-    lines.push(`  \uD83C\uDFAF Focus areas: ${result.today.hotspots.length} complex file(s) recently changed`);
+    lines.push(
+      `  \uD83C\uDFAF Focus areas: ${result.today.hotspots.length} complex file(s) recently changed`
+    );
     for (const hotspot of result.today.hotspots) {
       lines.push(`     - ${hotspot}`);
     }
@@ -386,7 +401,8 @@ export function formatStandup(result: StandupResult): string {
   lines.push('');
 
   // Blockers
-  const hasBlockers = result.blockers.highRiskFiles.length > 0 || result.blockers.circularDependencies > 0;
+  const hasBlockers =
+    result.blockers.highRiskFiles.length > 0 || result.blockers.circularDependencies > 0;
 
   lines.push('BLOCKERS');
   lines.push('\u2500'.repeat(53));
@@ -402,7 +418,9 @@ export function formatStandup(result: StandupResult): string {
     }
 
     if (result.blockers.circularDependencies > 0) {
-      lines.push(`  \u26A0\uFE0F  ${result.blockers.circularDependencies} circular dependenc${result.blockers.circularDependencies === 1 ? 'y' : 'ies'} detected`);
+      lines.push(
+        `  \u26A0\uFE0F  ${result.blockers.circularDependencies} circular dependenc${result.blockers.circularDependencies === 1 ? 'y' : 'ies'} detected`
+      );
     }
   }
 

@@ -5,7 +5,7 @@
  * highlighting key files, patterns, and entry points.
  */
 
-import type { KnowledgeGraph, GraphNode } from './graph/types.js';
+import type { GraphNode, KnowledgeGraph } from './graph/types.js';
 
 export interface TourStop {
   name: string;
@@ -154,9 +154,7 @@ function findCoreModules(graph: KnowledgeGraph): TourStop[] {
   }
 
   // Sort by import count
-  const coreFiles = [...importCounts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 4);
+  const coreFiles = [...importCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
 
   for (const [filePath, count] of coreFiles) {
     const node = Object.values(graph.nodes).find((n) => n.filePath === filePath);
@@ -166,10 +164,7 @@ function findCoreModules(graph: KnowledgeGraph): TourStop[] {
         path: filePath,
         description: `Imported by ${count} files - central to the codebase`,
         importance: 'critical',
-        tips: [
-          'Changes here affect many files',
-          'Understand this before major refactoring',
-        ],
+        tips: ['Changes here affect many files', 'Understand this before major refactoring'],
       });
     }
   }
@@ -302,9 +297,13 @@ function generateOverview(graph: KnowledgeGraph): string {
     .map(([lang]) => lang);
 
   const size =
-    fileCount < 20 ? 'small' :
-    fileCount < 100 ? 'medium-sized' :
-    fileCount < 500 ? 'large' : 'very large';
+    fileCount < 20
+      ? 'small'
+      : fileCount < 100
+        ? 'medium-sized'
+        : fileCount < 500
+          ? 'large'
+          : 'very large';
 
   return `This is a ${size} ${langs.join('/')} codebase with ${fileCount} files and ${totalLines.toLocaleString()} lines of code.`;
 }
@@ -457,8 +456,7 @@ export function formatTour(tour: CodebaseTour): string {
 
     for (const stop of section.stops) {
       const icon =
-        stop.importance === 'critical' ? '🔴' :
-        stop.importance === 'important' ? '🟡' : '🟢';
+        stop.importance === 'critical' ? '🔴' : stop.importance === 'important' ? '🟡' : '🟢';
 
       lines.push(`${icon} ${stop.name}`);
       lines.push(`   ${stop.path}`);

@@ -4,8 +4,8 @@
  * Transforms output based on personality mode and mood.
  */
 
-import { applyMood, getMood, type Mood } from './mood.js';
 import { getPersonality } from './modes.js';
+import { applyMood, getMood, type Mood } from './mood.js';
 import type { PersonalityMode } from './types.js';
 
 /**
@@ -227,10 +227,7 @@ export function applyPersonality(text: string, personality: PersonalityMode = 'd
 }
 
 // Apply personality and mood to any output text
-export function applyPersonalityWithMood(
-  text: string,
-  options: MoodFormatterOptions = {}
-): string {
+export function applyPersonalityWithMood(text: string, options: MoodFormatterOptions = {}): string {
   const personality = options.personality || 'default';
 
   // First apply personality
@@ -255,6 +252,6 @@ export function formatWithMood(
   return applyMood(message, mood, personality);
 }
 
+export type { Mood } from './mood.js';
 // Re-export mood functions for convenience
 export { applyMood, getMood, getMoodDescription, getMoodIntensity, listMoods } from './mood.js';
-export type { Mood } from './mood.js';

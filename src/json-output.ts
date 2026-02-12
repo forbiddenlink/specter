@@ -23,11 +23,7 @@ export interface JsonOutput<T = unknown> {
  * @param data - The data to output
  * @param meta - Optional metadata (personality, thresholds, etc.)
  */
-export function outputJson<T>(
-  command: string,
-  data: T,
-  meta?: Record<string, unknown>
-): void {
+export function outputJson<T>(command: string, data: T, meta?: Record<string, unknown>): void {
   const output: JsonOutput<T> = {
     command,
     timestamp: new Date().toISOString(),

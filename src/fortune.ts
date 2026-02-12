@@ -22,7 +22,7 @@ const majorArcana = [
     name: 'The Magician',
     code: 'THE FULL STACK',
     upright: 'Manifestation, resourcefulness, power. You have all the tools you need.',
-    reversed: 'Manipulation, poor planning, untapped talents. Don\'t overcomplicate.',
+    reversed: "Manipulation, poor planning, untapped talents. Don't overcomplicate.",
     advice: 'Master one thing before adding another framework to the stack.',
   },
   {
@@ -39,7 +39,7 @@ const majorArcana = [
     code: 'THE CODEBASE',
     upright: 'Femininity, beauty, nature, abundance. Your code is fertile ground.',
     reversed: 'Creative block, dependence, overbearing. Too many abstractions.',
-    advice: 'Nurture what you\'ve built before adding more.',
+    advice: "Nurture what you've built before adding more.",
   },
   {
     number: 4,
@@ -54,7 +54,8 @@ const majorArcana = [
     name: 'The Hierophant',
     code: 'THE SENIOR DEV',
     upright: 'Tradition, conformity, morality, ethics. Wisdom of experience.',
-    reversed: 'Rebellion, subversiveness, new approaches. Challenge the "we\'ve always done it this way."',
+    reversed:
+      'Rebellion, subversiveness, new approaches. Challenge the "we\'ve always done it this way."',
     advice: 'Respect the patterns, but know when to break them.',
   },
   {
@@ -79,14 +80,14 @@ const majorArcana = [
     code: 'THE TEST SUITE',
     upright: 'Strength, courage, patience, control. Your tests will hold.',
     reversed: 'Weakness, self-doubt, lack of confidence. Coverage gaps lurk.',
-    advice: 'True strength is testing the edge cases you\'d rather ignore.',
+    advice: "True strength is testing the edge cases you'd rather ignore.",
   },
   {
     number: 9,
     name: 'The Hermit',
     code: 'THE DEEP WORK',
     upright: 'Soul-searching, introspection, being alone. Focus time needed.',
-    reversed: 'Isolation, loneliness, withdrawal. Don\'t suffer in silence.',
+    reversed: "Isolation, loneliness, withdrawal. Don't suffer in silence.",
     advice: 'Sometimes you need to close Slack and just code.',
   },
   {
@@ -103,7 +104,7 @@ const majorArcana = [
     code: 'THE CODE REVIEW',
     upright: 'Justice, fairness, truth, law. Objective feedback incoming.',
     reversed: 'Unfairness, lack of accountability, dishonesty. Rubber-stamping.',
-    advice: 'Review others as you\'d have them review you.',
+    advice: "Review others as you'd have them review you.",
   },
   {
     number: 12,
@@ -230,11 +231,7 @@ function seededRandom(seed: number): () => number {
 /**
  * Draw cards for a reading
  */
-function drawCards(
-  random: () => number,
-  count: number,
-  graph: KnowledgeGraph
-): TarotCard[] {
+function drawCards(random: () => number, count: number, graph: KnowledgeGraph): TarotCard[] {
   const cards: TarotCard[] = [];
   const usedIndices = new Set<number>();
 
@@ -345,58 +342,80 @@ function formatCard(card: TarotCard, position?: string): string[] {
   const lines: string[] = [];
   const width = 44;
 
-  lines.push('┌' + '─'.repeat(width) + '┐');
+  lines.push(`┌${'─'.repeat(width)}┐`);
 
   // Card number and name
-  const numeral = ['0', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X',
-                   'XI', 'XII', 'XIII', 'XIV', 'XV', 'XVI', 'XVII', 'XVIII', 'XIX', 'XX', 'XXI'][card.number];
+  const numeral = [
+    '0',
+    'I',
+    'II',
+    'III',
+    'IV',
+    'V',
+    'VI',
+    'VII',
+    'VIII',
+    'IX',
+    'X',
+    'XI',
+    'XII',
+    'XIII',
+    'XIV',
+    'XV',
+    'XVI',
+    'XVII',
+    'XVIII',
+    'XIX',
+    'XX',
+    'XXI',
+  ][card.number];
   const header = `${numeral}. ${card.name}${card.reversed ? ' (Reversed)' : ''}`;
-  lines.push('│ ' + header.padEnd(width - 1) + '│');
+  lines.push(`│ ${header.padEnd(width - 1)}│`);
 
   // Code name
-  lines.push('│ ' + card.code.padEnd(width - 1) + '│');
-  lines.push('│' + '─'.repeat(width) + '│');
+  lines.push(`│ ${card.code.padEnd(width - 1)}│`);
+  lines.push(`│${'─'.repeat(width)}│`);
 
   // Position if provided
   if (position) {
-    lines.push('│ ' + position.toUpperCase().padEnd(width - 1) + '│');
-    lines.push('│' + ' '.repeat(width) + '│');
+    lines.push(`│ ${position.toUpperCase().padEnd(width - 1)}│`);
+    lines.push(`│${' '.repeat(width)}│`);
   }
 
   // Meaning (wrapped)
   const meaningWords = card.meaning.split(' ');
   let currentLine = '';
   for (const word of meaningWords) {
-    if ((currentLine + ' ' + word).length > width - 2) {
-      lines.push('│ ' + currentLine.padEnd(width - 1) + '│');
+    if (`${currentLine} ${word}`.length > width - 2) {
+      lines.push(`│ ${currentLine.padEnd(width - 1)}│`);
       currentLine = word;
     } else {
-      currentLine = currentLine ? currentLine + ' ' + word : word;
+      currentLine = currentLine ? `${currentLine} ${word}` : word;
     }
   }
   if (currentLine) {
-    lines.push('│ ' + currentLine.padEnd(width - 1) + '│');
+    lines.push(`│ ${currentLine.padEnd(width - 1)}│`);
   }
 
-  lines.push('│' + ' '.repeat(width) + '│');
+  lines.push(`│${' '.repeat(width)}│`);
 
   // Advice (wrapped)
-  lines.push('│ ' + '💡 Advice:'.padEnd(width - 1) + '│');
+  lines.push(`│ ${'💡 Advice:'.padEnd(width - 1)}│`);
   const adviceWords = card.advice.split(' ');
   currentLine = '';
   for (const word of adviceWords) {
-    if ((currentLine + ' ' + word).length > width - 2) {
-      lines.push('│ ' + currentLine.padEnd(width - 1) + '│');
+    if (`${currentLine} ${word}`.length > width - 2) {
+      lines.push(`│ ${currentLine.padEnd(width - 1)}│`);
       currentLine = word;
     } else {
-      currentLine = currentLine ? currentLine + ' ' + word : word;
+      currentLine = currentLine ? `${currentLine} ${word}` : word;
     }
   }
   if (currentLine) {
-    lines.push('│ ' + currentLine.padEnd(width - 1) + '│');
+    lines.push(`│ ${currentLine.padEnd(width - 1)}│`);
   }
 
-  lines.push('└' + '─'.repeat(width) + '┘');
+  lines.push(`└${'─'.repeat(width)}┘`);
 
   return lines;
 }
@@ -413,7 +432,9 @@ export function formatReading(reading: TarotReading): string {
   lines.push('');
   lines.push(`Reading for: ${reading.codebaseName}`);
   lines.push(`Date: ${reading.date}`);
-  lines.push(`Spread: ${reading.spread === 'single' ? 'Single Card' : 'Three Card (Past-Present-Future)'}`);
+  lines.push(
+    `Spread: ${reading.spread === 'single' ? 'Single Card' : 'Three Card (Past-Present-Future)'}`
+  );
   lines.push('');
 
   if (reading.spread === 'single') {

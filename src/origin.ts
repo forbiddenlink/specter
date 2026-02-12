@@ -51,10 +51,10 @@ export async function gatherOriginData(
   const git: SimpleGit = simpleGit(rootDir);
 
   // Check if git repo
-  let isGitRepo = false;
+  let _isGitRepo = false;
   try {
     await git.status();
-    isGitRepo = true;
+    _isGitRepo = true;
   } catch {
     return {
       codebaseName,
@@ -213,27 +213,63 @@ function determineEpochs(
   const now = new Date().toISOString();
 
   if (ageInDays < 30) {
-    epochs.push({ name: 'The Spark', startDate: now, description: 'freshly born, full of potential' });
+    epochs.push({
+      name: 'The Spark',
+      startDate: now,
+      description: 'freshly born, full of potential',
+    });
   } else if (ageInDays < 90) {
-    epochs.push({ name: 'The Beginning', startDate: now, description: 'young and growing rapidly' });
+    epochs.push({
+      name: 'The Beginning',
+      startDate: now,
+      description: 'young and growing rapidly',
+    });
   } else if (ageInDays < 365) {
-    epochs.push({ name: 'The Formation', startDate: now, description: 'taking shape, finding its identity' });
+    epochs.push({
+      name: 'The Formation',
+      startDate: now,
+      description: 'taking shape, finding its identity',
+    });
   } else if (ageInDays < 730) {
-    epochs.push({ name: 'The Adolescence', startDate: now, description: 'maturing, patterns emerging' });
+    epochs.push({
+      name: 'The Adolescence',
+      startDate: now,
+      description: 'maturing, patterns emerging',
+    });
   } else if (ageInDays < 1825) {
-    epochs.push({ name: 'The Maturity', startDate: now, description: 'established and battle-tested' });
+    epochs.push({
+      name: 'The Maturity',
+      startDate: now,
+      description: 'established and battle-tested',
+    });
   } else {
-    epochs.push({ name: 'The Legacy', startDate: now, description: 'ancient, carrying deep wisdom' });
+    epochs.push({
+      name: 'The Legacy',
+      startDate: now,
+      description: 'ancient, carrying deep wisdom',
+    });
   }
 
   if (commits > 1000) {
-    epochs.push({ name: 'The Prolific Era', startDate: now, description: 'over a thousand commits of labor' });
+    epochs.push({
+      name: 'The Prolific Era',
+      startDate: now,
+      description: 'over a thousand commits of labor',
+    });
   }
 
   if (contributors >= 10) {
-    epochs.push({ name: 'The Community', startDate: now, description: 'many hands have shaped this code' });
+    epochs.push({
+      name: 'The Community',
+      startDate: now,
+      description: 'many hands have shaped this code',
+    });
   } else if (contributors === 1) {
-    epochs.push({ name: 'The Solo Journey', startDate: now, description: 'a single author\'s vision' });
+    epochs.push({
+      name: 'The Solo Journey',
+      startDate: now,
+      description: "a single author's vision",
+    });
   }
 
   return epochs;
@@ -281,7 +317,9 @@ export function generateOriginStory(data: OriginData): string {
       lines.push('');
     }
 
-    lines.push(`That was ${ageDesc}. Since then, the codebase has seen ${data.totalCommits.toLocaleString()} commits.`);
+    lines.push(
+      `That was ${ageDesc}. Since then, the codebase has seen ${data.totalCommits.toLocaleString()} commits.`
+    );
     lines.push('');
   }
 
@@ -291,8 +329,8 @@ export function generateOriginStory(data: OriginData): string {
     lines.push('─'.repeat(30));
     lines.push('');
 
-    const founder = data.contributors.find(c => c.isFounder);
-    const others = data.contributors.filter(c => !c.isFounder);
+    const founder = data.contributors.find((c) => c.isFounder);
+    const others = data.contributors.filter((c) => !c.isFounder);
 
     if (founder) {
       lines.push(
@@ -309,7 +347,7 @@ export function generateOriginStory(data: OriginData): string {
             `contributing ${others[0].commits.toLocaleString()} commits.`
         );
       } else {
-        const topOthers = others.slice(0, 3).map(c => c.name);
+        const topOthers = others.slice(0, 3).map((c) => c.name);
         lines.push(
           `Over time, ${data.totalContributors} developers have contributed their craft. ` +
             `Among them: ${topOthers.join(', ')}${others.length > 3 ? ', and others' : ''}.`
@@ -324,7 +362,9 @@ export function generateOriginStory(data: OriginData): string {
   lines.push('─'.repeat(30));
   lines.push('');
 
-  lines.push(`Today, ${data.codebaseName} stands as a testament to ${describeEffort(data.totalCommits)}:`);
+  lines.push(
+    `Today, ${data.codebaseName} stands as a testament to ${describeEffort(data.totalCommits)}:`
+  );
   lines.push('');
   lines.push(`  ${data.currentStats.files.toLocaleString()} files`);
   lines.push(`  ${data.currentStats.lines.toLocaleString()} lines of code`);

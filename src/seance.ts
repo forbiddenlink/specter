@@ -88,7 +88,8 @@ export async function summonSpirits(
     // Parse the output
     const spirits: DeletedFile[] = [];
     const lines = (deletedFilesRaw || '').split('\n');
-    let currentCommit: { hash: string; date: string; author: string; message: string } | null = null;
+    let currentCommit: { hash: string; date: string; author: string; message: string } | null =
+      null;
 
     for (const line of lines) {
       if (line.includes('|')) {
@@ -108,10 +109,7 @@ export async function summonSpirits(
           const filePath = match[1].trim();
 
           // Check if this file matches our query
-          if (
-            filePath.toLowerCase().includes(query.toLowerCase()) ||
-            query.includes('*')
-          ) {
+          if (filePath.toLowerCase().includes(query.toLowerCase()) || query.includes('*')) {
             // Get creation info
             let createdAt: string | undefined;
             let createdBy: string | undefined;
@@ -140,10 +138,7 @@ export async function summonSpirits(
             if (showContents) {
               try {
                 // Get the file content from the commit before deletion
-                lastContents = await git.raw([
-                  'show',
-                  `${currentCommit.hash}^:${filePath}`,
-                ]);
+                lastContents = await git.raw(['show', `${currentCommit.hash}^:${filePath}`]);
                 linesOfCode = lastContents.split('\n').length;
               } catch {
                 // File might not exist in parent commit (edge case)
@@ -151,10 +146,7 @@ export async function summonSpirits(
             } else {
               // Just get line count
               try {
-                const content = await git.raw([
-                  'show',
-                  `${currentCommit.hash}^:${filePath}`,
-                ]);
+                const content = await git.raw(['show', `${currentCommit.hash}^:${filePath}`]);
                 linesOfCode = content.split('\n').length;
               } catch {
                 // Ignore
@@ -230,7 +222,7 @@ export function formatSeance(result: SeanceResult): string {
   if (!result.found) {
     lines.push(`Searching for: "${result.query}"`);
     lines.push('');
-    lines.push('  👻 ' + result.message);
+    lines.push(`  👻 ${result.message}`);
     lines.push('');
     lines.push('░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░');
     return lines.join('\n');
@@ -244,9 +236,9 @@ export function formatSeance(result: SeanceResult): string {
   for (let i = 0; i < result.spirits.length; i++) {
     const spirit = result.spirits[i];
 
-    lines.push('┌' + '─'.repeat(48) + '┐');
+    lines.push(`┌${'─'.repeat(48)}┐`);
     lines.push(`│ 👻 ${spirit.path.padEnd(44)} │`);
-    lines.push('├' + '─'.repeat(48) + '┤');
+    lines.push(`├${'─'.repeat(48)}┤`);
 
     // Death info
     const deletedDate = new Date(spirit.deletedAt).toLocaleDateString('en-US', {
@@ -260,7 +252,9 @@ export function formatSeance(result: SeanceResult): string {
 
     // Truncate message to fit
     const msgTrunc = spirit.commitMessage.substring(0, 36);
-    lines.push(`│  Last words: "${msgTrunc}"${msgTrunc.length < spirit.commitMessage.length ? '...' : '   '} │`);
+    lines.push(
+      `│  Last words: "${msgTrunc}"${msgTrunc.length < spirit.commitMessage.length ? '...' : '   '} │`
+    );
 
     // Life info
     if (spirit.createdAt && spirit.createdBy) {
@@ -269,29 +263,31 @@ export function formatSeance(result: SeanceResult): string {
         month: 'short',
         day: 'numeric',
       });
-      lines.push('│' + ' '.repeat(48) + '│');
+      lines.push(`│${' '.repeat(48)}│`);
       lines.push(`│  Born: ${createdDate.padEnd(40)} │`);
       lines.push(`│  Created by: ${spirit.createdBy.substring(0, 34).padEnd(34)} │`);
-      lines.push(`│  Lived: ${spirit.lifespan} days, ${spirit.linesOfCode} lines of code`.padEnd(48) + ' │');
+      lines.push(
+        `${`│  Lived: ${spirit.lifespan} days, ${spirit.linesOfCode} lines of code`.padEnd(48)} │`
+      );
     } else {
-      lines.push(`│  Lines of code: ${spirit.linesOfCode}`.padEnd(49) + '│');
+      lines.push(`${`│  Lines of code: ${spirit.linesOfCode}`.padEnd(49)}│`);
     }
 
     // Last contents preview
     if (spirit.lastContents) {
-      lines.push('│' + ' '.repeat(48) + '│');
-      lines.push('│  Final words from beyond:'.padEnd(49) + '│');
+      lines.push(`│${' '.repeat(48)}│`);
+      lines.push(`${'│  Final words from beyond:'.padEnd(49)}│`);
       const contentLines = spirit.lastContents.split('\n').slice(0, 5);
       for (const contentLine of contentLines) {
-        const truncated = '  ' + contentLine.substring(0, 44);
-        lines.push('│' + truncated.padEnd(48) + '│');
+        const truncated = `  ${contentLine.substring(0, 44)}`;
+        lines.push(`│${truncated.padEnd(48)}│`);
       }
       if (spirit.lastContents.split('\n').length > 5) {
-        lines.push('│  ...'.padEnd(49) + '│');
+        lines.push(`${'│  ...'.padEnd(49)}│`);
       }
     }
 
-    lines.push('└' + '─'.repeat(48) + '┘');
+    lines.push(`└${'─'.repeat(48)}┘`);
 
     if (i < result.spirits.length - 1) {
       lines.push('');
@@ -334,7 +330,8 @@ export async function listRecentlyDeleted(
     ]);
 
     const lines = deletedFilesRaw.split('\n');
-    let currentCommit: { hash: string; date: string; author: string; message: string } | null = null;
+    let currentCommit: { hash: string; date: string; author: string; message: string } | null =
+      null;
 
     for (const line of lines) {
       if (spirits.length >= limit) break;

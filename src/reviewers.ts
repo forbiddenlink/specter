@@ -107,13 +107,16 @@ export async function suggestReviewers(
   }
 
   // Aggregate experts across all files
-  const aggregateExperts = new Map<string, {
-    name: string;
-    email: string;
-    totalCommits: number;
-    filesKnown: Set<string>;
-    lastTouch: Date;
-  }>();
+  const aggregateExperts = new Map<
+    string,
+    {
+      name: string;
+      email: string;
+      totalCommits: number;
+      filesKnown: Set<string>;
+      lastTouch: Date;
+    }
+  >();
 
   for (const filePath of stagedFiles) {
     const fileExperts = await getFileExperts(git, filePath);
@@ -289,7 +292,9 @@ export function formatReviewers(result: ReviewersResult): string {
     for (const reviewer of primary) {
       const recentBadge = reviewer.recentActivity ? ' (active)' : '';
       lines.push(`  ${reviewer.name}${recentBadge}`);
-      lines.push(`    Score: ${reviewer.score}/100 | Knows: ${reviewer.filesKnown}/${result.stagedFiles.length} files`);
+      lines.push(
+        `    Score: ${reviewer.score}/100 | Knows: ${reviewer.filesKnown}/${result.stagedFiles.length} files`
+      );
       lines.push(`    Commits: ${reviewer.totalCommits} across affected files`);
       lines.push('');
     }
@@ -303,7 +308,9 @@ export function formatReviewers(result: ReviewersResult): string {
     for (const reviewer of backup.slice(0, 3)) {
       const recentBadge = reviewer.recentActivity ? ' (active)' : '';
       lines.push(`  ${reviewer.name}${recentBadge}`);
-      lines.push(`    Score: ${reviewer.score}/100 | Knows: ${reviewer.filesKnown}/${result.stagedFiles.length} files`);
+      lines.push(
+        `    Score: ${reviewer.score}/100 | Knows: ${reviewer.filesKnown}/${result.stagedFiles.length} files`
+      );
       lines.push('');
     }
   }
@@ -313,7 +320,10 @@ export function formatReviewers(result: ReviewersResult): string {
   if (optional.length > 0) {
     lines.push('👤 OPTIONAL REVIEWERS');
     lines.push('─'.repeat(50));
-    const names = optional.slice(0, 5).map((r) => r.name).join(', ');
+    const names = optional
+      .slice(0, 5)
+      .map((r) => r.name)
+      .join(', ');
     lines.push(`  ${names}`);
     lines.push('');
   }

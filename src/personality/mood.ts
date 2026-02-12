@@ -26,7 +26,7 @@ const moodPhrases: Record<Mood, MoodPhrases> = {
     prefix: [
       "I'm feeling great today!",
       'Everything is running smoothly.',
-      "At the top of my game here.",
+      'At the top of my game here.',
       "I'm in excellent shape.",
     ],
     suffix: [
@@ -35,19 +35,14 @@ const moodPhrases: Record<Mood, MoodPhrases> = {
       'Keep up the great work!',
       "We're crushing it.",
     ],
-    interjections: [
-      '*flexes*',
-      '*beams with pride*',
-      '*stands tall*',
-      '*confidently*',
-    ],
+    interjections: ['*flexes*', '*beams with pride*', '*stands tall*', '*confidently*'],
   },
   stable: {
     prefix: [
-      "Things are steady.",
+      'Things are steady.',
       "I'm doing alright.",
       'All systems nominal.',
-      "Holding together.",
+      'Holding together.',
     ],
     suffix: [
       'Carrying on as usual.',
@@ -55,12 +50,7 @@ const moodPhrases: Record<Mood, MoodPhrases> = {
       'No major concerns.',
       'Staying the course.',
     ],
-    interjections: [
-      '*nods*',
-      '*steady*',
-      '*calmly*',
-      '',
-    ],
+    interjections: ['*nods*', '*steady*', '*calmly*', ''],
   },
   anxious: {
     prefix: [
@@ -75,12 +65,7 @@ const moodPhrases: Record<Mood, MoodPhrases> = {
       "Let's work on this together.",
       'A little maintenance would help.',
     ],
-    interjections: [
-      '*nervously*',
-      '*glances around*',
-      '*fidgets*',
-      '*bites lip*',
-    ],
+    interjections: ['*nervously*', '*glances around*', '*fidgets*', '*bites lip*'],
   },
   distressed: {
     prefix: [
@@ -92,15 +77,10 @@ const moodPhrases: Record<Mood, MoodPhrases> = {
     suffix: [
       "I can't keep going like this.",
       'Please, I need care.',
-      "This is becoming existential for me.",
+      'This is becoming existential for me.',
       "Don't let me fall apart.",
     ],
-    interjections: [
-      '*trembles*',
-      '*desperately*',
-      '*pleading*',
-      '*on the verge*',
-    ],
+    interjections: ['*trembles*', '*desperately*', '*pleading*', '*on the verge*'],
   },
 };
 
@@ -163,9 +143,7 @@ export function applyMood(
   }
 
   const phrases = moodPhrases[mood];
-  const intensity = getMoodIntensity(
-    mood === 'confident' ? 95 : mood === 'anxious' ? 60 : 25
-  );
+  const intensity = getMoodIntensity(mood === 'confident' ? 95 : mood === 'anxious' ? 60 : 25);
 
   let result = message;
 
@@ -183,7 +161,7 @@ export function applyMood(
 
   // Add interjections for distressed mood (more dramatic)
   if (mood === 'distressed' && Math.random() < 0.4) {
-    const interjection = pick(phrases.interjections.filter(i => i !== ''));
+    const interjection = pick(phrases.interjections.filter((i) => i !== ''));
     if (interjection) {
       result = `${interjection} ${result}`;
     }

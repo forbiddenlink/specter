@@ -8,10 +8,10 @@
  * - Circular dependencies (refactoring cost)
  */
 
+import { analyzeBusFactor, type BusFactorResult } from './bus-factor.js';
+import { type CyclesResult, detectCycles } from './cycles.js';
 import type { KnowledgeGraph } from './graph/types.js';
 import { analyzeHotspots, type HotspotsResult } from './hotspots.js';
-import { analyzeBusFactor, type BusFactorResult } from './bus-factor.js';
-import { detectCycles, type CyclesResult } from './cycles.js';
 
 export interface DebtCategory {
   name: string;
@@ -204,7 +204,7 @@ export async function analyzeCost(
   }
 
   let busFactorCost = 0;
-  if (busFactor && busFactor.risks && busFactor.risks.length > 0) {
+  if (busFactor?.risks && busFactor.risks.length > 0) {
     for (const risk of busFactor.risks) {
       if (risk.busFactor === 1) {
         const cost = calculateBusFactorCost(
@@ -281,10 +281,12 @@ export async function analyzeCost(
 
   // Calculate dead code cost
   if (options.includeDeadCode !== false) {
-    const unusedExports = Object.values(graph.nodes).filter(
+    const _unusedExports = Object.values(graph.nodes).filter(
       (n) => n.type === 'function' || n.type === 'class'
     ).length;
-    const importedSymbols = new Set(graph.edges.filter((e) => e.type === 'imports').map((e) => e.target));
+    const importedSymbols = new Set(
+      graph.edges.filter((e) => e.type === 'imports').map((e) => e.target)
+    );
     const actualUnused = Object.values(graph.nodes).filter(
       (n) => (n.type === 'function' || n.type === 'class') && !importedSymbols.has(n.id)
     ).length;
@@ -385,16 +387,18 @@ export function formatCost(analysis: CostAnalysis): string {
   const W = 60;
 
   // Header
-  lines.push('\u250F' + '\u2501'.repeat(W) + '\u2513');
-  lines.push('\u2503  \u{1F4B0} TECH DEBT COST ANALYSIS' + ' '.repeat(W - 28) + '\u2503');
-  lines.push('\u2503  Estimated Annual Maintenance Burden' + ' '.repeat(W - 40) + '\u2503');
-  lines.push('\u2517' + '\u2501'.repeat(W) + '\u251B');
+  lines.push(`\u250F${'\u2501'.repeat(W)}\u2513`);
+  lines.push(`\u2503  \u{1F4B0} TECH DEBT COST ANALYSIS${' '.repeat(W - 28)}\u2503`);
+  lines.push(`\u2503  Estimated Annual Maintenance Burden${' '.repeat(W - 40)}\u2503`);
+  lines.push(`\u2517${'\u2501'.repeat(W)}\u251B`);
   lines.push('');
 
   // Total
   const totalStr = `Total Tech Debt: ${formatCurrency(analysis.totalDebt, analysis.currency)}`;
   lines.push(totalStr);
-  lines.push(`  (Based on ${formatCurrency(analysis.hourlyRate, analysis.currency)}/hour developer cost)`);
+  lines.push(
+    `  (Based on ${formatCurrency(analysis.hourlyRate, analysis.currency)}/hour developer cost)`
+  );
   lines.push('');
 
   // Category breakdown
@@ -428,15 +432,27 @@ export function formatCost(analysis: CostAnalysis): string {
 
     for (const file of analysis.topFiles.slice(0, 5)) {
       const emoji = priorityEmoji[file.priority] || '\u{1F7E1}';
-      const shortPath = file.file.length > 45 ? '...' + file.file.slice(-42) : file.file;
+      const shortPath = file.file.length > 45 ? `...${file.file.slice(-42)}` : file.file;
       lines.push(`${emoji} ${file.priority.toUpperCase()}  ${shortPath}`);
-      lines.push(`   Cost: ${formatCurrency(file.totalCost, analysis.currency)}/year | Fix: ~${file.estimatedFixTime}h`);
+      lines.push(
+        `   Cost: ${formatCurrency(file.totalCost, analysis.currency)}/year | Fix: ~${file.estimatedFixTime}h`
+      );
 
       const breakdown: string[] = [];
-      if (file.breakdown.complexity) breakdown.push(`Complexity: ${formatCurrency(file.breakdown.complexity, analysis.currency)}`);
-      if (file.breakdown.busFactor) breakdown.push(`Bus Factor: ${formatCurrency(file.breakdown.busFactor, analysis.currency)}`);
-      if (file.breakdown.deadCode) breakdown.push(`Dead Code: ${formatCurrency(file.breakdown.deadCode, analysis.currency)}`);
-      if (file.breakdown.cycles) breakdown.push(`Cycles: ${formatCurrency(Math.round(file.breakdown.cycles), analysis.currency)}`);
+      if (file.breakdown.complexity)
+        breakdown.push(
+          `Complexity: ${formatCurrency(file.breakdown.complexity, analysis.currency)}`
+        );
+      if (file.breakdown.busFactor)
+        breakdown.push(
+          `Bus Factor: ${formatCurrency(file.breakdown.busFactor, analysis.currency)}`
+        );
+      if (file.breakdown.deadCode)
+        breakdown.push(`Dead Code: ${formatCurrency(file.breakdown.deadCode, analysis.currency)}`);
+      if (file.breakdown.cycles)
+        breakdown.push(
+          `Cycles: ${formatCurrency(Math.round(file.breakdown.cycles), analysis.currency)}`
+        );
 
       if (breakdown.length > 0) {
         lines.push(`   Breakdown: ${breakdown.join(' | ')}`);
@@ -452,9 +468,11 @@ export function formatCost(analysis: CostAnalysis): string {
 
     for (let i = 0; i < analysis.quickWins.length; i++) {
       const win = analysis.quickWins[i];
-      const shortPath = win.file.length > 40 ? '...' + win.file.slice(-37) : win.file;
+      const shortPath = win.file.length > 40 ? `...${win.file.slice(-37)}` : win.file;
       lines.push(`  ${i + 1}. ${shortPath}`);
-      lines.push(`     Cost: ${formatCurrency(win.cost, analysis.currency)}/year | Fix: ${win.fixTime}h | ROI: ${formatCurrency(win.roi, analysis.currency)}/hour`);
+      lines.push(
+        `     Cost: ${formatCurrency(win.cost, analysis.currency)}/year | Fix: ${win.fixTime}h | ROI: ${formatCurrency(win.roi, analysis.currency)}/hour`
+      );
       lines.push(`     \u2192 ${win.recommendation}`);
       lines.push('');
     }
@@ -466,15 +484,21 @@ export function formatCost(analysis: CostAnalysis): string {
 
   const topFileCost = analysis.topFiles.slice(0, 5).reduce((sum, f) => sum + f.totalCost, 0);
   const topFilePct = Math.round((topFileCost / analysis.totalDebt) * 100);
-  lines.push(`  \u{1F3AF} Fix top 5 files to reduce debt by ${formatCurrency(topFileCost, analysis.currency)} (${topFilePct}%)`);
+  lines.push(
+    `  \u{1F3AF} Fix top 5 files to reduce debt by ${formatCurrency(topFileCost, analysis.currency)} (${topFilePct}%)`
+  );
 
   if (analysis.quickWins.length > 0) {
     const quickWinTotal = analysis.quickWins.reduce((sum, w) => sum + w.cost, 0);
     const quickWinHours = analysis.quickWins.reduce((sum, w) => sum + w.fixTime, 0);
-    lines.push(`  \u26A1 Implement quick wins to save ${formatCurrency(quickWinTotal, analysis.currency)} in ${quickWinHours} hours`);
+    lines.push(
+      `  \u26A1 Implement quick wins to save ${formatCurrency(quickWinTotal, analysis.currency)} in ${quickWinHours} hours`
+    );
   }
 
-  lines.push(`  \u{1F4CA} Estimated annual savings: ${formatCurrency(analysis.estimatedSavings, analysis.currency)}`);
+  lines.push(
+    `  \u{1F4CA} Estimated annual savings: ${formatCurrency(analysis.estimatedSavings, analysis.currency)}`
+  );
   lines.push(`  \u{1F4A1} Allocate 10% of sprint capacity to debt reduction`);
   lines.push('');
 

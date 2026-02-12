@@ -5,7 +5,7 @@
  * versus high-risk areas that require extra caution.
  */
 
-import type { KnowledgeGraph, GraphNode } from './graph/types.js';
+import type { GraphNode, KnowledgeGraph } from './graph/types.js';
 
 export interface ZoneFile {
   path: string;
@@ -30,7 +30,10 @@ export interface ZoneMap {
 /**
  * Calculate safety score for a file (0-100, higher = safer)
  */
-function calculateSafetyScore(node: GraphNode, graph: KnowledgeGraph): {
+function calculateSafetyScore(
+  node: GraphNode,
+  graph: KnowledgeGraph
+): {
   score: number;
   factors: string[];
 } {
@@ -123,8 +126,8 @@ function getRecommendation(score: number, factors: string[]): string {
   } else if (score >= 40) {
     return 'Moderate risk. Review changes carefully before committing.';
   } else {
-    const riskFactors = factors.filter((f) =>
-      f.includes('complexity') || f.includes('depend') || f.includes('entry')
+    const riskFactors = factors.filter(
+      (f) => f.includes('complexity') || f.includes('depend') || f.includes('entry')
     );
     if (riskFactors.length > 0) {
       return `High risk (${riskFactors[0].toLowerCase()}). Pair with an expert.`;
@@ -203,7 +206,8 @@ export function formatSafeZones(zones: ZoneMap): string {
   lines.push('');
 
   for (const zone of zones.safeZones.slice(0, 10)) {
-    const scoreBar = '█'.repeat(Math.floor(zone.score / 10)) + '░'.repeat(10 - Math.floor(zone.score / 10));
+    const scoreBar =
+      '█'.repeat(Math.floor(zone.score / 10)) + '░'.repeat(10 - Math.floor(zone.score / 10));
     lines.push(`🟢 ${zone.path}`);
     lines.push(`   Safety: ${scoreBar} ${zone.score}%`);
     lines.push(`   ✓ ${zone.factors.slice(0, 2).join(', ')}`);
@@ -239,7 +243,8 @@ export function formatDangerZones(zones: ZoneMap): string {
   lines.push('');
 
   for (const zone of zones.dangerZones.slice(0, 10)) {
-    const scoreBar = '█'.repeat(Math.floor(zone.score / 10)) + '░'.repeat(10 - Math.floor(zone.score / 10));
+    const scoreBar =
+      '█'.repeat(Math.floor(zone.score / 10)) + '░'.repeat(10 - Math.floor(zone.score / 10));
     lines.push(`🔴 ${zone.path}`);
     lines.push(`   Risk: ${scoreBar} ${100 - zone.score}%`);
     lines.push(`   ⚠️  ${zone.factors.slice(0, 2).join(', ')}`);

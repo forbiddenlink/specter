@@ -192,8 +192,8 @@ export function calculateStats(
 
   // Language distribution
   const languages = graph.metadata.languages;
-  const tsFiles = (languages['typescript'] || 0) + (languages['tsx'] || 0);
-  const jsFiles = (languages['javascript'] || 0) + (languages['jsx'] || 0);
+  const tsFiles = (languages.typescript || 0) + (languages.tsx || 0);
+  const jsFiles = (languages.javascript || 0) + (languages.jsx || 0);
   const totalLangFiles = tsFiles + jsFiles;
   const tsPercentage = totalLangFiles > 0 ? Math.round((tsFiles / totalLangFiles) * 100) : 0;
 

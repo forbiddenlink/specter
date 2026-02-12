@@ -6,7 +6,7 @@
  */
 
 import { type SimpleGit, simpleGit } from 'simple-git';
-import type { KnowledgeGraph, GraphNode } from './graph/types.js';
+import type { GraphNode, KnowledgeGraph } from './graph/types.js';
 
 export interface PrecommitFile {
   path: string;
@@ -194,8 +194,7 @@ export function formatPrecommit(result: PrecommitResult): string {
   const lines: string[] = [];
 
   // Status header
-  const statusIcon =
-    result.status === 'pass' ? '✅' : result.status === 'warn' ? '⚠️ ' : '❌';
+  const statusIcon = result.status === 'pass' ? '✅' : result.status === 'warn' ? '⚠️ ' : '❌';
 
   const statusColor =
     result.status === 'pass' ? 'PASS' : result.status === 'warn' ? 'WARN' : 'FAIL';

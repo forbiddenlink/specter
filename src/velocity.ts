@@ -5,9 +5,9 @@
  * Shows which areas are getting worse fastest and projects future state.
  */
 
+import type { KnowledgeGraph } from './graph/types.js';
 import { loadSnapshots } from './history/storage.js';
 import type { HealthSnapshot } from './history/types.js';
-import type { KnowledgeGraph, GraphNode } from './graph/types.js';
 
 // Types
 export type VelocityTrend = 'improving' | 'stable' | 'degrading' | 'critical';
@@ -173,8 +173,7 @@ export async function analyzeVelocity(
 
     // Calculate weekly velocity
     const weeksElapsed = timeSpanDays / 7;
-    const velocityPerWeek =
-      weeksElapsed > 0 ? Math.round((delta / weeksElapsed) * 100) / 100 : 0;
+    const velocityPerWeek = weeksElapsed > 0 ? Math.round((delta / weeksElapsed) * 100) / 100 : 0;
 
     fileVelocities.push({
       path,
@@ -190,9 +189,7 @@ export async function analyzeVelocity(
   fileVelocities.sort((a, b) => b.velocityPerWeek - a.velocityPerWeek);
 
   // Get fastest growing (positive velocity)
-  const fastestGrowing = fileVelocities
-    .filter((f) => f.velocityPerWeek > 0)
-    .slice(0, 5);
+  const fastestGrowing = fileVelocities.filter((f) => f.velocityPerWeek > 0).slice(0, 5);
 
   // Get fastest improving (negative velocity)
   const fastestImproving = fileVelocities
@@ -305,7 +302,9 @@ export function formatVelocity(result: VelocityResult): string {
   lines.push('─'.repeat(50));
   lines.push(`  ${trendEmoji} ${result.trend.toUpperCase()} ${arrow}`);
   lines.push('');
-  lines.push(`  Weekly change:  ${result.overallVelocity >= 0 ? '+' : ''}${result.overallVelocity} complexity/week`);
+  lines.push(
+    `  Weekly change:  ${result.overallVelocity >= 0 ? '+' : ''}${result.overallVelocity} complexity/week`
+  );
   lines.push(`  Trend:          ${sparkline}`);
   lines.push(`  Time span:      ${result.timeSpanDays} days (${result.snapshotCount} snapshots)`);
   lines.push('');
@@ -321,8 +320,7 @@ export function formatVelocity(result: VelocityResult): string {
 
   // 30-day projection
   const projectionDiff = result.projectedDebtIn30Days - result.currentMetrics.totalComplexity;
-  const projectionTrend =
-    projectionDiff < 0 ? '📉' : projectionDiff === 0 ? '➡️' : '📈';
+  const projectionTrend = projectionDiff < 0 ? '📉' : projectionDiff === 0 ? '➡️' : '📈';
 
   lines.push('🔮 30-DAY PROJECTION');
   lines.push('─'.repeat(50));
@@ -338,8 +336,7 @@ export function formatVelocity(result: VelocityResult): string {
     lines.push('─'.repeat(50));
 
     for (const file of result.fastestGrowing) {
-      const shortPath =
-        file.path.length > 40 ? '...' + file.path.slice(-37) : file.path;
+      const shortPath = file.path.length > 40 ? `...${file.path.slice(-37)}` : file.path;
       const velocityStr = `+${file.velocityPerWeek}/wk`;
       const trendIcon = getTrendColor(file.trend);
 
@@ -355,8 +352,7 @@ export function formatVelocity(result: VelocityResult): string {
     lines.push('─'.repeat(50));
 
     for (const file of result.fastestImproving) {
-      const shortPath =
-        file.path.length > 40 ? '...' + file.path.slice(-37) : file.path;
+      const shortPath = file.path.length > 40 ? `...${file.path.slice(-37)}` : file.path;
       const velocityStr = `${file.velocityPerWeek}/wk`;
       const trendIcon = getTrendColor(file.trend);
 

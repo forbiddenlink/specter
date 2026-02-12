@@ -5,10 +5,23 @@
  * Looks for: removed exports, changed function signatures, renamed types.
  */
 
-import { execSync } from 'node:child_process';
-import type { KnowledgeGraph, GraphNode } from './graph/types.js';
-import { getPersonality } from './personality/modes.js';
+import { spawnSync } from 'node:child_process';
 import type { PersonalityMode } from './personality/types.js';
+
+/**
+ * Execute git command safely using spawnSync with argument array
+ * Avoids shell injection by not interpolating user input into shell strings
+ */
+function gitCommand(args: string[], rootDir: string): string {
+  const result = spawnSync('git', args, {
+    cwd: rootDir,
+    encoding: 'utf-8',
+    maxBuffer: 10 * 1024 * 1024,
+  });
+  if (result.error) throw result.error;
+  if (result.status !== 0) throw new Error(result.stderr || 'Git command failed');
+  return result.stdout?.toString() || '';
+}
 
 export interface BreakingChange {
   type: 'removed-export' | 'signature-change' | 'type-change' | 'renamed' | 'removed-property';
@@ -38,10 +51,10 @@ export async function detectBreakingChanges(
   let analyzedFiles = 0;
 
   try {
-    // Get diff of source files
-    const diffOutput = execSync(
-      `git diff ${compareTo}...HEAD --name-status -- "*.ts" "*.tsx" "*.js" "*.jsx"`,
-      { cwd: rootDir, encoding: 'utf8' }
+    // Get diff of source files using safe argument array
+    const diffOutput = gitCommand(
+      ['diff', `${compareTo}...HEAD`, '--name-status', '--', '*.ts', '*.tsx', '*.js', '*.jsx'],
+      rootDir
     ).trim();
 
     if (!diffOutput) {
@@ -106,9 +119,10 @@ export async function detectBreakingChanges(
     riskLevel = 'caution';
   }
 
-  const summary = changes.length === 0
-    ? 'No breaking changes detected. Safe to merge.'
-    : `Found ${changes.length} potential breaking change(s): ${highCount} high, ${mediumCount} medium severity.`;
+  const summary =
+    changes.length === 0
+      ? 'No breaking changes detected. Safe to merge.'
+      : `Found ${changes.length} potential breaking change(s): ${highCount} high, ${mediumCount} medium severity.`;
 
   return {
     changes,
@@ -130,19 +144,20 @@ async function analyzeFileDiff(
   const changes: BreakingChange[] = [];
 
   try {
-    // Get the unified diff for this file
-    const diff = execSync(
-      `git diff ${compareTo}...HEAD -- "${file}"`,
-      { cwd: rootDir, encoding: 'utf8' }
-    );
+    // Get the unified diff for this file using safe argument array
+    const diff = gitCommand(['diff', `${compareTo}...HEAD`, '--', file], rootDir);
 
     // Look for removed exports
-    const removedExportPattern = /^-\s*export\s+(const|function|class|interface|type|enum)\s+(\w+)/gm;
-    let match;
-    while ((match = removedExportPattern.exec(diff)) !== null) {
+    const removedExportPattern =
+      /^-\s*export\s+(const|function|class|interface|type|enum)\s+(\w+)/gm;
+    let match: RegExpExecArray | null = removedExportPattern.exec(diff);
+    while (match !== null) {
       const [, kind, name] = match;
       // Check if it's actually removed (not just modified)
-      const addedPattern = new RegExp(`^\\+\\s*export\\s+(const|function|class|interface|type|enum)\\s+${name}\\b`, 'm');
+      const addedPattern = new RegExp(
+        `^\\+\\s*export\\s+(const|function|class|interface|type|enum)\\s+${name}\\b`,
+        'm'
+      );
       if (!addedPattern.test(diff)) {
         changes.push({
           type: 'removed-export',
@@ -152,14 +167,19 @@ async function analyzeFileDiff(
           description: `Exported ${kind} "${name}" was removed`,
         });
       }
+      match = removedExportPattern.exec(diff);
     }
 
     // Look for function signature changes (parameters added/removed)
     const funcSignaturePattern = /^-\s*export\s+(async\s+)?function\s+(\w+)\s*\(([^)]*)\)/gm;
-    while ((match = funcSignaturePattern.exec(diff)) !== null) {
+    match = funcSignaturePattern.exec(diff);
+    while (match !== null) {
       const [, , funcName, oldParams] = match;
       // Check if same function exists with different signature
-      const newFuncPattern = new RegExp(`^\\+\\s*export\\s+(async\\s+)?function\\s+${funcName}\\s*\\(([^)]*)\\)`, 'm');
+      const newFuncPattern = new RegExp(
+        `^\\+\\s*export\\s+(async\\s+)?function\\s+${funcName}\\s*\\(([^)]*)\\)`,
+        'm'
+      );
       const newMatch = newFuncPattern.exec(diff);
       if (newMatch) {
         const newParams = newMatch[2];
@@ -173,11 +193,13 @@ async function analyzeFileDiff(
           });
         }
       }
+      match = funcSignaturePattern.exec(diff);
     }
 
     // Look for interface/type property removals
     const removedPropertyPattern = /^-\s+(\w+)\s*[?]?\s*:/gm;
-    while ((match = removedPropertyPattern.exec(diff)) !== null) {
+    match = removedPropertyPattern.exec(diff);
+    while (match !== null) {
       const [, propName] = match;
       // Only flag if not re-added
       const addedPropPattern = new RegExp(`^\\+\\s+${propName}\\s*[?]?\\s*:`, 'm');
@@ -190,11 +212,13 @@ async function analyzeFileDiff(
           description: `Property "${propName}" was removed from interface/type`,
         });
       }
+      match = removedPropertyPattern.exec(diff);
     }
 
     // Look for required parameter additions (not optional)
     const addedRequiredParam = /^\+[^-]*function\s+\w+\s*\([^)]*,\s*(\w+)\s*:[^=)]+\)/gm;
-    while ((match = addedRequiredParam.exec(diff)) !== null) {
+    match = addedRequiredParam.exec(diff);
+    while (match !== null) {
       const [, paramName] = match;
       if (!paramName.includes('?') && !diff.includes(`${paramName}?:`)) {
         changes.push({
@@ -205,6 +229,7 @@ async function analyzeFileDiff(
           description: `New required parameter "${paramName}" added`,
         });
       }
+      match = addedRequiredParam.exec(diff);
     }
   } catch {
     // Individual file analysis failed
@@ -234,8 +259,12 @@ export function formatBreakingChanges(
   const lines: string[] = [];
 
   // Header
-  const emoji = result.riskLevel === 'safe' ? '\u2705' :
-                result.riskLevel === 'caution' ? '\u26A0\uFE0F' : '\u{1F6A8}';
+  const emoji =
+    result.riskLevel === 'safe'
+      ? '\u2705'
+      : result.riskLevel === 'caution'
+        ? '\u26A0\uFE0F'
+        : '\u{1F6A8}';
 
   lines.push('');
   lines.push(`${emoji} BREAKING CHANGES ANALYSIS`);
@@ -246,7 +275,7 @@ export function formatBreakingChanges(
 
   if (result.changes.length === 0) {
     if (personality === 'roast') {
-      lines.push('  No breaking changes. Wow, you actually didn\'t break anything.');
+      lines.push("  No breaking changes. Wow, you actually didn't break anything.");
     } else if (personality === 'cheerleader') {
       lines.push('  \u{1F389} No breaking changes! Your API is safe and sound!');
     } else if (personality === 'executive') {

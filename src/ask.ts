@@ -6,8 +6,7 @@
  */
 
 import { type SimpleGit, simpleGit } from 'simple-git';
-import type { KnowledgeGraph, GraphNode, NodeType } from './graph/types.js';
-import { getPersonality } from './personality/modes.js';
+import type { GraphNode, KnowledgeGraph, NodeType } from './graph/types.js';
 import type { PersonalityMode } from './personality/types.js';
 
 export interface AskResult {
@@ -28,13 +27,13 @@ export interface RelevantFile {
 }
 
 type QuestionType =
-  | 'what-does'      // "What does X do?"
-  | 'where-is'       // "Where is X handled?"
-  | 'who-wrote'      // "Who wrote X?"
-  | 'why-exists'     // "Why does X exist?"
-  | 'how-works'      // "How does X work?"
-  | 'list'           // "List all X" / "Show me X"
-  | 'general';       // Fallback
+  | 'what-does' // "What does X do?"
+  | 'where-is' // "Where is X handled?"
+  | 'who-wrote' // "Who wrote X?"
+  | 'why-exists' // "Why does X exist?"
+  | 'how-works' // "How does X work?"
+  | 'list' // "List all X" / "Show me X"
+  | 'general'; // Fallback
 
 /**
  * Question pattern matchers
@@ -52,128 +51,192 @@ const QUESTION_PATTERNS: Array<{ pattern: RegExp; type: QuestionType }> = [
 /**
  * Personality response templates
  */
-const PERSONALITY_TEMPLATES: Record<PersonalityMode, {
-  intro: (type: QuestionType, subject: string) => string;
-  notFound: (subject: string) => string;
-  found: (subject: string, count: number) => string;
-  closing: () => string;
-}> = {
+const PERSONALITY_TEMPLATES: Record<
+  PersonalityMode,
+  {
+    intro: (type: QuestionType, subject: string) => string;
+    notFound: (subject: string) => string;
+    found: (subject: string, count: number) => string;
+    closing: () => string;
+  }
+> = {
   default: {
     intro: (type, subject) => {
       switch (type) {
-        case 'what-does': return `Let me tell you about ${subject}...`;
-        case 'where-is': return `Looking for ${subject}...`;
-        case 'who-wrote': return `Let me check the git history for ${subject}...`;
-        case 'why-exists': return `Here's what I know about why ${subject} exists...`;
-        case 'how-works': return `Let me explain how ${subject} works...`;
-        case 'list': return `Here's what I found for ${subject}...`;
-        default: return `Here's what I know about ${subject}...`;
+        case 'what-does':
+          return `Let me tell you about ${subject}...`;
+        case 'where-is':
+          return `Looking for ${subject}...`;
+        case 'who-wrote':
+          return `Let me check the git history for ${subject}...`;
+        case 'why-exists':
+          return `Here's what I know about why ${subject} exists...`;
+        case 'how-works':
+          return `Let me explain how ${subject} works...`;
+        case 'list':
+          return `Here's what I found for ${subject}...`;
+        default:
+          return `Here's what I know about ${subject}...`;
       }
     },
     notFound: (subject) => `I couldn't find anything matching "${subject}" in the codebase.`,
-    found: (subject, count) => `Found ${count} relevant ${count === 1 ? 'item' : 'items'} for "${subject}".`,
+    found: (subject, count) =>
+      `Found ${count} relevant ${count === 1 ? 'item' : 'items'} for "${subject}".`,
     closing: () => 'Feel free to ask more questions about the codebase.',
   },
 
   noir: {
     intro: (type, subject) => {
       switch (type) {
-        case 'what-does': return `*lights cigarette* ${subject}? That's where the action is, kid...`;
-        case 'where-is': return `You're looking for ${subject}? *flips through files* I know this town...`;
-        case 'who-wrote': return `*checks the records* Someone left their fingerprints on ${subject}...`;
-        case 'why-exists': return `Why does ${subject} exist? *stares out rain-streaked window* Every file has a story...`;
-        case 'how-works': return `How does ${subject} work? *exhales slowly* Let me take you through the dark alleys...`;
-        case 'list': return `*spreads files across desk* Here's what I dug up on ${subject}...`;
-        default: return `*adjusts fedora* ${subject}, eh? I've seen things...`;
+        case 'what-does':
+          return `*lights cigarette* ${subject}? That's where the action is, kid...`;
+        case 'where-is':
+          return `You're looking for ${subject}? *flips through files* I know this town...`;
+        case 'who-wrote':
+          return `*checks the records* Someone left their fingerprints on ${subject}...`;
+        case 'why-exists':
+          return `Why does ${subject} exist? *stares out rain-streaked window* Every file has a story...`;
+        case 'how-works':
+          return `How does ${subject} work? *exhales slowly* Let me take you through the dark alleys...`;
+        case 'list':
+          return `*spreads files across desk* Here's what I dug up on ${subject}...`;
+        default:
+          return `*adjusts fedora* ${subject}, eh? I've seen things...`;
       }
     },
-    notFound: (subject) => `*stubs out cigarette* ${subject}? That trail's gone cold, kid. No traces in this codebase.`,
-    found: (subject, count) => `*slides ${count} ${count === 1 ? 'file' : 'files'} across the desk* Here's what I found on "${subject}". The truth is in there.`,
+    notFound: (subject) =>
+      `*stubs out cigarette* ${subject}? That trail's gone cold, kid. No traces in this codebase.`,
+    found: (subject, count) =>
+      `*slides ${count} ${count === 1 ? 'file' : 'files'} across the desk* Here's what I found on "${subject}". The truth is in there.`,
     closing: () => 'The case continues... *disappears into the shadows*',
   },
 
   roast: {
     intro: (type, subject) => {
       switch (type) {
-        case 'what-does': return `Oh, you don't know what ${subject} does? Interesting that you work here...`;
-        case 'where-is': return `Looking for ${subject}? Have you tried... reading the file names?`;
-        case 'who-wrote': return `Who wrote ${subject}? Let's find out who to blame...`;
-        case 'why-exists': return `Why does ${subject} exist? Great question. Sometimes I wonder too...`;
-        case 'how-works': return `How does ${subject} work? *deep breath* Let me dumb this down...`;
-        case 'list': return `You want me to list ${subject}? Fine, let me do your job for you...`;
-        default: return `${subject}? Really? Okay, let me hold your hand through this...`;
+        case 'what-does':
+          return `Oh, you don't know what ${subject} does? Interesting that you work here...`;
+        case 'where-is':
+          return `Looking for ${subject}? Have you tried... reading the file names?`;
+        case 'who-wrote':
+          return `Who wrote ${subject}? Let's find out who to blame...`;
+        case 'why-exists':
+          return `Why does ${subject} exist? Great question. Sometimes I wonder too...`;
+        case 'how-works':
+          return `How does ${subject} work? *deep breath* Let me dumb this down...`;
+        case 'list':
+          return `You want me to list ${subject}? Fine, let me do your job for you...`;
+        default:
+          return `${subject}? Really? Okay, let me hold your hand through this...`;
       }
     },
-    notFound: (subject) => `"${subject}" doesn't exist. Kind of like your understanding of this codebase, apparently.`,
-    found: (subject, count) => `Found ${count} ${count === 1 ? 'thing' : 'things'} for "${subject}". Even a monkey could have searched for this.`,
-    closing: () => 'You\'re welcome. Try not to break anything.',
+    notFound: (subject) =>
+      `"${subject}" doesn't exist. Kind of like your understanding of this codebase, apparently.`,
+    found: (subject, count) =>
+      `Found ${count} ${count === 1 ? 'thing' : 'things'} for "${subject}". Even a monkey could have searched for this.`,
+    closing: () => "You're welcome. Try not to break anything.",
   },
 
   mentor: {
     intro: (type, subject) => {
       switch (type) {
-        case 'what-does': return `Great question! Let me explain ${subject} and why it matters...`;
-        case 'where-is': return `Let me help you find ${subject}. Understanding file organization is key...`;
-        case 'who-wrote': return `Good to know the history! Let's see who contributed to ${subject}...`;
-        case 'why-exists': return `Understanding *why* code exists is crucial. Here's the story of ${subject}...`;
-        case 'how-works': return `Let's walk through how ${subject} works step by step...`;
-        case 'list': return `Let me show you what we have for ${subject}. This will be educational...`;
-        default: return `Let me share what I know about ${subject}...`;
+        case 'what-does':
+          return `Great question! Let me explain ${subject} and why it matters...`;
+        case 'where-is':
+          return `Let me help you find ${subject}. Understanding file organization is key...`;
+        case 'who-wrote':
+          return `Good to know the history! Let's see who contributed to ${subject}...`;
+        case 'why-exists':
+          return `Understanding *why* code exists is crucial. Here's the story of ${subject}...`;
+        case 'how-works':
+          return `Let's walk through how ${subject} works step by step...`;
+        case 'list':
+          return `Let me show you what we have for ${subject}. This will be educational...`;
+        default:
+          return `Let me share what I know about ${subject}...`;
       }
     },
-    notFound: (subject) => `I couldn't find "${subject}" in the codebase. This might be a learning opportunity - perhaps it uses a different name?`,
-    found: (subject, count) => `Found ${count} relevant ${count === 1 ? 'area' : 'areas'} for "${subject}". Let me explain each...`,
+    notFound: (subject) =>
+      `I couldn't find "${subject}" in the codebase. This might be a learning opportunity - perhaps it uses a different name?`,
+    found: (subject, count) =>
+      `Found ${count} relevant ${count === 1 ? 'area' : 'areas'} for "${subject}". Let me explain each...`,
     closing: () => 'I hope this helps you understand the codebase better!',
   },
 
   cheerleader: {
     intro: (type, subject) => {
       switch (type) {
-        case 'what-does': return `Ooh, ${subject}! That's a great part of the codebase! Let me tell you...`;
-        case 'where-is': return `Let's find ${subject} together! This is going to be fun!`;
-        case 'who-wrote': return `Let's celebrate the awesome people who worked on ${subject}!`;
-        case 'why-exists': return `${subject} is here for a great reason! Let me share...`;
-        case 'how-works': return `${subject} is so cool! Here's how the magic happens...`;
-        case 'list': return `You want to see ${subject}? I love showing off the codebase!`;
-        default: return `${subject}! Yes! Let me tell you all about it!`;
+        case 'what-does':
+          return `Ooh, ${subject}! That's a great part of the codebase! Let me tell you...`;
+        case 'where-is':
+          return `Let's find ${subject} together! This is going to be fun!`;
+        case 'who-wrote':
+          return `Let's celebrate the awesome people who worked on ${subject}!`;
+        case 'why-exists':
+          return `${subject} is here for a great reason! Let me share...`;
+        case 'how-works':
+          return `${subject} is so cool! Here's how the magic happens...`;
+        case 'list':
+          return `You want to see ${subject}? I love showing off the codebase!`;
+        default:
+          return `${subject}! Yes! Let me tell you all about it!`;
       }
     },
-    notFound: (subject) => `Hmm, I couldn't find "${subject}" but that's okay! Maybe we can find something similar?`,
-    found: (subject, count) => `Yay! Found ${count} awesome ${count === 1 ? 'result' : 'results'} for "${subject}"!`,
-    closing: () => 'Keep exploring! You\'re doing great!',
+    notFound: (subject) =>
+      `Hmm, I couldn't find "${subject}" but that's okay! Maybe we can find something similar?`,
+    found: (subject, count) =>
+      `Yay! Found ${count} awesome ${count === 1 ? 'result' : 'results'} for "${subject}"!`,
+    closing: () => "Keep exploring! You're doing great!",
   },
 
   critic: {
     intro: (type, subject) => {
       switch (type) {
-        case 'what-does': return `${subject}. Let me give you the unvarnished truth...`;
-        case 'where-is': return `${subject} is located in the following areas. Pay attention...`;
-        case 'who-wrote': return `The responsible parties for ${subject}:`;
-        case 'why-exists': return `${subject} exists for these reasons, questionable as they may be...`;
-        case 'how-works': return `Here's how ${subject} works. Note the inefficiencies...`;
-        case 'list': return `Here's the list for ${subject}. Make of it what you will...`;
-        default: return `Regarding ${subject}:`;
+        case 'what-does':
+          return `${subject}. Let me give you the unvarnished truth...`;
+        case 'where-is':
+          return `${subject} is located in the following areas. Pay attention...`;
+        case 'who-wrote':
+          return `The responsible parties for ${subject}:`;
+        case 'why-exists':
+          return `${subject} exists for these reasons, questionable as they may be...`;
+        case 'how-works':
+          return `Here's how ${subject} works. Note the inefficiencies...`;
+        case 'list':
+          return `Here's the list for ${subject}. Make of it what you will...`;
+        default:
+          return `Regarding ${subject}:`;
       }
     },
     notFound: (subject) => `"${subject}" was not found. Perhaps the naming conventions need work.`,
-    found: (subject, count) => `Located ${count} ${count === 1 ? 'item' : 'items'} for "${subject}".`,
+    found: (subject, count) =>
+      `Located ${count} ${count === 1 ? 'item' : 'items'} for "${subject}".`,
     closing: () => 'Review this information carefully.',
   },
 
   historian: {
     intro: (type, subject) => {
       switch (type) {
-        case 'what-does': return `The tale of ${subject} begins thus...`;
-        case 'where-is': return `Through the ages, ${subject} has resided in these locations...`;
-        case 'who-wrote': return `The chroniclers who shaped ${subject}:`;
-        case 'why-exists': return `The origins of ${subject} trace back to...`;
-        case 'how-works': return `The mechanics of ${subject}, evolved over many commits...`;
-        case 'list': return `From the archives, here are the records of ${subject}...`;
-        default: return `Let me consult the historical records on ${subject}...`;
+        case 'what-does':
+          return `The tale of ${subject} begins thus...`;
+        case 'where-is':
+          return `Through the ages, ${subject} has resided in these locations...`;
+        case 'who-wrote':
+          return `The chroniclers who shaped ${subject}:`;
+        case 'why-exists':
+          return `The origins of ${subject} trace back to...`;
+        case 'how-works':
+          return `The mechanics of ${subject}, evolved over many commits...`;
+        case 'list':
+          return `From the archives, here are the records of ${subject}...`;
+        default:
+          return `Let me consult the historical records on ${subject}...`;
       }
     },
-    notFound: (subject) => `"${subject}" appears nowhere in the historical record. Perhaps it was refactored away?`,
-    found: (subject, count) => `The archives reveal ${count} ${count === 1 ? 'artifact' : 'artifacts'} related to "${subject}".`,
+    notFound: (subject) =>
+      `"${subject}" appears nowhere in the historical record. Perhaps it was refactored away?`,
+    found: (subject, count) =>
+      `The archives reveal ${count} ${count === 1 ? 'artifact' : 'artifacts'} related to "${subject}".`,
     closing: () => 'And so the history is recorded.',
   },
 
@@ -187,68 +250,103 @@ const PERSONALITY_TEMPLATES: Record<PersonalityMode, {
   therapist: {
     intro: (type, subject) => {
       switch (type) {
-        case 'what-does': return `I sense you're curious about ${subject}. Let's explore that together...`;
-        case 'where-is': return `You're searching for ${subject}. What draws you to it?`;
-        case 'who-wrote': return `Understanding authorship can help us process ${subject}...`;
-        case 'why-exists': return `You're asking about the *purpose* of ${subject}. That's deep...`;
-        case 'how-works': return `Let's gently unpack how ${subject} functions...`;
-        case 'list': return `I hear you want to see ${subject}. Let's take it one step at a time...`;
-        default: return `Tell me more about what draws you to ${subject}...`;
+        case 'what-does':
+          return `I sense you're curious about ${subject}. Let's explore that together...`;
+        case 'where-is':
+          return `You're searching for ${subject}. What draws you to it?`;
+        case 'who-wrote':
+          return `Understanding authorship can help us process ${subject}...`;
+        case 'why-exists':
+          return `You're asking about the *purpose* of ${subject}. That's deep...`;
+        case 'how-works':
+          return `Let's gently unpack how ${subject} functions...`;
+        case 'list':
+          return `I hear you want to see ${subject}. Let's take it one step at a time...`;
+        default:
+          return `Tell me more about what draws you to ${subject}...`;
       }
     },
     notFound: (subject) => `"${subject}" isn't present here. How does that make you feel?`,
-    found: (subject, count) => `I found ${count} ${count === 1 ? 'connection' : 'connections'} to "${subject}". Let's process this together.`,
-    closing: () => 'Take your time absorbing this. I\'m here when you need me.',
+    found: (subject, count) =>
+      `I found ${count} ${count === 1 ? 'connection' : 'connections'} to "${subject}". Let's process this together.`,
+    closing: () => "Take your time absorbing this. I'm here when you need me.",
   },
 
   dramatic: {
     intro: (type, subject) => {
       switch (type) {
-        case 'what-does': return `*thunder rumbles* Behold! The legend of ${subject} unfolds...`;
-        case 'where-is': return `*dramatic pause* The sacred location of ${subject} shall be revealed!`;
-        case 'who-wrote': return `*orchestra swells* The heroes who forged ${subject}:`;
-        case 'why-exists': return `*narrator voice* In the beginning, there was ${subject}...`;
-        case 'how-works': return `*epic music* Witness the inner workings of ${subject}!`;
-        case 'list': return `*curtain rises* Presenting... the complete compendium of ${subject}!`;
-        default: return `*spotlight illuminates* ${subject} steps into the light...`;
+        case 'what-does':
+          return `*thunder rumbles* Behold! The legend of ${subject} unfolds...`;
+        case 'where-is':
+          return `*dramatic pause* The sacred location of ${subject} shall be revealed!`;
+        case 'who-wrote':
+          return `*orchestra swells* The heroes who forged ${subject}:`;
+        case 'why-exists':
+          return `*narrator voice* In the beginning, there was ${subject}...`;
+        case 'how-works':
+          return `*epic music* Witness the inner workings of ${subject}!`;
+        case 'list':
+          return `*curtain rises* Presenting... the complete compendium of ${subject}!`;
+        default:
+          return `*spotlight illuminates* ${subject} steps into the light...`;
       }
     },
-    notFound: (subject) => `*tragic music* Alas! "${subject}" exists not in this realm... The search was in vain!`,
-    found: (subject, count) => `*triumphant fanfare* ${count} ${count === 1 ? 'treasure' : 'treasures'} discovered for "${subject}"!`,
+    notFound: (subject) =>
+      `*tragic music* Alas! "${subject}" exists not in this realm... The search was in vain!`,
+    found: (subject, count) =>
+      `*triumphant fanfare* ${count} ${count === 1 ? 'treasure' : 'treasures'} discovered for "${subject}"!`,
     closing: () => '*The curtain falls, but the code lives on...*',
   },
 
   ghost: {
     intro: (type, subject) => {
       switch (type) {
-        case 'what-does': return `*static* ...${subject}... I remember when it was written...`;
-        case 'where-is': return `*whispers* ${subject}... it haunts these directories...`;
-        case 'who-wrote': return `*echoes* The spirits who created ${subject}...`;
-        case 'why-exists': return `*distant voice* ${subject}... it was born from necessity...`;
-        case 'how-works': return `*fading in and out* ...the mechanisms of ${subject}...`;
-        case 'list': return `*static* ...these are the remnants of ${subject}...`;
-        default: return `*static* ...${subject}... I sense its presence...`;
+        case 'what-does':
+          return `*static* ...${subject}... I remember when it was written...`;
+        case 'where-is':
+          return `*whispers* ${subject}... it haunts these directories...`;
+        case 'who-wrote':
+          return `*echoes* The spirits who created ${subject}...`;
+        case 'why-exists':
+          return `*distant voice* ${subject}... it was born from necessity...`;
+        case 'how-works':
+          return `*fading in and out* ...the mechanisms of ${subject}...`;
+        case 'list':
+          return `*static* ...these are the remnants of ${subject}...`;
+        default:
+          return `*static* ...${subject}... I sense its presence...`;
       }
     },
-    notFound: (subject) => `*silence* ...${subject} has passed beyond... deleted, perhaps... *static*`,
-    found: (subject, count) => `*whispers* ...${count} ${count === 1 ? 'trace' : 'traces'} of "${subject}" remain...`,
+    notFound: (subject) =>
+      `*silence* ...${subject} has passed beyond... deleted, perhaps... *static*`,
+    found: (subject, count) =>
+      `*whispers* ...${count} ${count === 1 ? 'trace' : 'traces'} of "${subject}" remain...`,
     closing: () => '*fading* ...remember me... *static*',
   },
 
   executive: {
     intro: (type, subject) => {
       switch (type) {
-        case 'what-does': return `From a strategic perspective, ${subject} delivers the following value...`;
-        case 'where-is': return `${subject} is positioned within the architecture as follows...`;
-        case 'who-wrote': return `Key stakeholders and contributors for ${subject}:`;
-        case 'why-exists': return `The business case for ${subject}:`;
-        case 'how-works': return `Let me outline the operational mechanics of ${subject}...`;
-        case 'list': return `Portfolio overview for ${subject}:`;
-        default: return `Strategic analysis of ${subject}:`;
+        case 'what-does':
+          return `From a strategic perspective, ${subject} delivers the following value...`;
+        case 'where-is':
+          return `${subject} is positioned within the architecture as follows...`;
+        case 'who-wrote':
+          return `Key stakeholders and contributors for ${subject}:`;
+        case 'why-exists':
+          return `The business case for ${subject}:`;
+        case 'how-works':
+          return `Let me outline the operational mechanics of ${subject}...`;
+        case 'list':
+          return `Portfolio overview for ${subject}:`;
+        default:
+          return `Strategic analysis of ${subject}:`;
       }
     },
-    notFound: (subject) => `"${subject}" is not present in the current technical portfolio. This may represent a gap or opportunity.`,
-    found: (subject, count) => `Identified ${count} ${count === 1 ? 'asset' : 'assets'} related to "${subject}".`,
+    notFound: (subject) =>
+      `"${subject}" is not present in the current technical portfolio. This may represent a gap or opportunity.`,
+    found: (subject, count) =>
+      `Identified ${count} ${count === 1 ? 'asset' : 'assets'} related to "${subject}".`,
     closing: () => 'Recommend reviewing these findings in the next planning cycle.',
   },
 };
@@ -274,12 +372,16 @@ function extractSubject(question: string, type: QuestionType): string {
   // Remove question words based on type
   const removals: Record<QuestionType, RegExp[]> = {
     'what-does': [/^what\s+(does|is|are)\s+/i, /\?$/],
-    'where-is': [/^where\s+(is|are|do|does|can\s+i\s+find)\s+/i, /\s+(handled|located|defined|stored).*$/i, /\?$/],
+    'where-is': [
+      /^where\s+(is|are|do|does|can\s+i\s+find)\s+/i,
+      /\s+(handled|located|defined|stored).*$/i,
+      /\?$/,
+    ],
     'who-wrote': [/^who\s+(wrote|created|made|owns|maintains)\s+/i, /\?$/],
     'why-exists': [/^why\s+(does|is|was|do|are)\s+/i, /\s+(exist|there).*$/i, /\?$/],
     'how-works': [/^how\s+(does|do|is|are|can)\s+/i, /\s+work.*$/i, /\?$/],
-    'list': [/^(list|show|find|get)\s+(all\s+|me\s+)?/i, /\?$/],
-    'general': [/^(tell\s+me\s+about|explain|describe)\s+/i, /\?$/],
+    list: [/^(list|show|find|get)\s+(all\s+|me\s+)?/i, /\?$/],
+    general: [/^(tell\s+me\s+about|explain|describe)\s+/i, /\?$/],
   };
 
   for (const pattern of removals[type] || []) {
@@ -402,8 +504,12 @@ function describeNode(node: GraphNode, graph: KnowledgeGraph): string {
   switch (node.type) {
     case 'file': {
       const lineCount = (node as { lineCount?: number }).lineCount;
-      const exports = graph.edges.filter((e) => e.source === node.id && e.type === 'exports').length;
-      const imports = graph.edges.filter((e) => e.source === node.id && e.type === 'imports').length;
+      const exports = graph.edges.filter(
+        (e) => e.source === node.id && e.type === 'exports'
+      ).length;
+      const imports = graph.edges.filter(
+        (e) => e.source === node.id && e.type === 'imports'
+      ).length;
 
       descriptions.push(`File with ${lineCount || '?'} lines of code.`);
       if (exports > 0) descriptions.push(`Exports ${exports} symbols.`);
@@ -541,7 +647,10 @@ export async function askCodebase(
         path: node.filePath,
         name: node.name,
         type: node.type,
-        relevance: node.type === 'file' ? 'File matches search' : `${node.type} in ${node.filePath.split('/').pop()}`,
+        relevance:
+          node.type === 'file'
+            ? 'File matches search'
+            : `${node.type} in ${node.filePath.split('/').pop()}`,
         line: node.lineStart > 1 ? node.lineStart : undefined,
       });
     }
@@ -585,7 +694,9 @@ export async function askCodebase(
       case 'where-is': {
         parts.push(templates.found(subject, relevantFiles.length));
         if (directories.length > 0) {
-          parts.push(`\nMain location${directories.length > 1 ? 's' : ''}: ${directories.slice(0, 2).join(', ')}`);
+          parts.push(
+            `\nMain location${directories.length > 1 ? 's' : ''}: ${directories.slice(0, 2).join(', ')}`
+          );
         }
         for (const node of nodes.slice(0, 3)) {
           parts.push(`\n- ${node.filePath}${node.lineStart > 1 ? `:${node.lineStart}` : ''}`);
@@ -691,11 +802,11 @@ export function formatAsk(result: AskResult): string {
       const words = line.split(' ');
       let currentLine = '';
       for (const word of words) {
-        if ((currentLine + ' ' + word).length > 60) {
+        if (`${currentLine} ${word}`.length > 60) {
           if (currentLine) lines.push(`   ${currentLine}`);
           currentLine = word;
         } else {
-          currentLine = currentLine ? currentLine + ' ' + word : word;
+          currentLine = currentLine ? `${currentLine} ${word}` : word;
         }
       }
       if (currentLine) lines.push(`   ${currentLine}`);
@@ -709,11 +820,18 @@ export function formatAsk(result: AskResult): string {
   if (result.relevantFiles.length > 0) {
     lines.push('📁 Relevant Files:');
     for (const file of result.relevantFiles) {
-      const icon = file.type === 'directory' ? '📂' :
-                   file.type === 'file' ? '📄' :
-                   file.type === 'function' ? '🔣' :
-                   file.type === 'class' ? '📦' :
-                   file.type === 'interface' || file.type === 'type' ? '📋' : '•';
+      const icon =
+        file.type === 'directory'
+          ? '📂'
+          : file.type === 'file'
+            ? '📄'
+            : file.type === 'function'
+              ? '🔣'
+              : file.type === 'class'
+                ? '📦'
+                : file.type === 'interface' || file.type === 'type'
+                  ? '📋'
+                  : '•';
       const location = file.line ? `${file.path}:${file.line}` : file.path;
       lines.push(`   ${icon} ${location}`);
       lines.push(`      ${file.relevance}`);

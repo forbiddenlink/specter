@@ -5,13 +5,13 @@
  * Shows which parts of the codebase are at risk if someone leaves.
  */
 
-import { simpleGit, type SimpleGit } from 'simple-git';
+import { type SimpleGit, simpleGit } from 'simple-git';
 import type { KnowledgeGraph } from './graph/types.js';
 
 export interface BusFactorRisk {
-  area: string;  // Directory or file
-  busFactor: number;  // 1 = single person, higher = safer
-  soleOwner?: string;  // If bus factor = 1
+  area: string; // Directory or file
+  busFactor: number; // 1 = single person, higher = safer
+  soleOwner?: string; // If bus factor = 1
   contributors: { name: string; percentage: number }[];
   linesOfCode: number;
   criticality: 'critical' | 'high' | 'medium' | 'low';
@@ -120,10 +120,7 @@ export async function analyzeBusFactor(
 /**
  * Group files by top-level directory area
  */
-function groupFilesByArea(
-  files: string[],
-  graph: KnowledgeGraph
-): Map<string, AreaStats> {
+function groupFilesByArea(files: string[], graph: KnowledgeGraph): Map<string, AreaStats> {
   const areas = new Map<string, AreaStats>();
 
   for (const file of files) {
@@ -152,9 +149,7 @@ function groupFilesByArea(
     areaStats.files.push(file);
 
     // Get line count from graph
-    const node = Object.values(graph.nodes).find(
-      (n) => n.type === 'file' && n.filePath === file
-    );
+    const node = Object.values(graph.nodes).find((n) => n.type === 'file' && n.filePath === file);
     if (node && 'lineCount' in node) {
       areaStats.linesOfCode += (node as { lineCount: number }).lineCount;
     }
@@ -173,12 +168,7 @@ async function analyzeGitHistory(
 ): Promise<void> {
   try {
     // Get commit log with numstat for line counts
-    const rawLog = await git.raw([
-      'log',
-      '--numstat',
-      '--format=%H|%an|%aI',
-      '-500',
-    ]);
+    const rawLog = await git.raw(['log', '--numstat', '--format=%H|%an|%aI', '-500']);
 
     let currentAuthor = '';
     let currentDate = new Date();
@@ -238,7 +228,10 @@ async function analyzeGitHistory(
             commit.hash,
           ]);
 
-          const files = filesRaw.trim().split('\n').filter((f) => f);
+          const files = filesRaw
+            .trim()
+            .split('\n')
+            .filter((f) => f);
 
           for (const file of files) {
             const area = findAreaForFile(file, areaStats, sourceFiles);
@@ -392,8 +385,8 @@ function determineCriticality(
   _graph: KnowledgeGraph
 ): 'critical' | 'high' | 'medium' | 'low' {
   // Check if this is core infrastructure
-  const isCoreArea = ['src/core', 'src/graph', 'src/analyzers', 'core', 'lib'].some(
-    (core) => area.startsWith(core)
+  const isCoreArea = ['src/core', 'src/graph', 'src/analyzers', 'core', 'lib'].some((core) =>
+    area.startsWith(core)
   );
 
   // Large areas with single owner are more critical
@@ -530,9 +523,7 @@ function generateRecommendations(
 
   if (criticalRisks.length > 0) {
     // Find the most common sole owner
-    const soleOwners = criticalRisks
-      .filter((r) => r.soleOwner)
-      .map((r) => r.soleOwner!);
+    const soleOwners = criticalRisks.filter((r) => r.soleOwner).map((r) => r.soleOwner!);
     const ownerCounts = new Map<string, number>();
     for (const owner of soleOwners) {
       ownerCounts.set(owner, (ownerCounts.get(owner) || 0) + 1);
@@ -567,9 +558,7 @@ function generateRecommendations(
       'Knowledge distribution is healthy! Maintain current collaborative practices.'
     );
   } else if (recommendations.length === 0) {
-    recommendations.push(
-      'Consider documenting complex areas and rotating ownership periodically'
-    );
+    recommendations.push('Consider documenting complex areas and rotating ownership periodically');
   }
 
   return recommendations;
@@ -591,7 +580,9 @@ export function formatBusFactor(result: BusFactorResult): string {
   // Overall bus factor with risk level
   const riskEmoji = getRiskEmoji(result.riskLevel);
   const riskColor = getRiskLabel(result.riskLevel);
-  lines.push(`Overall Bus Factor: ${result.overallBusFactor.toFixed(1)} (${riskEmoji} ${riskColor})`);
+  lines.push(
+    `Overall Bus Factor: ${result.overallBusFactor.toFixed(1)} (${riskEmoji} ${riskColor})`
+  );
   lines.push('');
 
   // Critical and high risks
@@ -607,7 +598,9 @@ export function formatBusFactor(result: BusFactorResult): string {
       lines.push(`${emoji} ${risk.area.padEnd(24)} Bus Factor: ${risk.busFactor}`);
       if (risk.soleOwner) {
         const topContributor = risk.contributors[0];
-        lines.push(`   Solo owner: ${risk.soleOwner} (${topContributor?.percentage || 0}% of commits)`);
+        lines.push(
+          `   Solo owner: ${risk.soleOwner} (${topContributor?.percentage || 0}% of commits)`
+        );
       }
       lines.push(`   ${risk.linesOfCode.toLocaleString()} lines at risk`);
       lines.push(`   -> ${risk.suggestion}`);
@@ -618,7 +611,9 @@ export function formatBusFactor(result: BusFactorResult): string {
       lines.push(`[*] ${risk.area.padEnd(24)} Bus Factor: ${risk.busFactor}`);
       if (risk.soleOwner) {
         const topContributor = risk.contributors[0];
-        lines.push(`   Solo owner: ${risk.soleOwner} (${topContributor?.percentage || 0}% of commits)`);
+        lines.push(
+          `   Solo owner: ${risk.soleOwner} (${topContributor?.percentage || 0}% of commits)`
+        );
       }
       lines.push(`   ${risk.linesOfCode.toLocaleString()} lines at risk`);
       lines.push(`   -> ${risk.suggestion}`);
@@ -659,8 +654,12 @@ export function formatBusFactor(result: BusFactorResult): string {
   lines.push('SUMMARY');
   lines.push('-'.repeat(49));
   lines.push(`  Files with single owner:    ${String(result.summary.soloOwnedFiles).padStart(6)}`);
-  lines.push(`  Lines at risk:              ${result.summary.soloOwnedLines.toLocaleString().padStart(6)}`);
-  lines.push(`  Percentage of codebase:     ${String(result.summary.percentageAtRisk).padStart(5)}%`);
+  lines.push(
+    `  Lines at risk:              ${result.summary.soloOwnedLines.toLocaleString().padStart(6)}`
+  );
+  lines.push(
+    `  Percentage of codebase:     ${String(result.summary.percentageAtRisk).padStart(5)}%`
+  );
   lines.push('');
 
   // Recommendations

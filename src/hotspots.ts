@@ -50,10 +50,7 @@ interface FileChurnData {
 /**
  * Get churn data from git history
  */
-async function getChurnData(
-  rootDir: string,
-  since: string
-): Promise<Map<string, FileChurnData>> {
+async function getChurnData(rootDir: string, since: string): Promise<Map<string, FileChurnData>> {
   const git = simpleGit(rootDir);
   const churnMap = new Map<string, FileChurnData>();
 
@@ -86,7 +83,7 @@ async function getChurnData(
       const files = diffResult
         .trim()
         .split('\n')
-        .filter((f) => f && f.match(/\.(ts|tsx|js|jsx)$/));
+        .filter((f) => f?.match(/\.(ts|tsx|js|jsx)$/));
 
       for (const file of files) {
         const existing = churnMap.get(file);
@@ -107,7 +104,7 @@ async function getChurnData(
         }
       }
     }
-  } catch (error) {
+  } catch (_error) {
     // Not a git repo or other error - return empty map
   }
 
@@ -209,9 +206,7 @@ export async function analyzeHotspots(
     }
   }
 
-  const weeks = Math.ceil(
-    (Date.now() - sinceDate.getTime()) / (1000 * 60 * 60 * 24 * 7)
-  );
+  const weeks = Math.ceil((Date.now() - sinceDate.getTime()) / (1000 * 60 * 60 * 24 * 7));
 
   // Get churn data from git
   const churnData = await getChurnData(rootDir, since);
@@ -266,27 +261,16 @@ export async function analyzeHotspots(
   hotspots.sort((a, b) => b.hotspotScore - a.hotspotScore);
 
   // Categorize into quadrants (using 50 as midpoint)
-  const highComplexityHighChurn = hotspots.filter(
-    (h) => h.complexity >= 50 && h.churn >= 50
-  );
-  const highComplexityLowChurn = hotspots.filter(
-    (h) => h.complexity >= 50 && h.churn < 50
-  );
-  const lowComplexityHighChurn = hotspots.filter(
-    (h) => h.complexity < 50 && h.churn >= 50
-  );
-  const lowComplexityLowChurn = hotspots.filter(
-    (h) => h.complexity < 50 && h.churn < 50
-  );
+  const highComplexityHighChurn = hotspots.filter((h) => h.complexity >= 50 && h.churn >= 50);
+  const highComplexityLowChurn = hotspots.filter((h) => h.complexity >= 50 && h.churn < 50);
+  const lowComplexityHighChurn = hotspots.filter((h) => h.complexity < 50 && h.churn >= 50);
+  const lowComplexityLowChurn = hotspots.filter((h) => h.complexity < 50 && h.churn < 50);
 
   // Calculate summary
   const topHotspots = hotspots.slice(0, top);
   const criticalCount = topHotspots.filter((h) => h.priority === 'critical').length;
   const highCount = topHotspots.filter((h) => h.priority === 'high').length;
-  const totalDebtHours = topHotspots.reduce(
-    (sum, h) => sum + estimateRefactoringHours(h),
-    0
-  );
+  const totalDebtHours = topHotspots.reduce((sum, h) => sum + estimateRefactoringHours(h), 0);
 
   return {
     hotspots: topHotspots,
@@ -329,10 +313,7 @@ function generateScatterPlot(hotspots: Hotspot[]): string[] {
   for (const hotspot of hotspots.slice(0, 30)) {
     // Map to grid coordinates
     const x = Math.min(Math.floor((hotspot.churn / 100) * (width - 1)), width - 1);
-    const y = Math.min(
-      Math.floor((1 - hotspot.complexity / 100) * (height - 1)),
-      height - 1
-    );
+    const y = Math.min(Math.floor((1 - hotspot.complexity / 100) * (height - 1)), height - 1);
 
     const key = `${x},${y}`;
     if (!plotted.has(key)) {
@@ -368,15 +349,21 @@ function generateScatterPlot(hotspots: Hotspot[]): string[] {
     // Add quadrant divider at middle
     let displayRow = row;
     if (y === Math.floor(height / 2)) {
-      displayRow = row.substring(0, midPoint) + '\u253C' + row.substring(midPoint + 1);
+      displayRow = `${row.substring(0, midPoint)}\u253C${row.substring(midPoint + 1)}`;
     }
 
     lines.push(`${label} \u2502${displayRow}`);
   }
 
   // Draw x-axis
-  lines.push('    \u2514' + '\u2500'.repeat(width) + '\u25B6 Churn');
-  lines.push('    0' + ' '.repeat(Math.floor(width / 2) - 3) + '50' + ' '.repeat(Math.floor(width / 2) - 2) + '100');
+  lines.push(`    \u2514${'\u2500'.repeat(width)}\u25B6 Churn`);
+  lines.push(
+    '    0' +
+      ' '.repeat(Math.floor(width / 2) - 3) +
+      '50' +
+      ' '.repeat(Math.floor(width / 2) - 2) +
+      '100'
+  );
 
   return lines;
 }
@@ -388,14 +375,10 @@ export function formatHotspots(result: HotspotsResult): string {
   const lines: string[] = [];
 
   // Header
-  lines.push('\u250F' + '\u2501'.repeat(58) + '\u2513');
-  lines.push(
-    '\u2503  \uD83D\uDD25 HOTSPOT ANALYSIS                                       \u2503'
-  );
-  lines.push(
-    '\u2503  Complexity x Churn = Refactoring Priority                \u2503'
-  );
-  lines.push('\u2517' + '\u2501'.repeat(58) + '\u251B');
+  lines.push(`\u250F${'\u2501'.repeat(58)}\u2513`);
+  lines.push('\u2503  \uD83D\uDD25 HOTSPOT ANALYSIS                                       \u2503');
+  lines.push('\u2503  Complexity x Churn = Refactoring Priority                \u2503');
+  lines.push(`\u2517${'\u2501'.repeat(58)}\u251B`);
   lines.push('');
 
   // Time range
@@ -423,31 +406,19 @@ export function formatHotspots(result: HotspotsResult): string {
   const activeCount = result.quadrants.lowComplexityHighChurn.length;
   const healthyCount = result.quadrants.lowComplexityLowChurn.length;
 
-  lines.push(
-    `  \uD83D\uDD34 DANGER ZONE (high complexity + high churn): ${dangerCount} files`
-  );
-  lines.push(
-    `  \uD83D\uDFE0 Legacy Debt (high complexity + low churn):  ${legacyCount} files`
-  );
-  lines.push(
-    `  \uD83D\uDFE1 Active Dev (low complexity + high churn):   ${activeCount} files`
-  );
-  lines.push(
-    `  \uD83D\uDFE2 Healthy (low complexity + low churn):       ${healthyCount} files`
-  );
+  lines.push(`  \uD83D\uDD34 DANGER ZONE (high complexity + high churn): ${dangerCount} files`);
+  lines.push(`  \uD83D\uDFE0 Legacy Debt (high complexity + low churn):  ${legacyCount} files`);
+  lines.push(`  \uD83D\uDFE1 Active Dev (low complexity + high churn):   ${activeCount} files`);
+  lines.push(`  \uD83D\uDFE2 Healthy (low complexity + low churn):       ${healthyCount} files`);
   lines.push('');
 
   // Summary stats
   lines.push('SUMMARY');
   lines.push('\u2500'.repeat(58));
   lines.push('');
-  lines.push(
-    `  Critical hotspots: ${result.summary.criticalCount}`
-  );
+  lines.push(`  Critical hotspots: ${result.summary.criticalCount}`);
   lines.push(`  High-risk hotspots: ${result.summary.highCount}`);
-  lines.push(
-    `  Estimated debt: ~${result.summary.totalDebtHours} hours of refactoring`
-  );
+  lines.push(`  Estimated debt: ~${result.summary.totalDebtHours} hours of refactoring`);
   lines.push('');
 
   // Top hotspots list
@@ -498,18 +469,12 @@ export function formatHotspots(result: HotspotsResult): string {
   lines.push('');
 
   if (dangerCount > 0) {
-    lines.push(
-      `  \uD83D\uDEA8 ${dangerCount} files in the DANGER ZONE need immediate attention.`
-    );
-    lines.push(
-      '     These are frequently changed AND complex - highest ROI for refactoring.'
-    );
+    lines.push(`  \uD83D\uDEA8 ${dangerCount} files in the DANGER ZONE need immediate attention.`);
+    lines.push('     These are frequently changed AND complex - highest ROI for refactoring.');
   }
 
   if (legacyCount > 5) {
-    lines.push(
-      `  \u26A0\uFE0F  ${legacyCount} complex files rarely change - legacy debt.`
-    );
+    lines.push(`  \u26A0\uFE0F  ${legacyCount} complex files rarely change - legacy debt.`);
     lines.push('     Consider refactoring when next touching these files.');
   }
 
@@ -518,9 +483,7 @@ export function formatHotspots(result: HotspotsResult): string {
     lines.push(
       `  \uD83D\uDCCA Total estimated refactoring debt: ${result.summary.totalDebtHours} hours`
     );
-    lines.push(
-      '     Consider allocating 10-20% of sprint capacity to debt reduction.'
-    );
+    lines.push('     Consider allocating 10-20% of sprint capacity to debt reduction.');
   }
 
   lines.push('');

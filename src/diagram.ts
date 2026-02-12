@@ -6,8 +6,7 @@
  */
 
 import fs from 'node:fs/promises';
-import path from 'node:path';
-import type { KnowledgeGraph, GraphNode, GraphEdge } from './graph/types.js';
+import type { KnowledgeGraph } from './graph/types.js';
 
 // Types
 export type DiagramFormat = 'mermaid' | 'd2' | 'ascii';
@@ -197,11 +196,7 @@ function generateMermaid(
 /**
  * Generate D2 format diagram
  */
-function generateD2(
-  nodes: DiagramNode[],
-  edges: DiagramEdge[],
-  options: DiagramOptions
-): string {
+function generateD2(nodes: DiagramNode[], edges: DiagramEdge[], options: DiagramOptions): string {
   const lines: string[] = [];
 
   // D2 uses nested structure for groups
@@ -302,7 +297,7 @@ function generateAscii(
       const node = groupNodes[i];
       nodePositions.set(node.id, { group, index: groupIndex });
 
-      let label = node.label;
+      const label = node.label;
       let indicator = '';
 
       if (options.showComplexity && node.complexity !== undefined) {
@@ -370,10 +365,7 @@ function generateAscii(
 /**
  * Main function to generate a diagram
  */
-export function generateDiagram(
-  graph: KnowledgeGraph,
-  options: DiagramOptions
-): DiagramResult {
+export function generateDiagram(graph: KnowledgeGraph, options: DiagramOptions): DiagramResult {
   const { nodes, edges } = buildDiagramData(graph, options);
 
   let content: string;

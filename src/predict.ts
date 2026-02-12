@@ -6,7 +6,7 @@
  */
 
 import { type SimpleGit, simpleGit } from 'simple-git';
-import type { KnowledgeGraph, GraphNode } from './graph/types.js';
+import type { GraphNode, KnowledgeGraph } from './graph/types.js';
 
 export interface StagedFile {
   path: string;
@@ -202,7 +202,7 @@ function estimateReviewTime(file: StagedFile, riskScore: number): number {
   const lineTime = totalLines / linesPerMinute;
 
   // Risk multiplier: higher risk = more careful review
-  const riskMultiplier = 1 + (riskScore / 100);
+  const riskMultiplier = 1 + riskScore / 100;
 
   return Math.ceil((baseTime + lineTime) * riskMultiplier);
 }
@@ -284,9 +284,7 @@ export async function generatePrediction(
   }
 
   // Recommend reviewers based on complexity
-  const reviewerCount =
-    overallRisk === 'critical' ? 3 :
-    overallRisk === 'high' ? 2 : 1;
+  const reviewerCount = overallRisk === 'critical' ? 3 : overallRisk === 'high' ? 2 : 1;
 
   // Generate warnings
   const warnings: string[] = [];
@@ -295,8 +293,8 @@ export async function generatePrediction(
     warnings.push(`${highRiskFiles.length} high-risk file(s) need careful review`);
   }
 
-  const configChanges = impacts.filter((i) =>
-    i.path.includes('config') || i.path.includes('package.json')
+  const configChanges = impacts.filter(
+    (i) => i.path.includes('config') || i.path.includes('package.json')
   );
   if (configChanges.length > 0) {
     warnings.push('Configuration changes detected - verify in staging environment');
@@ -319,9 +317,12 @@ export async function generatePrediction(
   }
 
   const hasTests = staged.some((f) => f.path.includes('test') || f.path.includes('spec'));
-  const hasCode = staged.some((f) =>
-    f.path.endsWith('.ts') || f.path.endsWith('.js') ||
-    f.path.endsWith('.py') || f.path.endsWith('.go')
+  const hasCode = staged.some(
+    (f) =>
+      f.path.endsWith('.ts') ||
+      f.path.endsWith('.js') ||
+      f.path.endsWith('.py') ||
+      f.path.endsWith('.go')
   );
   if (hasCode && !hasTests) {
     recommendations.push('Consider adding tests for code changes');
@@ -367,9 +368,13 @@ export function formatPrediction(result: PredictionResult): string {
 
   // Summary
   const riskEmoji =
-    result.summary.overallRisk === 'critical' ? '🔴' :
-    result.summary.overallRisk === 'high' ? '🟠' :
-    result.summary.overallRisk === 'medium' ? '🟡' : '🟢';
+    result.summary.overallRisk === 'critical'
+      ? '🔴'
+      : result.summary.overallRisk === 'high'
+        ? '🟠'
+        : result.summary.overallRisk === 'medium'
+          ? '🟡'
+          : '🟢';
 
   lines.push('SUMMARY');
   lines.push('─'.repeat(50));
@@ -386,12 +391,17 @@ export function formatPrediction(result: PredictionResult): string {
   lines.push('─'.repeat(50));
 
   for (const impact of result.impacts.slice(0, 10)) {
-    const riskBar = '█'.repeat(Math.floor(impact.riskScore / 10)) +
-                    '░'.repeat(10 - Math.floor(impact.riskScore / 10));
+    const riskBar =
+      '█'.repeat(Math.floor(impact.riskScore / 10)) +
+      '░'.repeat(10 - Math.floor(impact.riskScore / 10));
     const statusIcon =
-      impact.status === 'added' ? '🆕' :
-      impact.status === 'deleted' ? '🗑️ ' :
-      impact.status === 'renamed' ? '📝' : '✏️ ';
+      impact.status === 'added'
+        ? '🆕'
+        : impact.status === 'deleted'
+          ? '🗑️ '
+          : impact.status === 'renamed'
+            ? '📝'
+            : '✏️ ';
 
     lines.push(`${statusIcon} ${impact.path}`);
     lines.push(`   Risk: ${riskBar} ${impact.riskScore}%`);

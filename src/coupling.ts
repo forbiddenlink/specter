@@ -5,7 +5,7 @@
  * This reveals hidden coupling - a sign of poor architecture or missing abstractions.
  */
 
-import { simpleGit, type SimpleGit } from 'simple-git';
+import { type SimpleGit, simpleGit } from 'simple-git';
 import type { KnowledgeGraph } from './graph/types.js';
 
 export interface CoupledPair {
@@ -60,7 +60,7 @@ async function buildCoChangeMatrix(
         const files = diffResult
           .trim()
           .split('\n')
-          .filter((f) => f && f.match(/\.(ts|tsx|js|jsx)$/));
+          .filter((f) => f?.match(/\.(ts|tsx|js|jsx)$/));
 
         if (files.length > 0 && files.length <= 20) {
           // Skip huge commits (likely bulk operations)
@@ -170,8 +170,8 @@ function determineCouplingType(
 function generateSuggestion(
   type: 'hidden' | 'expected' | 'suspicious',
   strength: number,
-  file1: string,
-  file2: string
+  _file1: string,
+  _file2: string
 ): string {
   switch (type) {
     case 'suspicious':
@@ -243,7 +243,9 @@ export async function analyzeCoupling(
 
       // Calculate coupling strength (Jaccard-like coefficient)
       const totalChanges = data1.totalChanges + data2.totalChanges - coChangeCount;
-      const couplingStrength = Math.round((coChangeCount / Math.min(data1.totalChanges, data2.totalChanges)) * 100);
+      const couplingStrength = Math.round(
+        (coChangeCount / Math.min(data1.totalChanges, data2.totalChanges)) * 100
+      );
 
       if (couplingStrength < minStrength) continue;
 
@@ -345,9 +347,7 @@ function generateRecommendations(
   }
 
   if (hiddenCount === 0 && suspiciousCount === 0) {
-    recommendations.push(
-      'No hidden couplings detected - your codebase has explicit dependencies!'
-    );
+    recommendations.push('No hidden couplings detected - your codebase has explicit dependencies!');
   }
 
   return recommendations;
@@ -360,11 +360,9 @@ export function formatCoupling(result: CouplingResult): string {
   const lines: string[] = [];
 
   // Header
-  lines.push('\u250F' + '\u2501'.repeat(53) + '\u2513');
-  lines.push(
-    '\u2503  \uD83D\uDD17 COUPLING ANALYSIS                               \u2503'
-  );
-  lines.push('\u2517' + '\u2501'.repeat(53) + '\u251B');
+  lines.push(`\u250F${'\u2501'.repeat(53)}\u2513`);
+  lines.push('\u2503  \uD83D\uDD17 COUPLING ANALYSIS                               \u2503');
+  lines.push(`\u2517${'\u2501'.repeat(53)}\u251B`);
   lines.push('');
 
   // Summary
@@ -390,7 +388,9 @@ export function formatCoupling(result: CouplingResult): string {
       lines.push(`${emoji} ${label}`);
       lines.push(`   ${pair.file1}`);
       lines.push(`   \u2194 ${pair.file2}`);
-      lines.push(`   Changed together: ${pair.coChangeCount} times (${pair.couplingStrength}% correlation)`);
+      lines.push(
+        `   Changed together: ${pair.coChangeCount} times (${pair.couplingStrength}% correlation)`
+      );
 
       if (!pair.hasDirectDependency) {
         lines.push('   \u26A0\uFE0F  No direct import found!');
@@ -415,7 +415,9 @@ export function formatCoupling(result: CouplingResult): string {
 
     for (const pair of expectedPairs.slice(0, 5)) {
       lines.push(`   ${pair.file1} \u2194 ${pair.file2}`);
-      lines.push(`      ${pair.couplingStrength}% correlation (${pair.coChangeCount} shared commits)`);
+      lines.push(
+        `      ${pair.couplingStrength}% correlation (${pair.coChangeCount} shared commits)`
+      );
     }
 
     if (expectedPairs.length > 5) {

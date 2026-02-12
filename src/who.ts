@@ -81,12 +81,15 @@ export async function findExperts(
     }
 
     // Aggregate by author
-    const authorStats = new Map<string, {
-      name: string;
-      email: string;
-      commits: number;
-      lastTouch: string;
-    }>();
+    const authorStats = new Map<
+      string,
+      {
+        name: string;
+        email: string;
+        commits: number;
+        lastTouch: string;
+      }
+    >();
 
     for (const commit of log.all) {
       const key = commit.author_email;
@@ -110,13 +113,7 @@ export async function findExperts(
     // Get line stats using numstat
     const authorLines = new Map<string, number>();
     try {
-      const numstat = await git.raw([
-        'log',
-        '--numstat',
-        '--format=%ae',
-        '--',
-        actualPath,
-      ]);
+      const numstat = await git.raw(['log', '--numstat', '--format=%ae', '--', actualPath]);
 
       let currentAuthor = '';
       for (const line of numstat.split('\n')) {
@@ -127,10 +124,7 @@ export async function findExperts(
           if (match && currentAuthor) {
             const added = parseInt(match[1], 10) || 0;
             const removed = parseInt(match[2], 10) || 0;
-            authorLines.set(
-              currentAuthor,
-              (authorLines.get(currentAuthor) || 0) + added + removed
-            );
+            authorLines.set(currentAuthor, (authorLines.get(currentAuthor) || 0) + added + removed);
           }
         }
       }
@@ -215,10 +209,7 @@ export async function findExperts(
         // Find most frequent author
         const authorCounts = new Map<string, number>();
         for (const commit of relatedLog.all) {
-          authorCounts.set(
-            commit.author_name,
-            (authorCounts.get(commit.author_name) || 0) + 1
-          );
+          authorCounts.set(commit.author_name, (authorCounts.get(commit.author_name) || 0) + 1);
         }
 
         const topAuthor = [...authorCounts.entries()].sort((a, b) => b[1] - a[1])[0];
@@ -300,8 +291,11 @@ export function formatWho(result: WhoResult): string {
     const expert = result.experts[i];
     const rank = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '  ';
     const badge =
-      expert.expertise === 'primary' ? '⭐ Primary' :
-      expert.expertise === 'significant' ? '📌 Significant' : '👤 Contributor';
+      expert.expertise === 'primary'
+        ? '⭐ Primary'
+        : expert.expertise === 'significant'
+          ? '📌 Significant'
+          : '👤 Contributor';
 
     const lastTouchDate = new Date(expert.lastTouch).toLocaleDateString('en-US', {
       month: 'short',

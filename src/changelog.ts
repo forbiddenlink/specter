@@ -4,9 +4,24 @@
  * Generates changelogs from git history with Specter's personality modes.
  */
 
-import { execSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import { getPersonality } from './personality/modes.js';
 import type { PersonalityMode } from './personality/types.js';
+
+/**
+ * Execute git command safely using spawnSync with argument array
+ * Avoids shell injection by not interpolating user input into shell strings
+ */
+function gitCommand(args: string[], rootDir: string): string {
+  const result = spawnSync('git', args, {
+    cwd: rootDir,
+    encoding: 'utf-8',
+    maxBuffer: 10 * 1024 * 1024,
+  });
+  if (result.error) throw result.error;
+  if (result.status !== 0) throw new Error(result.stderr || 'Git command failed');
+  return result.stdout?.toString() || '';
+}
 
 export interface ChangelogEntry {
   hash: string;
@@ -35,7 +50,12 @@ export interface ChangelogResult {
 /**
  * Parse conventional commit message
  */
-function parseCommitMessage(message: string): { type: ChangelogEntry['type']; scope?: string; breaking: boolean; description: string } {
+function parseCommitMessage(message: string): {
+  type: ChangelogEntry['type'];
+  scope?: string;
+  breaking: boolean;
+  description: string;
+} {
   const breakingMatch = message.match(/^(\w+)(?:\(([^)]+)\))?!:\s*(.+)$/);
   const normalMatch = message.match(/^(\w+)(?:\(([^)]+)\))?:\s*(.+)$/);
 
@@ -97,29 +117,25 @@ export async function generateChangelog(
 ): Promise<ChangelogResult> {
   const { since, until, fromTag } = options;
 
-  // Build git log command
-  let range = '';
+  // Build git log command args safely using argument array
+  const format = '%H|%s|%an|%ai';
+  const args: string[] = ['log', `--format=${format}`, '--no-merges'];
+
   if (fromTag) {
-    range = `${fromTag}..HEAD`;
+    args.push(`${fromTag}..HEAD`);
   } else if (since) {
-    range = `--since="${since}"`;
+    args.push(`--since=${since}`);
     if (until) {
-      range += ` --until="${until}"`;
+      args.push(`--until=${until}`);
     }
   } else {
     // Default: last 50 commits
-    range = '-n 50';
+    args.push('-n', '50');
   }
-
-  const format = '%H|%s|%an|%ai';
-  const cmd = `git log ${range} --format="${format}" --no-merges`;
 
   let logOutput: string;
   try {
-    logOutput = execSync(cmd, {
-      cwd: rootDir,
-      encoding: 'utf8',
-    }).trim();
+    logOutput = gitCommand(args, rootDir).trim();
   } catch {
     logOutput = '';
   }
@@ -173,8 +189,11 @@ export async function generateChangelog(
 /**
  * Format changelog for display
  */
-export function formatChangelog(result: ChangelogResult, personality: PersonalityMode = 'default'): string {
-  const config = getPersonality(personality);
+export function formatChangelog(
+  result: ChangelogResult,
+  personality: PersonalityMode = 'default'
+): string {
+  const _config = getPersonality(personality);
   const lines: string[] = [];
 
   // Header
@@ -190,7 +209,9 @@ export function formatChangelog(result: ChangelogResult, personality: Personalit
   } else if (personality === 'cheerleader') {
     lines.push(`  \u{1F389} Amazing work! ${result.stats.total} commits of pure awesomeness!`);
   } else if (personality === 'noir') {
-    lines.push(`  *flips through the records* ${result.stats.total} changes since last we spoke...`);
+    lines.push(
+      `  *flips through the records* ${result.stats.total} changes since last we spoke...`
+    );
   } else if (personality === 'executive') {
     lines.push(`  Executive Summary: ${result.stats.total} changes delivered.`);
   } else {
@@ -272,9 +293,13 @@ export function formatChangelog(result: ChangelogResult, personality: Personalit
   if (personality === 'roast') {
     lines.push(`  ${result.stats.features} features, ${result.stats.fixes} fixes. Could be worse.`);
   } else if (personality === 'cheerleader') {
-    lines.push(`  ${result.stats.features} features + ${result.stats.fixes} fixes = PROGRESS! \u{1F680}`);
+    lines.push(
+      `  ${result.stats.features} features + ${result.stats.fixes} fixes = PROGRESS! \u{1F680}`
+    );
   } else if (personality === 'executive') {
-    lines.push(`  Delivery metrics: ${result.stats.features} features, ${result.stats.fixes} defect resolutions.`);
+    lines.push(
+      `  Delivery metrics: ${result.stats.features} features, ${result.stats.fixes} defect resolutions.`
+    );
   } else {
     lines.push(`  ${result.stats.features} features, ${result.stats.fixes} bug fixes`);
   }

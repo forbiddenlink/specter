@@ -7,11 +7,11 @@
  */
 
 import path from 'node:path';
-import { Project, SyntaxKind, type SourceFile, type Node } from 'ts-morph';
-import { simpleGit, type SimpleGit } from 'simple-git';
-import type { KnowledgeGraph, GraphNode } from './graph/types.js';
-import { detectCycles, type CyclesResult } from './cycles.js';
-import { execute as findDeadCode, type DeadCodeResult } from './tools/get-dead-code.js';
+import { type SimpleGit, simpleGit } from 'simple-git';
+import { Project, type SourceFile, SyntaxKind } from 'ts-morph';
+import { type CyclesResult, detectCycles } from './cycles.js';
+import type { KnowledgeGraph } from './graph/types.js';
+import { type DeadCodeResult, execute as findDeadCode } from './tools/get-dead-code.js';
 
 // Types
 export type SuggestionSeverity = 'critical' | 'warning' | 'info';
@@ -54,7 +54,7 @@ function identifyExtractableBlocks(
 ): CodeBlock[] {
   const blocks: CodeBlock[] = [];
   const funcText = sourceFile.getFullText();
-  const lines = funcText.split('\n');
+  const _lines = funcText.split('\n');
 
   // Find control flow structures that could be extracted
   sourceFile.forEachDescendant((node) => {
@@ -130,9 +130,11 @@ function identifyExtractableBlocks(
           const parent = node.getParent();
 
           // Skip if parent is a function (we want inner blocks)
-          if (parent?.getKind() === SyntaxKind.FunctionDeclaration ||
-              parent?.getKind() === SyntaxKind.ArrowFunction ||
-              parent?.getKind() === SyntaxKind.MethodDeclaration) {
+          if (
+            parent?.getKind() === SyntaxKind.FunctionDeclaration ||
+            parent?.getKind() === SyntaxKind.ArrowFunction ||
+            parent?.getKind() === SyntaxKind.MethodDeclaration
+          ) {
             break;
           }
 
@@ -174,10 +176,12 @@ function guessBlockName(prefix: string, content: string): string {
     .trim()
     .split(/\s+/)
     .slice(0, 2)
-    .map((w, i) => i === 0 ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .map((w, i) =>
+      i === 0 ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+    )
     .join('');
 
-  return prefix + clean.charAt(0).toUpperCase() + clean.slice(1) || prefix + 'Block';
+  return prefix + clean.charAt(0).toUpperCase() + clean.slice(1) || `${prefix}Block`;
 }
 
 /**
@@ -185,17 +189,16 @@ function guessBlockName(prefix: string, content: string): string {
  */
 function deduplicateBlocks(blocks: CodeBlock[]): CodeBlock[] {
   // Sort by size (largest first)
-  const sorted = [...blocks].sort((a, b) =>
-    (b.endLine - b.startLine) - (a.endLine - a.startLine)
-  );
+  const sorted = [...blocks].sort((a, b) => b.endLine - b.startLine - (a.endLine - a.startLine));
 
   const result: CodeBlock[] = [];
 
   for (const block of sorted) {
-    const overlaps = result.some(existing =>
-      (block.startLine >= existing.startLine && block.startLine <= existing.endLine) ||
-      (block.endLine >= existing.startLine && block.endLine <= existing.endLine) ||
-      (block.startLine <= existing.startLine && block.endLine >= existing.endLine)
+    const overlaps = result.some(
+      (existing) =>
+        (block.startLine >= existing.startLine && block.startLine <= existing.endLine) ||
+        (block.endLine >= existing.startLine && block.endLine <= existing.endLine) ||
+        (block.startLine <= existing.startLine && block.endLine >= existing.endLine)
     );
 
     if (!overlaps) {
@@ -217,12 +220,7 @@ async function getFileBusFactor(
   const git: SimpleGit = simpleGit(rootDir);
 
   try {
-    const rawLog = await git.raw([
-      'log',
-      '--format=%an',
-      '--follow',
-      filePath,
-    ]);
+    const rawLog = await git.raw(['log', '--format=%an', '--follow', filePath]);
 
     const authors = rawLog.trim().split('\n').filter(Boolean);
     const authorCounts = new Map<string, number>();
@@ -240,7 +238,7 @@ async function getFileBusFactor(
       .sort((a, b) => b.percentage - a.percentage);
 
     // Bus factor = number of people with >= 20% contribution
-    const significantContributors = contributors.filter(c => c.percentage >= 20);
+    const significantContributors = contributors.filter((c) => c.percentage >= 20);
     const busFactor = Math.max(1, significantContributors.length);
 
     return { busFactor, contributors: contributors.slice(0, 5) };
@@ -254,8 +252,8 @@ async function getFileBusFactor(
  */
 function getFileCycles(filePath: string, cyclesResult: CyclesResult): string[][] {
   return cyclesResult.cycles
-    .filter(cycle => cycle.files.includes(filePath))
-    .map(cycle => cycle.files);
+    .filter((cycle) => cycle.files.includes(filePath))
+    .map((cycle) => cycle.files);
 }
 
 /**
@@ -266,8 +264,8 @@ function getFileDeadExports(
   deadCodeResult: DeadCodeResult
 ): { name: string; line: number }[] {
   return deadCodeResult.items
-    .filter(item => item.filePath === filePath)
-    .map(item => ({ name: item.name, line: item.lineStart }));
+    .filter((item) => item.filePath === filePath)
+    .map((item) => ({ name: item.name, line: item.lineStart }));
 }
 
 /**
@@ -278,8 +276,8 @@ function analyzeFileComplexity(
   filePath: string
 ): Array<{ name: string; complexity: number; lineStart: number; lineEnd: number }> {
   return Object.values(graph.nodes)
-    .filter(n => n.filePath === filePath && n.type === 'function' && n.complexity !== undefined)
-    .map(n => ({
+    .filter((n) => n.filePath === filePath && n.type === 'function' && n.complexity !== undefined)
+    .map((n) => ({
       name: n.name,
       complexity: n.complexity!,
       lineStart: n.lineStart,
@@ -296,7 +294,7 @@ function getFileInfo(
   filePath: string
 ): { lineCount: number; importCount: number; exportCount: number } | null {
   const fileNode = Object.values(graph.nodes).find(
-    n => n.type === 'file' && n.filePath === filePath
+    (n) => n.type === 'file' && n.filePath === filePath
   ) as { lineCount?: number; importCount?: number; exportCount?: number } | undefined;
 
   if (!fileNode) return null;
@@ -313,13 +311,13 @@ function getFileInfo(
  */
 function suggestCycleBreak(cycle: string[], targetFile: string): string[] {
   const details: string[] = [];
-  const files = cycle.map(f => path.basename(f));
+  const files = cycle.map((f) => path.basename(f));
   const targetBase = path.basename(targetFile);
 
   // Find position in cycle
   const targetIdx = files.indexOf(targetBase);
   const nextFile = files[(targetIdx + 1) % files.length];
-  const prevFile = files[(targetIdx - 1 + files.length) % files.length];
+  const _prevFile = files[(targetIdx - 1 + files.length) % files.length];
 
   details.push(`Cycle: ${files.join(' -> ')} -> [loop]`);
   details.push('');
@@ -342,19 +340,15 @@ function suggestCycleBreak(cycle: string[], targetFile: string): string[] {
 /**
  * Suggest how to split a large file
  */
-function suggestFileSplit(
-  filePath: string,
-  graph: KnowledgeGraph,
-  lineCount: number
-): string[] {
+function suggestFileSplit(filePath: string, graph: KnowledgeGraph, lineCount: number): string[] {
   const details: string[] = [];
   const dir = path.dirname(filePath);
   const baseName = path.basename(filePath, path.extname(filePath));
 
   // Group functions/classes by likely concern
   const symbols = Object.values(graph.nodes)
-    .filter(n => n.filePath === filePath && n.type !== 'file')
-    .map(n => n.name);
+    .filter((n) => n.filePath === filePath && n.type !== 'file')
+    .map((n) => n.name);
 
   details.push(`This file has ${lineCount} lines - consider splitting.`);
   details.push('');
@@ -370,7 +364,9 @@ function suggestFileSplit(
 
   for (const [pattern, syms] of Object.entries(groups)) {
     if (syms.length >= 2) {
-      details.push(`    ${pattern}.ts    - ${syms.slice(0, 3).join(', ')}${syms.length > 3 ? '...' : ''}`);
+      details.push(
+        `    ${pattern}.ts    - ${syms.slice(0, 3).join(', ')}${syms.length > 3 ? '...' : ''}`
+      );
       fileNum++;
     }
   }
@@ -408,7 +404,12 @@ function groupSymbolsByPattern(symbols: string[]): Record<string, string[]> {
     const lower = sym.toLowerCase();
     if (lower.includes('type') || lower.includes('interface') || sym.match(/^I[A-Z]/)) {
       groups.types.push(sym);
-    } else if (lower.includes('helper') || lower.includes('util') || lower.includes('get') || lower.includes('is')) {
+    } else if (
+      lower.includes('helper') ||
+      lower.includes('util') ||
+      lower.includes('get') ||
+      lower.includes('is')
+    ) {
       groups.helpers.push(sym);
     } else if (lower.includes('handle') || lower.includes('on')) {
       groups.handlers.push(sym);
@@ -422,9 +423,7 @@ function groupSymbolsByPattern(symbols: string[]): Record<string, string[]> {
   }
 
   // Filter out empty groups
-  return Object.fromEntries(
-    Object.entries(groups).filter(([_, syms]) => syms.length > 0)
-  );
+  return Object.fromEntries(Object.entries(groups).filter(([_, syms]) => syms.length > 0));
 }
 
 /**
@@ -576,7 +575,7 @@ export async function generateFix(
       details: [
         'These exports are never imported elsewhere:',
         '',
-        ...fileDeadExports.map(e => `  - ${e.name} (line ${e.line})`),
+        ...fileDeadExports.map((e) => `  - ${e.name} (line ${e.line})`),
         '',
         'Suggested fix:',
         '  - Remove if truly unused, or',
@@ -619,9 +618,9 @@ export async function generateFix(
 
   // Calculate summary
   const summary = {
-    critical: suggestions.filter(s => s.severity === 'critical').length,
-    warning: suggestions.filter(s => s.severity === 'warning').length,
-    info: suggestions.filter(s => s.severity === 'info').length,
+    critical: suggestions.filter((s) => s.severity === 'critical').length,
+    warning: suggestions.filter((s) => s.severity === 'warning').length,
+    info: suggestions.filter((s) => s.severity === 'info').length,
     total: suggestions.length,
   };
 
@@ -645,8 +644,8 @@ export async function generateFixAll(
 
   // Get all files from the graph
   const files = Object.values(graph.nodes)
-    .filter(n => n.type === 'file')
-    .map(n => n.filePath);
+    .filter((n) => n.type === 'file')
+    .map((n) => n.filePath);
 
   for (const file of files) {
     const result = await generateFix(file, rootDir, graph, options);
@@ -706,19 +705,21 @@ export function formatFix(result: FixResult): string {
   lines.push('');
   lines.push(`  Analyzing: ${result.filePath}`);
   lines.push('');
-  lines.push('  ' + '\u2550'.repeat(58));
+  lines.push(`  ${'\u2550'.repeat(58)}`);
 
   if (result.suggestions.length === 0) {
     lines.push('');
     lines.push('  \u2705 No issues detected in this file!');
     lines.push('');
-    lines.push('  ' + '\u2550'.repeat(58));
+    lines.push(`  ${'\u2550'.repeat(58)}`);
     return lines.join('\n');
   }
 
   for (const suggestion of result.suggestions) {
     lines.push('');
-    lines.push(`  ${getSeverityEmoji(suggestion.severity)} ${getSeverityLabel(suggestion.severity)}: ${suggestion.title}`);
+    lines.push(
+      `  ${getSeverityEmoji(suggestion.severity)} ${getSeverityLabel(suggestion.severity)}: ${suggestion.title}`
+    );
     lines.push('');
 
     for (const detail of suggestion.details) {
@@ -729,7 +730,9 @@ export function formatFix(result: FixResult): string {
       lines.push('');
       for (let i = 0; i < suggestion.codeBlocks.length; i++) {
         const block = suggestion.codeBlocks[i];
-        lines.push(`     ${i + 1}. Lines ${block.startLine}-${block.endLine}: Extract to ${block.suggestedName}()`);
+        lines.push(
+          `     ${i + 1}. Lines ${block.startLine}-${block.endLine}: Extract to ${block.suggestedName}()`
+        );
         lines.push(`        ${block.description}`);
       }
     }
@@ -740,7 +743,7 @@ export function formatFix(result: FixResult): string {
     }
 
     lines.push('');
-    lines.push('  ' + '\u2500'.repeat(58));
+    lines.push(`  ${'\u2500'.repeat(58)}`);
   }
 
   // Summary
@@ -751,9 +754,9 @@ export function formatFix(result: FixResult): string {
   if (result.summary.info > 0) parts.push(`${result.summary.info} info`);
 
   lines.push(`  Summary: ${result.summary.total} suggestions (${parts.join(', ')})`);
-  lines.push('  Run: specter fix ' + result.filePath + ' --apply  (coming soon)');
+  lines.push(`  Run: specter fix ${result.filePath} --apply  (coming soon)`);
   lines.push('');
-  lines.push('  ' + '\u2550'.repeat(58));
+  lines.push(`  ${'\u2550'.repeat(58)}`);
   lines.push('');
 
   return lines.join('\n');
@@ -769,13 +772,13 @@ export function formatFixAll(results: FixResult[]): string {
   lines.push('');
   lines.push('  \u{1F527} SPECTER FIX SUGGESTIONS - ALL FILES');
   lines.push('');
-  lines.push('  ' + '\u2550'.repeat(58));
+  lines.push(`  ${'\u2550'.repeat(58)}`);
   lines.push('');
 
   if (results.length === 0) {
     lines.push('  \u2705 No issues detected in the codebase!');
     lines.push('');
-    lines.push('  ' + '\u2550'.repeat(58));
+    lines.push(`  ${'\u2550'.repeat(58)}`);
     return lines.join('\n');
   }
 
@@ -796,20 +799,20 @@ export function formatFixAll(results: FixResult[]): string {
   lines.push(`    \u{1F7E1} Warning:  ${totalWarning}`);
   lines.push(`    \u{1F480} Info:     ${totalInfo}`);
   lines.push('');
-  lines.push('  ' + '\u2500'.repeat(58));
+  lines.push(`  ${'\u2500'.repeat(58)}`);
   lines.push('');
 
   // List files with critical issues first
-  const criticalFiles = results.filter(r => r.summary.critical > 0);
-  const warningFiles = results.filter(r => r.summary.critical === 0 && r.summary.warning > 0);
-  const infoFiles = results.filter(r => r.summary.critical === 0 && r.summary.warning === 0);
+  const criticalFiles = results.filter((r) => r.summary.critical > 0);
+  const warningFiles = results.filter((r) => r.summary.critical === 0 && r.summary.warning > 0);
+  const infoFiles = results.filter((r) => r.summary.critical === 0 && r.summary.warning === 0);
 
   if (criticalFiles.length > 0) {
     lines.push('  \u{1F534} CRITICAL ISSUES');
     lines.push('');
     for (const result of criticalFiles.slice(0, 10)) {
       lines.push(`     ${result.filePath}`);
-      for (const sug of result.suggestions.filter(s => s.severity === 'critical').slice(0, 2)) {
+      for (const sug of result.suggestions.filter((s) => s.severity === 'critical').slice(0, 2)) {
         lines.push(`       - ${sug.title}`);
       }
     }
@@ -843,11 +846,11 @@ export function formatFixAll(results: FixResult[]): string {
     lines.push('');
   }
 
-  lines.push('  ' + '\u2500'.repeat(58));
+  lines.push(`  ${'\u2500'.repeat(58)}`);
   lines.push('');
   lines.push('  Run: specter fix <file> to see detailed suggestions');
   lines.push('');
-  lines.push('  ' + '\u2550'.repeat(58));
+  lines.push(`  ${'\u2550'.repeat(58)}`);
   lines.push('');
 
   return lines.join('\n');

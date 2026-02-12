@@ -8,7 +8,7 @@
  * 4. Mean Time to Recovery - Time to recover from failures
  */
 
-import { simpleGit, type SimpleGit } from 'simple-git';
+import { type SimpleGit, simpleGit } from 'simple-git';
 
 // Types
 export type PerformanceLevel = 'elite' | 'high' | 'medium' | 'low';
@@ -175,8 +175,7 @@ function calculateOverallLevel(metrics: {
     low: 1,
   };
 
-  const avgScore =
-    levels.reduce((sum, level) => sum + levelScores[level], 0) / levels.length;
+  const avgScore = levels.reduce((sum, level) => sum + levelScores[level], 0) / levels.length;
 
   if (avgScore >= 3.5) return 'elite';
   if (avgScore >= 2.5) return 'high';
@@ -227,10 +226,7 @@ export async function calculateDora(
 
   // Calculate weeks in analysis period
   const msPerWeek = 7 * 24 * 60 * 60 * 1000;
-  const weeksAnalyzed = Math.max(
-    1,
-    (endDate.getTime() - startDate.getTime()) / msPerWeek
-  );
+  const weeksAnalyzed = Math.max(1, (endDate.getTime() - startDate.getTime()) / msPerWeek);
 
   // Initialize raw data
   let deployCount = 0;
@@ -271,7 +267,7 @@ export async function calculateDora(
     commitCount = log.all.length;
 
     // Track commits that became part of releases
-    const tagCommits = new Map<string, Date>();
+    const _tagCommits = new Map<string, Date>();
 
     // For each tag, find when its commits were first authored
     for (const tag of tags.all) {
@@ -281,7 +277,9 @@ export async function calculateDora(
 
         if (tagDate >= startDate && tagDate <= endDate) {
           // Get commits in this tag that aren't in previous tag
-          const prevTag = await git.raw(['describe', '--tags', '--abbrev=0', `${tag}^`]).catch(() => '');
+          const prevTag = await git
+            .raw(['describe', '--tags', '--abbrev=0', `${tag}^`])
+            .catch(() => '');
           const range = prevTag.trim() ? `${prevTag.trim()}..${tag}` : tag;
 
           try {
@@ -291,8 +289,7 @@ export async function calculateDora(
               const [hash, dateStr] = line.split(' ');
               if (hash && dateStr) {
                 const commitDate = new Date(dateStr);
-                const leadTimeHours =
-                  (tagDate.getTime() - commitDate.getTime()) / (1000 * 60 * 60);
+                const leadTimeHours = (tagDate.getTime() - commitDate.getTime()) / (1000 * 60 * 60);
                 if (leadTimeHours >= 0 && leadTimeHours < 24 * 365) {
                   leadTimes.push(leadTimeHours);
                 }
@@ -352,8 +349,7 @@ export async function calculateDora(
           ) {
             const revertDate = new Date(commit.date);
             const fixDate = new Date(nextCommit.date);
-            const recoveryHours =
-              (fixDate.getTime() - revertDate.getTime()) / (1000 * 60 * 60);
+            const recoveryHours = (fixDate.getTime() - revertDate.getTime()) / (1000 * 60 * 60);
 
             if (recoveryHours > 0 && recoveryHours < 24 * 30) {
               recoveryTimes.push(recoveryHours);
@@ -363,7 +359,7 @@ export async function calculateDora(
         }
       }
     }
-  } catch (error) {
+  } catch (_error) {
     // Not a git repo or other error - return defaults
   }
 
@@ -459,7 +455,7 @@ function getLevelEmoji(level: PerformanceLevel): string {
 /**
  * Get level display text
  */
-function getLevelText(level: PerformanceLevel): string {
+function _getLevelText(level: PerformanceLevel): string {
   switch (level) {
     case 'elite':
       return 'ELITE';
@@ -506,8 +502,7 @@ function calculateEliteProgress(metrics: DoraMetrics): number {
     low: 25,
   };
 
-  const avgScore =
-    levels.reduce((sum, level) => sum + levelScores[level], 0) / levels.length;
+  const avgScore = levels.reduce((sum, level) => sum + levelScores[level], 0) / levels.length;
 
   return Math.round(avgScore);
 }
@@ -519,9 +514,9 @@ export function formatDora(metrics: DoraMetrics): string {
   const lines: string[] = [];
 
   // Header
-  lines.push('\u250F' + '\u2501'.repeat(51) + '\u2513');
+  lines.push(`\u250F${'\u2501'.repeat(51)}\u2513`);
   lines.push('\u2503  \uD83D\uDCCA DORA METRICS                                    \u2503');
-  lines.push('\u2517' + '\u2501'.repeat(51) + '\u251B');
+  lines.push(`\u2517${'\u2501'.repeat(51)}\u251B`);
   lines.push('');
 
   // Overall performance
@@ -529,16 +524,16 @@ export function formatDora(metrics: DoraMetrics): string {
   lines.push('');
 
   // Metrics table - column widths
-  const labelWidth = 23; // Width for metric labels
+  const _labelWidth = 23; // Width for metric labels
   const valueWidth = 18; // Width for value column
 
   lines.push('                          Your Team        Elite Target');
-  lines.push('  ' + '\u2500'.repeat(53));
+  lines.push(`  ${'\u2500'.repeat(53)}`);
 
   // Helper to truncate/pad values
   const formatValue = (val: string): string => {
     if (val.length > valueWidth) {
-      return val.slice(0, valueWidth - 1) + '\u2026'; // ellipsis
+      return `${val.slice(0, valueWidth - 1)}\u2026`; // ellipsis
     }
     return val.padEnd(valueWidth);
   };
@@ -549,30 +544,22 @@ export function formatDora(metrics: DoraMetrics): string {
     metrics.deploymentFrequency.value >= 1
       ? `${metrics.deploymentFrequency.value}/week`
       : `${(metrics.deploymentFrequency.value * 4).toFixed(1)}/month`;
-  lines.push(
-    `  ${dfEmoji} Deployment Frequency   ${formatValue(dfValue)}Multiple/day`
-  );
+  lines.push(`  ${dfEmoji} Deployment Frequency   ${formatValue(dfValue)}Multiple/day`);
 
   // Lead Time
   const ltEmoji = getLevelEmoji(metrics.leadTimeForChanges.level);
   const ltValue = metrics.leadTimeForChanges.description;
-  lines.push(
-    `  ${ltEmoji} Lead Time for Changes  ${formatValue(ltValue)}< 1 hour`
-  );
+  lines.push(`  ${ltEmoji} Lead Time for Changes  ${formatValue(ltValue)}< 1 hour`);
 
   // Change Failure Rate
   const cfrEmoji = getLevelEmoji(metrics.changeFailureRate.level);
   const cfrValue = `${metrics.changeFailureRate.value}%`;
-  lines.push(
-    `  ${cfrEmoji} Change Failure Rate    ${formatValue(cfrValue)}< 5%`
-  );
+  lines.push(`  ${cfrEmoji} Change Failure Rate    ${formatValue(cfrValue)}< 5%`);
 
   // MTTR
   const mttrEmoji = getLevelEmoji(metrics.meanTimeToRecovery.level);
   const mttrValue = metrics.meanTimeToRecovery.description;
-  lines.push(
-    `  ${mttrEmoji} Mean Time to Recovery  ${formatValue(mttrValue)}< 1 hour`
-  );
+  lines.push(`  ${mttrEmoji} Mean Time to Recovery  ${formatValue(mttrValue)}< 1 hour`);
 
   lines.push('');
 

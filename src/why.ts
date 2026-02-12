@@ -5,10 +5,10 @@
  * git history, comments, patterns, and relationships.
  */
 
-import { type SimpleGit, simpleGit } from 'simple-git';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type { KnowledgeGraph, GraphNode } from './graph/types.js';
+import { type SimpleGit, simpleGit } from 'simple-git';
+import type { GraphNode, KnowledgeGraph } from './graph/types.js';
 
 export interface WhyResult {
   file: string;
@@ -31,7 +31,11 @@ export interface WhyResult {
 /**
  * Detect patterns in a file based on its name, path, and content
  */
-function detectPatterns(filePath: string, fileNode: GraphNode | null, graph: KnowledgeGraph): string[] {
+function detectPatterns(
+  filePath: string,
+  fileNode: GraphNode | null,
+  graph: KnowledgeGraph
+): string[] {
   const patterns: string[] = [];
   const fileName = path.basename(filePath);
   const dirName = path.dirname(filePath);
@@ -110,7 +114,7 @@ function detectPatterns(filePath: string, fileNode: GraphNode | null, graph: Kno
   if (fileNode) {
     // Check if it's a heavily imported file (core module)
     const importedByCount = graph.edges.filter(
-      e => e.type === 'imports' && e.target === fileNode.id
+      (e) => e.type === 'imports' && e.target === fileNode.id
     ).length;
 
     if (importedByCount >= 10) {
@@ -121,7 +125,7 @@ function detectPatterns(filePath: string, fileNode: GraphNode | null, graph: Kno
 
     // Check if it exports many things (utility/barrel file)
     const exportCount = graph.edges.filter(
-      e => e.type === 'exports' && e.source === fileNode.id
+      (e) => e.type === 'exports' && e.source === fileNode.id
     ).length;
 
     if (exportCount >= 10) {
@@ -158,7 +162,7 @@ async function extractComments(filePath: string): Promise<string[]> {
         .replace(/^\s*\*\s?/gm, '')
         .trim()
         .split('\n')
-        .filter(line => !line.startsWith('@')) // Remove JSDoc tags for summary
+        .filter((line) => !line.startsWith('@')) // Remove JSDoc tags for summary
         .join(' ')
         .trim();
 
@@ -188,7 +192,12 @@ async function extractComments(filePath: string): Promise<string[]> {
         if (comment.length > 5 && !comment.startsWith('@')) {
           topComments.push(comment);
         }
-      } else if (!trimmed.startsWith('import') && !trimmed.startsWith('export') && trimmed.length > 0 && !inTopComment) {
+      } else if (
+        !trimmed.startsWith('import') &&
+        !trimmed.startsWith('export') &&
+        trimmed.length > 0 &&
+        !inTopComment
+      ) {
         break; // Stop at first non-comment, non-import line
       }
     }
@@ -226,8 +235,8 @@ export async function explainWhy(
   const relativePath = filePath.startsWith(rootDir)
     ? path.relative(rootDir, filePath)
     : filePath.startsWith('/')
-    ? path.relative(rootDir, filePath)
-    : filePath;
+      ? path.relative(rootDir, filePath)
+      : filePath;
 
   const absolutePath = path.join(rootDir, relativePath);
 
@@ -241,13 +250,14 @@ export async function explainWhy(
   }
 
   // Find the file node in the graph
-  const fileNode = Object.values(graph.nodes).find(
-    n => n.type === 'file' && (
-      n.filePath === relativePath ||
-      n.filePath === absolutePath ||
-      n.filePath.endsWith(relativePath)
-    )
-  ) || null;
+  const fileNode =
+    Object.values(graph.nodes).find(
+      (n) =>
+        n.type === 'file' &&
+        (n.filePath === relativePath ||
+          n.filePath === absolutePath ||
+          n.filePath.endsWith(relativePath))
+    ) || null;
 
   // Initialize result
   const result: WhyResult = {
@@ -313,7 +323,7 @@ export async function explainWhy(
 
     // Get major changes (commits with significant changes)
     try {
-      const log = await git.log({
+      const _log = await git.log({
         file: relativePath,
         maxCount: 20,
       });
@@ -329,8 +339,10 @@ export async function explainWhy(
       ]);
 
       const commitLines = commitDetails.split('\n');
-      let currentCommit: { hash: string; date: string; author: string; message: string } | null = null;
-      const majorCommits: Array<{ date: string; author: string; message: string; lines: number }> = [];
+      let currentCommit: { hash: string; date: string; author: string; message: string } | null =
+        null;
+      const majorCommits: Array<{ date: string; author: string; message: string; lines: number }> =
+        [];
 
       for (const line of commitLines) {
         if (line.includes('|') && line.split('|').length >= 4) {
@@ -366,7 +378,7 @@ export async function explainWhy(
       result.history.majorChanges = majorCommits
         .sort((a, b) => b.lines - a.lines)
         .slice(0, 5)
-        .map(c => ({
+        .map((c) => ({
           date: c.date,
           author: c.author,
           message: c.message,
@@ -437,12 +449,9 @@ export async function explainWhy(
         });
       }
       // Similar name (e.g., user.ts and user.test.ts)
-      else if (
-        nodeBase.includes(baseName) ||
-        baseName.includes(nodeBase)
-      ) {
+      else if (nodeBase.includes(baseName) || baseName.includes(nodeBase)) {
         const existingIndex = result.context.relatedFiles.findIndex(
-          r => r.file === node.filePath
+          (r) => r.file === node.filePath
         );
         if (existingIndex === -1 && result.context.relatedFiles.length < 5) {
           result.context.relatedFiles.push({
@@ -458,16 +467,24 @@ export async function explainWhy(
   result.summary = generateSummary(result);
 
   // Generate suggestions
-  if (result.context.importedBy.length === 0 && !relativePath.endsWith('.test.ts') && !relativePath.endsWith('.spec.ts')) {
+  if (
+    result.context.importedBy.length === 0 &&
+    !relativePath.endsWith('.test.ts') &&
+    !relativePath.endsWith('.spec.ts')
+  ) {
     result.suggestions.push('Not imported anywhere - might be dead code or an entry point.');
   }
 
   if (result.history.majorChanges.length >= 5) {
-    result.suggestions.push('Frequently modified file - consider if it has too many responsibilities.');
+    result.suggestions.push(
+      'Frequently modified file - consider if it has too many responsibilities.'
+    );
   }
 
   if (result.patterns.length === 0) {
-    result.suggestions.push('No standard pattern detected - consider if naming could be more descriptive.');
+    result.suggestions.push(
+      'No standard pattern detected - consider if naming could be more descriptive.'
+    );
   }
 
   if (result.comments.length === 0) {
@@ -492,7 +509,7 @@ function generateSummary(result: WhyResult): string {
   if (result.comments.length > 0) {
     const firstComment = result.comments[0];
     if (firstComment.length > 100) {
-      parts.push(firstComment.substring(0, 100) + '...');
+      parts.push(`${firstComment.substring(0, 100)}...`);
     } else {
       parts.push(firstComment);
     }
@@ -553,7 +570,7 @@ export function formatWhy(result: WhyResult): string {
 
   // Author's Notes
   if (result.comments.length > 0) {
-    lines.push('AUTHOR\'S NOTES');
+    lines.push("AUTHOR'S NOTES");
     lines.push('-'.repeat(50));
     for (const comment of result.comments.slice(0, 3)) {
       const wrapped = wrapText(comment, 50);
@@ -571,7 +588,7 @@ export function formatWhy(result: WhyResult): string {
   if (result.context.importedBy.length > 0) {
     const count = result.context.importedBy.length;
     const suffix = count === 1 ? '' : 's';
-    const desc = count >= 5 ? ' (it\'s a core module)' : '';
+    const desc = count >= 5 ? " (it's a core module)" : '';
     lines.push(`   * Imported by ${count} file${suffix}${desc}`);
     for (const imp of result.context.importedBy.slice(0, 3)) {
       lines.push(`     - ${imp.file}`);

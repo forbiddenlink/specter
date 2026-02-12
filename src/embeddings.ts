@@ -237,9 +237,7 @@ function generateNodeContent(
 
   // Add related node names (edges)
   const nodeId = `${node.filePath}::${node.name}`;
-  const relatedEdges = graph.edges.filter(
-    (e) => e.source === nodeId || e.target === nodeId
-  );
+  const relatedEdges = graph.edges.filter((e) => e.source === nodeId || e.target === nodeId);
   for (const edge of relatedEdges.slice(0, 10)) {
     // Limit to avoid huge content
     const relatedId = edge.source === nodeId ? edge.target : edge.source;
@@ -255,9 +253,7 @@ function generateNodeContent(
 /**
  * Build embedding index from knowledge graph
  */
-export async function buildEmbeddingIndex(
-  graph: KnowledgeGraph
-): Promise<EmbeddingIndex> {
+export async function buildEmbeddingIndex(graph: KnowledgeGraph): Promise<EmbeddingIndex> {
   const chunks: CodeChunk[] = [];
 
   // Extract chunks from all nodes
@@ -286,11 +282,7 @@ export async function buildEmbeddingIndex(
 
   // Generate embeddings for each chunk
   for (let i = 0; i < chunks.length; i++) {
-    chunks[i].embedding = generateTFIDFVector(
-      chunks[i].content,
-      vocabulary,
-      idf
-    );
+    chunks[i].embedding = generateTFIDFVector(chunks[i].content, vocabulary, idf);
   }
 
   return {
@@ -322,10 +314,7 @@ async function ensureSpecterDir(rootDir: string): Promise<string> {
 /**
  * Save embedding index to disk
  */
-export async function saveEmbeddingIndex(
-  rootDir: string,
-  index: EmbeddingIndex
-): Promise<void> {
+export async function saveEmbeddingIndex(rootDir: string, index: EmbeddingIndex): Promise<void> {
   const specterDir = await ensureSpecterDir(rootDir);
   const embeddingsPath = path.join(specterDir, EMBEDDINGS_FILE);
 
@@ -339,19 +328,13 @@ export async function saveEmbeddingIndex(
     })),
   };
 
-  await fs.writeFile(
-    embeddingsPath,
-    JSON.stringify(compressedIndex, null, 2),
-    'utf-8'
-  );
+  await fs.writeFile(embeddingsPath, JSON.stringify(compressedIndex, null, 2), 'utf-8');
 }
 
 /**
  * Compress embedding by storing only non-zero values
  */
-function compressEmbedding(
-  embedding: number[]
-): Array<[number, number]> | undefined {
+function compressEmbedding(embedding: number[]): Array<[number, number]> | undefined {
   if (!embedding || embedding.length === 0) {
     return undefined;
   }
@@ -369,10 +352,7 @@ function compressEmbedding(
 /**
  * Decompress sparse embedding back to dense vector
  */
-function decompressEmbedding(
-  sparse: Array<[number, number]> | undefined,
-  size: number
-): number[] {
+function decompressEmbedding(sparse: Array<[number, number]> | undefined, size: number): number[] {
   const embedding = new Array<number>(size).fill(0);
 
   if (!sparse) {
@@ -389,9 +369,7 @@ function decompressEmbedding(
 /**
  * Load embedding index from disk
  */
-export async function loadEmbeddingIndex(
-  rootDir: string
-): Promise<EmbeddingIndex | null> {
+export async function loadEmbeddingIndex(rootDir: string): Promise<EmbeddingIndex | null> {
   const specterDir = path.join(rootDir, SPECTER_DIR);
   const embeddingsPath = path.join(specterDir, EMBEDDINGS_FILE);
 
@@ -404,10 +382,7 @@ export async function loadEmbeddingIndex(
     const index: EmbeddingIndex = {
       ...compressed,
       chunks: compressed.chunks.map(
-        (chunk: {
-          embedding: Array<[number, number]> | undefined;
-          [key: string]: unknown;
-        }) => ({
+        (chunk: { embedding: Array<[number, number]> | undefined; [key: string]: unknown }) => ({
           ...chunk,
           embedding: decompressEmbedding(chunk.embedding, vocabSize),
         })
@@ -479,11 +454,7 @@ export function searchEmbeddingIndex(
   }
 
   // Generate query embedding
-  const queryEmbedding = generateTFIDFVector(
-    query,
-    index.vocabulary,
-    idfMap
-  );
+  const queryEmbedding = generateTFIDFVector(query, index.vocabulary, idfMap);
 
   // Calculate similarity with each chunk
   const results: SemanticSearchResult[] = [];

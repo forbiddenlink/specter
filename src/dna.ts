@@ -48,7 +48,7 @@ function generateHash(graph: KnowledgeGraph): string {
   let hash = 0;
   for (let i = 0; i < data.length; i++) {
     const char = data.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
+    hash = (hash << 5) - hash + char;
     hash = hash & hash;
   }
 
@@ -67,7 +67,7 @@ function generateHash(graph: KnowledgeGraph): string {
 /**
  * Generate DNA strand visualization
  */
-function generateStrand(hash: string, width: number = 40): string[] {
+function generateStrand(hash: string, _width: number = 40): string[] {
   const lines: string[] = [];
   const pairs = hash.split('');
 
@@ -89,7 +89,7 @@ function generateStrand(hash: string, width: number = 40): string[] {
     const pos2 = center + offset2;
 
     // Build the line
-    let line = ' '.repeat(helixWidth);
+    const line = ' '.repeat(helixWidth);
     const lineArr = line.split('');
 
     // Place base pairs
@@ -147,9 +147,8 @@ function analyzeTraits(graph: KnowledgeGraph): DNAProfile['traits'] {
   const complexities = Object.values(graph.nodes)
     .filter((n) => n.complexity !== undefined)
     .map((n) => n.complexity as number);
-  const avgComplexity = complexities.length > 0
-    ? complexities.reduce((a, b) => a + b, 0) / complexities.length
-    : 0;
+  const avgComplexity =
+    complexities.length > 0 ? complexities.reduce((a, b) => a + b, 0) / complexities.length : 0;
 
   let complexityLevel: string;
   let complexityGene: string;
@@ -186,8 +185,8 @@ function analyzeTraits(graph: KnowledgeGraph): DNAProfile['traits'] {
     langGene = '░█░█░';
     langDesc = 'Polyglot';
   }
-  const primaryLang = Object.entries(graph.metadata.languages)
-    .sort((a, b) => b[1] - a[1])[0]?.[0] || 'unknown';
+  const primaryLang =
+    Object.entries(graph.metadata.languages).sort((a, b) => b[1] - a[1])[0]?.[0] || 'unknown';
   traits.push({
     name: 'Language',
     value: `${primaryLang} (${langDesc})`,
@@ -195,9 +194,8 @@ function analyzeTraits(graph: KnowledgeGraph): DNAProfile['traits'] {
   });
 
   // Connectivity gene (based on edges/nodes ratio)
-  const connectivity = graph.metadata.nodeCount > 0
-    ? graph.metadata.edgeCount / graph.metadata.nodeCount
-    : 0;
+  const connectivity =
+    graph.metadata.nodeCount > 0 ? graph.metadata.edgeCount / graph.metadata.nodeCount : 0;
   let connectGene: string;
   let connectDesc: string;
   if (connectivity < 1) {
@@ -217,9 +215,8 @@ function analyzeTraits(graph: KnowledgeGraph): DNAProfile['traits'] {
   });
 
   // Code density gene (lines per file)
-  const density = graph.metadata.fileCount > 0
-    ? graph.metadata.totalLines / graph.metadata.fileCount
-    : 0;
+  const density =
+    graph.metadata.fileCount > 0 ? graph.metadata.totalLines / graph.metadata.fileCount : 0;
   let densityGene: string;
   let densityDesc: string;
   if (density < 50) {
@@ -297,7 +294,7 @@ export function formatDNA(profile: DNAProfile): string {
 
   // Traits
   lines.push('  GENETIC TRAITS');
-  lines.push('  ' + '─'.repeat(45));
+  lines.push(`  ${'─'.repeat(45)}`);
   for (const trait of profile.traits) {
     const nameCol = trait.name.padEnd(12);
     const geneCol = trait.gene.padEnd(10);
@@ -307,15 +304,15 @@ export function formatDNA(profile: DNAProfile): string {
 
   // Genome
   lines.push('  GENOME SIGNATURE');
-  lines.push('  ' + '─'.repeat(45));
+  lines.push(`  ${'─'.repeat(45)}`);
   lines.push(`  ${profile.genome}`);
   lines.push('');
 
   // Uniqueness statement
-  lines.push('  ' + '━'.repeat(45));
+  lines.push(`  ${'━'.repeat(45)}`);
   lines.push('  This genetic signature is unique to your codebase.');
   lines.push('  No two projects share the same DNA.');
-  lines.push('  ' + '━'.repeat(45));
+  lines.push(`  ${'━'.repeat(45)}`);
 
   return lines.join('\n');
 }

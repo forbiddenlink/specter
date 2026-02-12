@@ -11,9 +11,9 @@ import type { KnowledgeGraph } from './graph/types.js';
 export type CycleSeverity = 'low' | 'medium' | 'high';
 
 export interface Cycle {
-  files: string[];  // Files in the cycle, in order
+  files: string[]; // Files in the cycle, in order
   length: number;
-  severity: CycleSeverity;  // 2-3 nodes = low, 4-5 = medium, 6+ = high
+  severity: CycleSeverity; // 2-3 nodes = low, 4-5 = medium, 6+ = high
 }
 
 export interface CyclesResult {
@@ -151,9 +151,7 @@ function generateSuggestions(cycles: Cycle[]): string[] {
   }
 
   // Find the most common files in cycles
-  const sortedFiles = [...fileCounts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3);
+  const sortedFiles = [...fileCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3);
 
   if (sortedFiles.length > 0) {
     const [topFile, count] = sortedFiles[0];
@@ -166,7 +164,9 @@ function generateSuggestions(cycles: Cycle[]): string[] {
   const mediumSeverity = cycles.filter((c) => c.severity === 'medium').length;
 
   if (highSeverity > 0) {
-    suggestions.push('Focus on breaking long cycles first - they indicate deeper architectural issues');
+    suggestions.push(
+      'Focus on breaking long cycles first - they indicate deeper architectural issues'
+    );
   }
 
   if (cycles.length > 5) {
@@ -174,14 +174,18 @@ function generateSuggestions(cycles: Cycle[]): string[] {
   }
 
   if (cycles.some((c) => c.length === 2)) {
-    suggestions.push('2-file cycles can often be resolved by extracting shared logic to a third module');
+    suggestions.push(
+      '2-file cycles can often be resolved by extracting shared logic to a third module'
+    );
   }
 
   if (mediumSeverity > 3) {
     suggestions.push('Many medium cycles suggest the need for clearer module boundaries');
   }
 
-  suggestions.push('Use dependency injection or event-based patterns to decouple tightly coupled modules');
+  suggestions.push(
+    'Use dependency injection or event-based patterns to decouple tightly coupled modules'
+  );
 
   return suggestions;
 }
@@ -259,12 +263,12 @@ function formatFilePath(filePath: string, maxLen: number = 40): string {
 
   // Try to keep the filename and some path context
   if (fileName.length >= maxLen - 3) {
-    return '...' + fileName.slice(-(maxLen - 3));
+    return `...${fileName.slice(-(maxLen - 3))}`;
   }
 
   const remaining = maxLen - fileName.length - 4; // 4 for ".../"
   const pathPart = parts.join('/').slice(-remaining);
-  return '.../' + pathPart + '/' + fileName;
+  return `.../${pathPart}/${fileName}`;
 }
 
 /**
@@ -315,15 +319,16 @@ export function formatCycles(result: CyclesResult): string {
     lines.push('─'.repeat(50));
 
     const severityIcon =
-      result.worstCycle.severity === 'high' ? '🔴' :
-      result.worstCycle.severity === 'medium' ? '🟡' : '🟢';
+      result.worstCycle.severity === 'high'
+        ? '🔴'
+        : result.worstCycle.severity === 'medium'
+          ? '🟡'
+          : '🟢';
 
     lines.push(`  ${severityIcon} ${result.worstCycle.length} files in cycle:`);
 
     // Display the cycle as a chain
-    const cycleDisplay = result.worstCycle.files
-      .map((f) => formatFilePath(f, 35))
-      .join(' -> ');
+    const cycleDisplay = result.worstCycle.files.map((f) => formatFilePath(f, 35)).join(' -> ');
 
     // Wrap long lines
     const maxLineLen = 48;
@@ -334,9 +339,12 @@ export function formatCycles(result: CyclesResult): string {
       const word = words[i];
       const connector = i < words.length - 1 ? ' -> ' : '';
 
-      if (currentLine.length + word.length + connector.length > maxLineLen && currentLine !== '  ') {
+      if (
+        currentLine.length + word.length + connector.length > maxLineLen &&
+        currentLine !== '  '
+      ) {
         lines.push(currentLine);
-        currentLine = '    ' + word + connector;
+        currentLine = `    ${word}${connector}`;
       } else {
         currentLine += word + connector;
       }
@@ -344,7 +352,7 @@ export function formatCycles(result: CyclesResult): string {
 
     if (currentLine.trim()) {
       // Add arrow back to first file to show the cycle
-      lines.push(currentLine + ' -> [first]');
+      lines.push(`${currentLine} -> [first]`);
     }
     lines.push('');
   }

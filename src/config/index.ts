@@ -125,7 +125,8 @@ const ImpactAnalysisSchema = z.object({
       complexity: z.number().min(0).max(1).default(0.25),
       churn: z.number().min(0).max(1).default(0.15),
     })
-    .default({}),
+    .optional()
+    .default({ dependency: 0.35, coupling: 0.25, complexity: 0.25, churn: 0.15 }),
 });
 
 /**
@@ -142,7 +143,8 @@ const HealthSchema = z.object({
       c: z.number().min(0).max(100).default(70),
       d: z.number().min(0).max(100).default(60),
     })
-    .default({}),
+    .optional()
+    .default({ a: 90, b: 80, c: 70, d: 60 }),
   /** Threshold for trend direction change (default: 2) */
   trendChangeThreshold: z.number().min(0).max(20).default(2),
 });
@@ -164,28 +166,74 @@ const LimitsSchema = z.object({
  */
 const SpecterConfigSchema = z.object({
   /** Complexity thresholds for categorizing functions */
-  complexity: ComplexityThresholdsSchema.default({}),
+  complexity: ComplexityThresholdsSchema.optional().default({ low: 5, medium: 10, high: 20 }),
   /** Risk scoring configuration */
   risk: z
     .object({
-      weights: RiskWeightsSchema.default({}),
-      levels: RiskLevelsSchema.default({}),
-      filesChanged: FilesChangedThresholdsSchema.default({}),
-      linesChanged: LinesChangedThresholdsSchema.default({}),
+      weights: RiskWeightsSchema.optional().default({
+        filesChanged: 0.15,
+        linesChanged: 0.15,
+        complexityTouched: 0.25,
+        dependentImpact: 0.25,
+        busFactorRisk: 0.1,
+        testCoverage: 0.1,
+      }),
+      levels: RiskLevelsSchema.optional().default({ low: 25, medium: 50, high: 75 }),
+      filesChanged: FilesChangedThresholdsSchema.optional().default({
+        small: 3,
+        moderate: 10,
+        large: 20,
+      }),
+      linesChanged: LinesChangedThresholdsSchema.optional().default({
+        minor: 50,
+        moderate: 200,
+        significant: 500,
+        large: 1000,
+      }),
     })
-    .default({}),
+    .optional()
+    .default({
+      weights: {
+        filesChanged: 0.15,
+        linesChanged: 0.15,
+        complexityTouched: 0.25,
+        dependentImpact: 0.25,
+        busFactorRisk: 0.1,
+        testCoverage: 0.1,
+      },
+      levels: { low: 25, medium: 50, high: 75 },
+      filesChanged: { small: 3, moderate: 10, large: 20 },
+      linesChanged: { minor: 50, moderate: 200, significant: 500, large: 1000 },
+    }),
   /** Dashboard server configuration */
-  dashboard: DashboardSchema.default({}),
+  dashboard: DashboardSchema.optional().default({ port: 3333, host: 'localhost' }),
   /** History/snapshots configuration */
-  history: HistorySchema.default({}),
+  history: HistorySchema.optional().default({ maxSnapshots: 100 }),
   /** Git analysis configuration */
-  git: GitSchema.default({}),
+  git: GitSchema.optional().default({
+    maxCommitsPerFile: 50,
+    maxCommitsForCoupling: 200,
+    minCouplingStrength: 0.3,
+    hotFileThreshold: 10,
+    batchSize: 10,
+  }),
   /** Impact analysis configuration */
-  impact: ImpactAnalysisSchema.default({}),
+  impact: ImpactAnalysisSchema.optional().default({
+    maxIndirectDepth: 2,
+    weights: { dependency: 0.35, coupling: 0.25, complexity: 0.25, churn: 0.15 },
+  }),
   /** Health scoring configuration */
-  health: HealthSchema.default({}),
+  health: HealthSchema.optional().default({
+    complexityMultiplier: 5,
+    grades: { a: 90, b: 80, c: 70, d: 60 },
+    trendChangeThreshold: 2,
+  }),
   /** Various limits and display options */
-  limits: LimitsSchema.default({}),
+  limits: LimitsSchema.optional().default({
+    defaultHotspotsLimit: 10,
+    maxReportHotspots: 20,
+    maxRiskFactorItems: 5,
+  }),
 });
 
 /**
