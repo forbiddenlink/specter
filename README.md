@@ -6,7 +6,7 @@
 
 <p align="center">
   A haunted code analysis tool that speaks <em>as</em> your codebase in first person.<br/>
-  45 commands. 11 personality modes. One ghost.
+  47 commands. 11 personality modes. One ghost.
 </p>
 
 ```
