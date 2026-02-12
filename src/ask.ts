@@ -234,6 +234,23 @@ const PERSONALITY_TEMPLATES: Record<PersonalityMode, {
     found: (subject, count) => `*whispers* ...${count} ${count === 1 ? 'trace' : 'traces'} of "${subject}" remain...`,
     closing: () => '*fading* ...remember me... *static*',
   },
+
+  executive: {
+    intro: (type, subject) => {
+      switch (type) {
+        case 'what-does': return `From a strategic perspective, ${subject} delivers the following value...`;
+        case 'where-is': return `${subject} is positioned within the architecture as follows...`;
+        case 'who-wrote': return `Key stakeholders and contributors for ${subject}:`;
+        case 'why-exists': return `The business case for ${subject}:`;
+        case 'how-works': return `Let me outline the operational mechanics of ${subject}...`;
+        case 'list': return `Portfolio overview for ${subject}:`;
+        default: return `Strategic analysis of ${subject}:`;
+      }
+    },
+    notFound: (subject) => `"${subject}" is not present in the current technical portfolio. This may represent a gap or opportunity.`,
+    found: (subject, count) => `Identified ${count} ${count === 1 ? 'asset' : 'assets'} related to "${subject}".`,
+    closing: () => 'Recommend reviewing these findings in the next planning cycle.',
+  },
 };
 
 /**

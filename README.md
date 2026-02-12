@@ -6,7 +6,7 @@
 
 <p align="center">
   A haunted code analysis tool that speaks <em>as</em> your codebase in first person.<br/>
-  47 commands. 11 personality modes. One ghost.
+  51 commands. 12 personality modes. One ghost.
 </p>
 
 ```
@@ -59,8 +59,8 @@ specter scan && specter health && specter morning
 | Category | Commands | What They Do |
 |----------|----------|--------------|
 | **Fun/Viral** | `roast`, `tinder`, `horoscope`, `wrapped`, `achievements`, `seance`, `dna`, `origin`, `confess`, `fortune`, `vitals`, `leaderboard` | Shareable, personality-driven entertainment + gamification |
-| **Daily Workflow** | `morning`, `precommit`, `tour`, `who`, `safe`, `danger`, `predict`, `reviewers`, `why`, `standup`, `fix` | Practical tools for everyday development |
-| **Deep Intelligence** | `drift`, `cycles`, `velocity`, `trajectory`, `knowledge-map`, `search`, `diagram`, `hotspots`, `bus-factor`, `dora`, `coupling`, `report`, `index`, `ask`, `cost` | Advanced analysis and metrics |
+| **Daily Workflow** | `morning`, `precommit`, `compare`, `tour`, `who`, `safe`, `danger`, `predict`, `reviewers`, `why`, `standup`, `fix` | Practical tools for everyday development |
+| **Deep Intelligence** | `drift`, `cycles`, `velocity`, `trajectory`, `knowledge-map`, `search`, `diagram`, `hotspots`, `bus-factor`, `dora`, `coupling`, `report`, `index`, `ask`, `cost`, `breaking-changes`, `changelog` | Advanced analysis and metrics |
 | **Setup & Core** | `init`, `init-hooks`, `scan`, `status`, `health`, `trends`, `risk`, `dashboard`, `clean` | Foundation commands |
 
 ---

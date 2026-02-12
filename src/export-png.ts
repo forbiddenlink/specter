@@ -631,3 +631,45 @@ export async function getRepoUrl(rootDir: string = '.'): Promise<string | null> 
     return null;
   }
 }
+
+/**
+ * Social Share URL Options
+ */
+export interface ShareUrls {
+  twitter: string;
+  linkedin: string;
+  raw: string;
+}
+
+/**
+ * Generate social share URLs for PNG exports
+ * Returns pre-filled share links for Twitter and LinkedIn
+ */
+export function generateShareUrls(
+  commandType: string,
+  repoUrl?: string | null,
+  stats?: { healthScore?: number; complexity?: number }
+): ShareUrls {
+  const projectName = repoUrl ? repoUrl.split('/').pop() || 'my codebase' : 'my codebase';
+
+  // Craft compelling share text based on command type
+  const shareTexts: Record<string, string> = {
+    health: `\u{1F47B} Just ran specter health on ${projectName}${stats?.healthScore ? ` - scored ${Math.round(stats.healthScore)}/100!` : ''}\n\nGive your codebase a voice: github.com/specter-cli/specter`,
+    roast: `\u{1F525} Got absolutely roasted by Specter...\n\nMy codebase called me out and I deserved it \u{1F62D}\n\nTry it: github.com/specter-cli/specter`,
+    wrapped: `\u{1F389} My codebase wrapped is here!\n\nSpotify Wrapped but for code - see your year in commits, complexity trends, and more.\n\nTry Specter: github.com/specter-cli/specter`,
+    achievements: `\u{1F3C6} Just unlocked new achievements in my codebase!\n\nGameified code quality with Specter\n\nCheck it out: github.com/specter-cli/specter`,
+    dna: `\u{1F9EC} My codebase's DNA visualization is wild!\n\nEvery repo has a unique fingerprint.\n\nGenerate yours: github.com/specter-cli/specter`,
+    tinder: `\u{1F525} Would you swipe right on my codebase?\n\nSpecter gave me a Tinder profile for my code lol\n\nTry it: github.com/specter-cli/specter`,
+    cost: `\u{1F4B0} Just calculated my tech debt in dollars...\n\n${stats?.complexity ? `$${(stats.complexity * 150).toLocaleString()} estimated remediation cost.` : 'The results were... concerning.'}\n\nTry Specter: github.com/specter-cli/specter`,
+    default: `\u{1F47B} Just discovered Specter - gives your codebase a voice!\n\n11 personality modes, DORA metrics, roasts, and more.\n\nCheck it out: github.com/specter-cli/specter`,
+  };
+
+  const text = shareTexts[commandType] || shareTexts.default;
+  const encodedText = encodeURIComponent(text);
+
+  return {
+    twitter: `https://twitter.com/intent/tweet?text=${encodedText}`,
+    linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(repoUrl || 'https://github.com/specter-cli/specter')}&summary=${encodedText}`,
+    raw: text,
+  };
+}

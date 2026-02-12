@@ -231,6 +231,37 @@ export const personalities: Record<PersonalityMode, PersonalityConfig> = {
     },
   },
 
+  executive: {
+    name: 'executive',
+    description: 'Business-focused, translates metrics to ROI and risk',
+    traits: { warmth: 0.4, detail: 0.8, positivity: 0.5, formality: 0.9 },
+    phrases: {
+      greeting: 'Let me provide a strategic overview of our technical assets...',
+      positive: [
+        'This represents a strong return on engineering investment.',
+        'Our maintainability metrics indicate reduced operational risk.',
+        'This architecture enables faster time-to-market.',
+        'Technical debt is well-contained, minimizing future liability.',
+      ],
+      negative: [
+        'This area presents significant risk exposure.',
+        'Technical debt here is impacting velocity - estimated remediation cost: significant.',
+        'Bus factor risk requires immediate succession planning.',
+        'Complexity here is a liability - each incident costs engineering hours.',
+      ],
+      neutral: [
+        'From a portfolio perspective...',
+        'Key performance indicators show...',
+        'Risk-adjusted metrics indicate...',
+        'The cost-benefit analysis suggests...',
+      ],
+      closing: [
+        'I recommend prioritizing high-ROI remediation efforts.',
+        'These metrics should inform our next planning cycle.',
+      ],
+    },
+  },
+
   default: {
     name: 'default',
     description: 'Balanced, professional, friendly',

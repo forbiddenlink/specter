@@ -85,17 +85,69 @@ function getFileNickname(filePath: string): string {
   return 'A Familiar Friend';
 }
 
+export type WrappedPeriod = 'year' | 'quarter' | 'month' | 'week';
+
+interface PeriodRange {
+  start: Date;
+  end: Date;
+  label: string;
+}
+
+/**
+ * Calculate date range for a given period
+ */
+function calculatePeriodRange(period: WrappedPeriod, year?: number, periodNum?: number): PeriodRange {
+  const now = new Date();
+  const targetYear = year || now.getFullYear();
+
+  switch (period) {
+    case 'week': {
+      // Last 7 days
+      const end = new Date();
+      const start = new Date();
+      start.setDate(start.getDate() - 7);
+      return { start, end, label: 'This Week' };
+    }
+    case 'month': {
+      const month = periodNum !== undefined ? periodNum - 1 : now.getMonth();
+      const start = new Date(targetYear, month, 1);
+      const end = new Date(targetYear, month + 1, 0);
+      const monthName = start.toLocaleDateString('en-US', { month: 'long' });
+      return { start, end, label: `${monthName} ${targetYear}` };
+    }
+    case 'quarter': {
+      const quarter = periodNum || Math.ceil((now.getMonth() + 1) / 3);
+      const startMonth = (quarter - 1) * 3;
+      const start = new Date(targetYear, startMonth, 1);
+      const end = new Date(targetYear, startMonth + 3, 0);
+      return { start, end, label: `Q${quarter} ${targetYear}` };
+    }
+    case 'year':
+    default: {
+      const start = new Date(targetYear, 0, 1);
+      const end = new Date(targetYear, 11, 31);
+      return { start, end, label: `${targetYear}` };
+    }
+  }
+}
+
 /**
  * Gather wrapped data from git history
  */
 export async function gatherWrappedData(
   graph: KnowledgeGraph,
   rootDir: string,
-  year?: number
+  options: { year?: number; period?: WrappedPeriod; periodNum?: number } = {}
 ): Promise<WrappedData> {
+  const { year, period = 'year', periodNum } = options;
   const codebaseName = graph.metadata.rootDir.split('/').pop() || 'unknown';
   const targetYear = year || new Date().getFullYear();
   const git: SimpleGit = simpleGit(rootDir);
+
+  // Calculate period range
+  const range = calculatePeriodRange(period, targetYear, periodNum);
+  const periodStart = range.start.toISOString().split('T')[0];
+  const periodEnd = range.end.toISOString().split('T')[0];
 
   // Check if git repo
   let isGitRepo = false;
@@ -103,14 +155,10 @@ export async function gatherWrappedData(
     await git.status();
     isGitRepo = true;
   } catch {
-    return createEmptyWrappedData(codebaseName, targetYear, graph);
+    return createEmptyWrappedData(codebaseName, targetYear, graph, range.label);
   }
 
-  // Date range for the year
-  const periodStart = `${targetYear}-01-01`;
-  const periodEnd = `${targetYear}-12-31`;
-
-  // Get all commits for the year
+  // Get all commits for the period
   let commits: Array<{
     hash: string;
     date: string;
@@ -119,9 +167,14 @@ export async function gatherWrappedData(
   }> = [];
 
   try {
+    const afterDate = new Date(range.start);
+    afterDate.setDate(afterDate.getDate() - 1);
+    const beforeDate = new Date(range.end);
+    beforeDate.setDate(beforeDate.getDate() + 1);
+
     const log = await git.log({
-      '--after': `${targetYear - 1}-12-31`,
-      '--before': `${targetYear + 1}-01-01`,
+      '--after': afterDate.toISOString().split('T')[0],
+      '--before': beforeDate.toISOString().split('T')[0],
     });
 
     commits = log.all.map((c) => ({
@@ -272,13 +325,14 @@ export async function gatherWrappedData(
 function createEmptyWrappedData(
   codebaseName: string,
   year: number,
-  graph: KnowledgeGraph
+  graph: KnowledgeGraph,
+  periodLabel?: string
 ): WrappedData {
   return {
     codebaseName,
     year,
-    periodStart: `${year}-01-01`,
-    periodEnd: `${year}-12-31`,
+    periodStart: periodLabel || `${year}-01-01`,
+    periodEnd: periodLabel || `${year}-12-31`,
     isGitRepo: false,
     totalCommits: 0,
     totalLinesAdded: 0,

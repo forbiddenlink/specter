@@ -24,6 +24,15 @@ function createSpinner(text: string): Ora {
   return spinner;
 }
 
+// Display share links after PNG export
+function showShareLinks(commandType: string, repoUrl?: string | null): void {
+  const shareUrls = generateShareUrls(commandType, repoUrl);
+  console.log();
+  console.log(chalk.bold.magenta('  📤 Share your results:'));
+  console.log(chalk.cyan(`     Twitter: `) + chalk.dim(shareUrls.twitter));
+  console.log(chalk.cyan(`     LinkedIn: `) + chalk.dim(shareUrls.linkedin));
+}
+
 import { generateComplexityReport, getComplexityEmoji } from './analyzers/complexity.js';
 import { buildKnowledgeGraph, getGraphStats } from './graph/builder.js';
 import {
@@ -46,7 +55,7 @@ import { coloredSparkline, healthBar } from './ui/index.js';
 import { calculateStats, checkAchievements, achievements } from './achievements.js';
 import { formatHoroscope, generateHoroscope } from './horoscope.js';
 import { gatherOriginData, generateOriginStory } from './origin.js';
-import { gatherWrappedData, formatWrapped } from './wrapped.js';
+import { gatherWrappedData, formatWrapped, type WrappedPeriod } from './wrapped.js';
 import { summonSpirits, formatSeance, listRecentlyDeleted } from './seance.js';
 import { generateReading, formatReading } from './fortune.js';
 import { generateDNA, formatDNA, generateBadge } from './dna.js';
@@ -60,7 +69,7 @@ import { generatePrediction, formatPrediction } from './predict.js';
 import { suggestReviewers, formatReviewers } from './reviewers.js';
 import { runPrecommitCheck, formatPrecommit } from './precommit.js';
 import { detectDrift, formatDrift } from './drift.js';
-import { exportToPng, formatAchievementsForExport, isPngExportAvailable, getRepoUrl } from './export-png.js';
+import { exportToPng, formatAchievementsForExport, isPngExportAvailable, getRepoUrl, generateShareUrls } from './export-png.js';
 import { detectCycles, formatCycles } from './cycles.js';
 import { analyzeVelocity, formatVelocity } from './velocity.js';
 import { projectTrajectory, formatTrajectory } from './trajectory.js';
@@ -88,6 +97,9 @@ import { calculateDora, formatDora } from './dora.js';
 import { analyzeCost, formatCost } from './cost.js';
 import { generateLeaderboard, formatLeaderboard } from './leaderboard.js';
 import { askCodebase, formatAsk } from './ask.js';
+import { compareBranches, formatCompare } from './compare.js';
+import { generateChangelog, formatChangelog } from './changelog.js';
+import { detectBreakingChanges, formatBreakingChanges } from './breaking-changes.js';
 import { generateFix, generateFixAll, formatFix, formatFixAll, type SuggestionSeverity } from './fix.js';
 import {
   initializeProject,
@@ -529,7 +541,7 @@ program
       const outputPath = await exportToPng(output, options.png, { qrUrl: qrUrl || undefined });
 
       spinner.succeed(`Image saved to ${outputPath}`);
-      console.log(chalk.dim('  Share your health report on social media! #SpecterHealth'));
+      showShareLinks('health', qrUrl);
       return;
     }
 
@@ -1425,7 +1437,7 @@ program
       const outputPath = await exportToPng(output, options.png, { qrUrl: qrUrl || undefined });
 
       spinner.succeed(`Image saved to ${outputPath}`);
-      console.log(chalk.dim('  Share your codebase profile on social media! #SpecterTinder'));
+      showShareLinks('tinder', qrUrl);
       return;
     }
 
@@ -1594,7 +1606,7 @@ program
       const outputPath = await exportToPng(output, options.png, { qrUrl: qrUrl || undefined });
 
       spinner.succeed(`Image saved to ${outputPath}`);
-      console.log(chalk.dim('  Share your roast on social media! #SpecterRoast'));
+      showShareLinks('roast', qrUrl);
       return;
     }
 
@@ -1884,7 +1896,7 @@ program
       const outputPath = await exportToPng(content, options.png, { qrUrl: qrUrl || undefined });
 
       spinner.succeed(`Image saved to ${outputPath}`);
-      console.log(chalk.dim('  Share your achievements on social media!'));
+      showShareLinks('achievements', qrUrl);
       return;
     }
 
@@ -2039,16 +2051,25 @@ program
 
 program
   .command('wrapped')
-  .description('Get your Spotify Wrapped-style yearly summary')
+  .description('Get your Spotify Wrapped-style summary (year, quarter, month, or week)')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
   .option('-y, --year <year>', 'Year to summarize (default: current year)')
+  .option('--period <period>', 'Period: year, quarter, month, week (default: year)', 'year')
+  .option('--quarter <n>', 'Quarter number (1-4) when period is quarter')
+  .option('--month <n>', 'Month number (1-12) when period is month')
   .option('--png <file>', 'Export as PNG image for sharing')
   .option('--qr', 'Add QR code linking to repo (with --png)')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
     const year = options.year ? parseInt(options.year, 10) : undefined;
+    const period = (options.period || 'year') as WrappedPeriod;
+    const periodNum = options.quarter ? parseInt(options.quarter, 10) :
+                      options.month ? parseInt(options.month, 10) : undefined;
 
-    const spinner = createSpinner('Unwrapping your year...');
+    const periodLabel = period === 'year' ? 'year' :
+                        period === 'quarter' ? `Q${periodNum || Math.ceil((new Date().getMonth() + 1) / 3)}` :
+                        period === 'month' ? 'month' : 'week';
+    const spinner = createSpinner(`Unwrapping your ${periodLabel}...`);
     spinner.start();
 
     const graph = await loadGraph(rootDir);
@@ -2058,7 +2079,7 @@ program
       return;
     }
 
-    const wrappedData = await gatherWrappedData(graph, rootDir, year);
+    const wrappedData = await gatherWrappedData(graph, rootDir, { year, period, periodNum });
     spinner.stop();
 
     const output = formatWrapped(wrappedData);
@@ -2078,7 +2099,7 @@ program
       const outputPath = await exportToPng(output, options.png, { qrUrl: qrUrl || undefined });
 
       pngSpinner.succeed(`Image saved to ${outputPath}`);
-      console.log(chalk.dim('  Share your year in code on social media! #SpecterWrapped'));
+      showShareLinks('wrapped', qrUrl);
       return;
     }
 
@@ -2300,7 +2321,7 @@ program
       const outputPath = await exportToPng(output, options.png, { qrUrl: qrUrl || undefined });
 
       pngSpinner.succeed(`Image saved to ${outputPath}`);
-      console.log(chalk.dim('  Share your codebase DNA on social media!'));
+      showShareLinks('dna', qrUrl);
       return;
     }
 
@@ -2841,6 +2862,172 @@ program
 
     // Exit with error code if high-risk changes detected
     if (exitCode && result.status === 'fail') {
+      process.exit(1);
+    }
+  });
+
+/**
+ * Compare command - branch health comparison
+ */
+program
+  .command('compare [branch]')
+  .description('Compare health between current branch and another branch (default: main)')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option(
+    '-p, --personality <mode>',
+    'Output personality: mentor, critic, roast, cheerleader, executive',
+    'default'
+  )
+  .option('--exit-code', 'Exit with code 1 if health decreased significantly')
+  .action(async (branch, options) => {
+    const rootDir = path.resolve(options.dir);
+    const compareBranch = branch || 'main';
+    const personality = options.personality as PersonalityMode;
+
+    const spinner = createSpinner(`Comparing with ${compareBranch}...`);
+    spinner.start();
+
+    const result = await compareBranches(rootDir, compareBranch);
+    spinner.stop();
+
+    const output = formatCompare(result, personality);
+
+    console.log();
+    for (const line of output.split('\n')) {
+      if (line.includes('PR HEALTH CHECK')) {
+        const color =
+          result.riskLevel === 'safe' ? chalk.bold.green :
+          result.riskLevel === 'caution' ? chalk.bold.yellow : chalk.bold.red;
+        console.log(color(`  ${line}`));
+      } else if (line.startsWith('\u2500')) {
+        console.log(chalk.dim(`  ${line}`));
+      } else if (line.includes('\u{1F4C8}') || line.includes('\u{1F389}') || line.includes('\u{1F7E2}')) {
+        console.log(chalk.green(`  ${line}`));
+      } else if (line.includes('\u{1F4C9}') || line.includes('\u{1F525}') || line.includes('\u{1F534}') || line.includes('\u{1F6A8}')) {
+        console.log(chalk.red(`  ${line}`));
+      } else if (line.includes('\u26A0\uFE0F')) {
+        console.log(chalk.yellow(`  ${line}`));
+      } else if (line.includes('\u{1F4C1}') || line.includes('\u{1F3AF}') || line.includes('\u{1F4AC}')) {
+        console.log(chalk.cyan(`  ${line}`));
+      } else {
+        console.log(`  ${line}`);
+      }
+    }
+    console.log();
+
+    // Exit with error code if health decreased significantly
+    if (options.exitCode && result.riskLevel === 'danger') {
+      process.exit(1);
+    }
+  });
+
+/**
+ * Changelog command - auto-generate release notes with personality
+ */
+program
+  .command('changelog')
+  .description('Auto-generate changelog from git history with personality')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('--since <date>', 'Start date (e.g., 2024-01-01 or "1 week ago")')
+  .option('--until <date>', 'End date (e.g., 2024-12-31)')
+  .option('--from-tag <tag>', 'Generate changelog since tag (e.g., v1.0.0)')
+  .option(
+    '-p, --personality <mode>',
+    'Output personality: mentor, critic, roast, cheerleader, executive, noir',
+    'default'
+  )
+  .action(async (options) => {
+    const rootDir = path.resolve(options.dir);
+    const personality = options.personality as PersonalityMode;
+
+    const spinner = createSpinner('Generating changelog...');
+    spinner.start();
+
+    const result = await generateChangelog(rootDir, {
+      since: options.since,
+      until: options.until,
+      fromTag: options.fromTag,
+    });
+    spinner.stop();
+
+    if (result.entries.length === 0) {
+      console.log(chalk.yellow('\n  No commits found in the specified range.\n'));
+      return;
+    }
+
+    const output = formatChangelog(result, personality);
+
+    console.log();
+    for (const line of output.split('\n')) {
+      if (line.includes('CHANGELOG')) {
+        console.log(chalk.bold.magenta(`  ${line}`));
+      } else if (line.startsWith('\u2500')) {
+        console.log(chalk.dim(`  ${line}`));
+      } else if (line.includes('BREAKING')) {
+        console.log(chalk.bold.red(`  ${line}`));
+      } else if (line.includes('NEW FEATURES') || line.includes('\u2728')) {
+        console.log(chalk.bold.green(`  ${line}`));
+      } else if (line.includes('BUG FIXES') || line.includes('\u{1F41B}')) {
+        console.log(chalk.bold.yellow(`  ${line}`));
+      } else if (line.includes('REFACTORING') || line.includes('\u{1F527}')) {
+        console.log(chalk.bold.cyan(`  ${line}`));
+      } else if (line.includes('CONTRIBUTORS') || line.includes('\u{1F465}')) {
+        console.log(chalk.bold.blue(`  ${line}`));
+      } else {
+        console.log(`  ${line}`);
+      }
+    }
+    console.log();
+  });
+
+/**
+ * Breaking Changes command - detect API breaking changes
+ */
+program
+  .command('breaking-changes [branch]')
+  .alias('breaking')
+  .description('Detect potential breaking changes compared to another branch')
+  .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option(
+    '-p, --personality <mode>',
+    'Output personality: mentor, critic, roast, cheerleader, executive',
+    'default'
+  )
+  .option('--exit-code', 'Exit with code 1 if breaking changes detected')
+  .action(async (branch, options) => {
+    const rootDir = path.resolve(options.dir);
+    const compareTo = branch || 'main';
+    const personality = options.personality as PersonalityMode;
+
+    const spinner = createSpinner(`Analyzing changes vs ${compareTo}...`);
+    spinner.start();
+
+    const result = await detectBreakingChanges(rootDir, compareTo);
+    spinner.stop();
+
+    const output = formatBreakingChanges(result, personality);
+
+    console.log();
+    for (const line of output.split('\n')) {
+      if (line.includes('BREAKING CHANGES ANALYSIS')) {
+        console.log(chalk.bold.magenta(`  ${line}`));
+      } else if (line.startsWith('\u2500')) {
+        console.log(chalk.dim(`  ${line}`));
+      } else if (line.includes('HIGH SEVERITY') || line.includes('\u{1F534}')) {
+        console.log(chalk.bold.red(`  ${line}`));
+      } else if (line.includes('MEDIUM SEVERITY') || line.includes('\u{1F7E1}')) {
+        console.log(chalk.bold.yellow(`  ${line}`));
+      } else if (line.includes('LOW SEVERITY') || line.includes('\u{1F7E2}')) {
+        console.log(chalk.bold.green(`  ${line}`));
+      } else if (line.includes('\u2705')) {
+        console.log(chalk.green(`  ${line}`));
+      } else {
+        console.log(`  ${line}`);
+      }
+    }
+    console.log();
+
+    if (options.exitCode && result.riskLevel === 'breaking') {
       process.exit(1);
     }
   });
@@ -3663,7 +3850,7 @@ program
       const outputPath = await exportToPng(output, options.png, { qrUrl: qrUrl || undefined });
 
         pngSpinner.succeed(`Image saved to ${outputPath}`);
-        console.log(chalk.dim('  Share your DORA metrics on social media! #SpecterDORA'));
+        showShareLinks('dora', qrUrl);
         return;
       }
 
@@ -3767,7 +3954,7 @@ program
       const outputPath = await exportToPng(output, options.png, { qrUrl: qrUrl || undefined });
 
         pngSpinner.succeed(`Image saved to ${outputPath}`);
-        console.log(chalk.dim('  Share your tech debt analysis! #SpecterCost'));
+        showShareLinks('cost', qrUrl);
         return;
       }
 
@@ -3854,7 +4041,7 @@ program
       const outputPath = await exportToPng(output, options.png, { qrUrl: qrUrl || undefined });
 
         pngSpinner.succeed(`Image saved to ${outputPath}`);
-        console.log(chalk.dim('  Share your leaderboard! #SpecterLeaderboard'));
+        showShareLinks('leaderboard', qrUrl);
         return;
       }
 

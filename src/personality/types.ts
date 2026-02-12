@@ -15,6 +15,7 @@ export type PersonalityMode =
   | 'roast'
   | 'dramatic'
   | 'ghost'
+  | 'executive'
   | 'default';
 
 export interface PersonalityConfig {
