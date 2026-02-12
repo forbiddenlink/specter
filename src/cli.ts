@@ -1354,6 +1354,7 @@ program
   .command('roast')
   .description('Get a comedic roast of your codebase')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
+  .option('--png <file>', 'Export as PNG image for sharing')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
@@ -1375,26 +1376,27 @@ program
 
     const stats = graph.metadata;
 
-    console.log();
-    console.log(chalk.bold.red('  ' + '\u{1F525} CODEBASE ROAST \u{1F525}'));
-    console.log();
-    console.log(chalk.italic('  Oh, you want feedback? Alright, let\'s see what we\'re working with...'));
-    console.log();
+    // Build output as array of lines
+    const lines: string[] = [];
+    lines.push('');
+    lines.push(chalk.bold.red('  \u{1F525} CODEBASE ROAST \u{1F525}'));
+    lines.push('');
+    lines.push(chalk.italic("  Oh, you want feedback? Alright, let's see what we're working with..."));
+    lines.push('');
 
     // Stats roast
-    console.log(chalk.bold.cyan('  \u{1F4CA} The Stats:'));
-    console.log(chalk.white(`  You have ${stats.fileCount} files. That's ${stats.fileCount} opportunities for bugs. Congratulations.`));
-    console.log(chalk.white(`  ${stats.totalLines.toLocaleString()} lines of code. That's a lot of places to hide mistakes.`));
-    console.log();
+    lines.push(chalk.bold.cyan('  \u{1F4CA} The Stats:'));
+    lines.push(chalk.white(`  You have ${stats.fileCount} files. That's ${stats.fileCount} opportunities for bugs. Congratulations.`));
+    lines.push(chalk.white(`  ${stats.totalLines.toLocaleString()} lines of code. That's a lot of places to hide mistakes.`));
+    lines.push('');
 
     // Hotspots roast
     if (report.hotspots.length > 0) {
-      console.log(chalk.bold.red('  \u{1F336}\u{FE0F} Hottest Takes:'));
+      lines.push(chalk.bold.red('  \u{1F336}\u{FE0F} Hottest Takes:'));
       for (const hotspot of report.hotspots.slice(0, 5)) {
         const fileName = hotspot.filePath.split('/').pop() || hotspot.filePath;
         let roastLine = '';
 
-        // Special roasts for common naming patterns
         if (fileName.includes('helper') || fileName.includes('util')) {
           roastLine = `Ah yes, the junk drawer of code. ${hotspot.complexity > 1 ? `${Object.values(graph.nodes).filter(n => n.filePath === hotspot.filePath && n.type === 'function').length} functions, 0 purpose.` : ''}`;
         } else if (fileName === 'index.ts' || fileName === 'index.js') {
@@ -1407,37 +1409,37 @@ program
           roastLine = `Complexity ${hotspot.complexity}. It's seen better days.`;
         }
 
-        console.log(chalk.yellow(`  \u{2022} ${hotspot.filePath}:${hotspot.lineStart}`));
-        console.log(chalk.dim(`    ${roastLine}`));
+        lines.push(chalk.yellow(`  \u{2022} ${hotspot.filePath}:${hotspot.lineStart}`));
+        lines.push(chalk.dim(`    ${roastLine}`));
       }
-      console.log();
+      lines.push('');
     }
 
     // Dead code roast
     if (deadCode.totalCount > 0) {
-      console.log(chalk.bold.gray('  \u{1F480} Dead Code:'));
-      console.log(chalk.white(`  You have ${deadCode.totalCount} unused exports. They're not dead, they're just waiting for someone to care.`));
-      console.log(chalk.dim(`  They'll keep waiting.`));
-      console.log();
+      lines.push(chalk.bold.gray('  \u{1F480} Dead Code:'));
+      lines.push(chalk.white(`  You have ${deadCode.totalCount} unused exports. They're not dead, they're just waiting for someone to care.`));
+      lines.push(chalk.dim("  They'll keep waiting."));
+      lines.push('');
     }
 
     // Bus factor roast
     if (busFactor.analyzed && busFactor.topOwners.length > 0) {
       const topOwner = busFactor.topOwners[0];
-      console.log(chalk.bold.magenta('  \u{1F47B} Bus Factor:'));
+      lines.push(chalk.bold.magenta('  \u{1F47B} Bus Factor:'));
       if (topOwner.percentage > 60) {
-        console.log(chalk.white(`  ${topOwner.name} owns ${topOwner.percentage}% of your codebase.`));
-        console.log(chalk.dim(`  Hope they like their job here. Forever.`));
+        lines.push(chalk.white(`  ${topOwner.name} owns ${topOwner.percentage}% of your codebase.`));
+        lines.push(chalk.dim('  Hope they like their job here. Forever.'));
       } else if (busFactor.overallBusFactor < 2) {
-        console.log(chalk.white(`  Overall bus factor: ${busFactor.overallBusFactor}. That's dangerously low.`));
-        console.log(chalk.dim(`  One sick day and it all falls apart.`));
+        lines.push(chalk.white(`  Overall bus factor: ${busFactor.overallBusFactor}. That's dangerously low.`));
+        lines.push(chalk.dim('  One sick day and it all falls apart.'));
       } else {
-        console.log(chalk.white(`  Bus factor ${busFactor.overallBusFactor}. At least ${Math.ceil(busFactor.overallBusFactor)} people need to win the lottery for this to be a problem.`));
+        lines.push(chalk.white(`  Bus factor ${busFactor.overallBusFactor}. At least ${Math.ceil(busFactor.overallBusFactor)} people need to win the lottery for this to be a problem.`));
       }
-      console.log();
+      lines.push('');
     }
 
-    // Naming roasts - check for common bad patterns
+    // Naming roasts
     const suspiciousFiles = Object.values(graph.nodes)
       .filter(n => n.type === 'file')
       .filter(n => {
@@ -1446,34 +1448,56 @@ program
       });
 
     if (suspiciousFiles.length > 0) {
-      console.log(chalk.bold.yellow('  \u{1F914} Naming Crimes:'));
+      lines.push(chalk.bold.yellow('  \u{1F914} Naming Crimes:'));
       for (const file of suspiciousFiles.slice(0, 3)) {
         const name = file.filePath.split('/').pop();
-        console.log(chalk.white(`  \u{2022} ${file.filePath}`));
+        lines.push(chalk.white(`  \u{2022} ${file.filePath}`));
         if (name?.includes('helper')) {
-          console.log(chalk.dim(`    "Helpers" - the universal sign for "I gave up on naming things"`));
+          lines.push(chalk.dim('    "Helpers" - the universal sign for "I gave up on naming things"'));
         } else if (name?.includes('util')) {
-          console.log(chalk.dim(`    "Utils" - where functions go to be forgotten`));
+          lines.push(chalk.dim('    "Utils" - where functions go to be forgotten'));
         } else if (name?.includes('misc')) {
-          console.log(chalk.dim(`    "Misc" - at least you're honest about the chaos`));
+          lines.push(chalk.dim('    "Misc" - at least you\'re honest about the chaos'));
         } else {
-          console.log(chalk.dim(`    This name screams "I'll refactor later"`));
+          lines.push(chalk.dim('    This name screams "I\'ll refactor later"'));
         }
       }
-      console.log();
+      lines.push('');
     }
 
     // Complexity distribution roast
     if (report.distribution.veryHigh > 0) {
-      console.log(chalk.bold.red('  \u{1F4A3} Complexity Crimes:'));
-      console.log(chalk.white(`  ${report.distribution.veryHigh} functions have complexity over 20.`));
-      console.log(chalk.dim(`  These aren't functions, they're escape rooms.`));
-      console.log();
+      lines.push(chalk.bold.red('  \u{1F4A3} Complexity Crimes:'));
+      lines.push(chalk.white(`  ${report.distribution.veryHigh} functions have complexity over 20.`));
+      lines.push(chalk.dim("  These aren't functions, they're escape rooms."));
+      lines.push('');
     }
 
     // Final mic drop
-    console.log(chalk.bold.red('  \u{1F3A4} *drops mic*'));
-    console.log();
+    lines.push(chalk.bold.red('  \u{1F3A4} *drops mic*'));
+    lines.push('');
+
+    const output = lines.join('\n');
+
+    // PNG export
+    if (options.png) {
+      const pngAvailable = await isPngExportAvailable();
+      if (!pngAvailable) {
+        console.log(chalk.red('PNG export requires the canvas package. Install with: npm install canvas'));
+        return;
+      }
+
+      const spinner = createSpinner('Generating shareable roast image...');
+      spinner.start();
+
+      const outputPath = await exportToPng(output, options.png);
+
+      spinner.succeed(`Image saved to ${outputPath}`);
+      console.log(chalk.dim('  Share your roast on social media! #SpecterRoast'));
+      return;
+    }
+
+    console.log(output);
   });
 
 /**
@@ -1687,10 +1711,15 @@ program
 
     // Open browser (macOS/Linux/Windows)
     if (options.open !== false) {
-      const { exec } = await import('node:child_process');
+      const { execFile } = await import('node:child_process');
       const platform = process.platform;
-      const command = platform === 'darwin' ? 'open' : platform === 'win32' ? 'start' : 'xdg-open';
-      exec(`${command} ${url}`);
+      if (platform === 'darwin') {
+        execFile('open', [url]);
+      } else if (platform === 'win32') {
+        execFile('cmd', ['/c', 'start', '', url]);
+      } else {
+        execFile('xdg-open', [url]);
+      }
     }
 
     console.log(chalk.dim('  Press Ctrl+C to stop'));
@@ -3498,6 +3527,7 @@ program
   .description('Calculate DORA metrics for software delivery performance')
   .option('-d, --dir <path>', 'Directory to analyze', '.')
   .option('--since <period>', 'Time period to analyze', '6 months ago')
+  .option('--png <file>', 'Export as PNG image for sharing')
   .action(async (options) => {
     const rootDir = path.resolve(options.dir);
 
@@ -3509,6 +3539,24 @@ program
       spinner.stop();
 
       const output = formatDora(result);
+
+      // PNG export
+      if (options.png) {
+        const pngAvailable = await isPngExportAvailable();
+        if (!pngAvailable) {
+          console.log(chalk.red('PNG export requires the canvas package. Install with: npm install canvas'));
+          return;
+        }
+
+        const pngSpinner = createSpinner('Generating shareable image...');
+        pngSpinner.start();
+
+        const outputPath = await exportToPng(output, options.png);
+
+        pngSpinner.succeed(`Image saved to ${outputPath}`);
+        console.log(chalk.dim('  Share your DORA metrics on social media! #SpecterDORA'));
+        return;
+      }
 
       console.log();
       for (const line of output.split('\n')) {

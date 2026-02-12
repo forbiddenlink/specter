@@ -4,6 +4,7 @@
  * API endpoints for the web dashboard.
  */
 
+import path from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import { loadGraph } from '../graph/persistence.js';
 import { loadSnapshots } from '../history/storage.js';
@@ -83,7 +84,14 @@ export function registerApiRoutes(app: FastifyInstance, rootDir: string): void {
 
   // GET /api/file/:path - File details
   app.get('/api/file/*', async (request, reply) => {
-    const filePath = (request.params as { '*': string })['*'];
+    const rawPath = (request.params as { '*': string })['*'];
+
+    // Security: Reject path traversal attempts
+    if (rawPath.includes('..') || rawPath.startsWith('/')) {
+      return reply.code(400).send({ error: 'Invalid file path' });
+    }
+    const filePath = path.normalize(rawPath);
+
     const graph = await loadGraph(rootDir);
     if (!graph) return reply.code(404).send({ error: 'No graph found' });
 
