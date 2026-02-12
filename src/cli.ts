@@ -101,7 +101,8 @@ const program = new Command();
 program
   .name('specter')
   .description('Give your codebase a voice. Build a knowledge graph and talk to your code.')
-  .version('1.0.0');
+  .version('1.0.0')
+  .showSuggestionAfterError(true);
 
 /**
  * Scan command - builds the knowledge graph
