@@ -3,1385 +3,257 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/@purplegumdropz/specter"><img src="https://img.shields.io/npm/v/@purplegumdropz/specter.svg" alt="npm version"></a>
   <a href="https://github.com/forbiddenlink/specter/actions"><img src="https://github.com/forbiddenlink/specter/workflows/CI/badge.svg" alt="Build Status"></a>
-  <a href="https://codecov.io/gh/forbiddenlink/specter"><img src="https://codecov.io/gh/forbiddenlink/specter/branch/main/graph/badge.svg" alt="Coverage"></a>
   <a href="https://github.com/forbiddenlink/specter/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/@purplegumdropz/specter.svg" alt="License"></a>
-  <a href="https://github.com/forbiddenlink/specter"><img src="https://img.shields.io/github/stars/forbiddenlink/specter?style=social" alt="GitHub stars"></a>
-  <a href="https://securityscorecards.dev/viewer/?uri=github.com/forbiddenlink/specter"><img src="https://api.securityscorecards.dev/projects/github.com/forbiddenlink/specter/badge" alt="OpenSSF Scorecard"></a>
   <a href="https://www.npmjs.com/package/@purplegumdropz/specter"><img src="https://img.shields.io/npm/dm/@purplegumdropz/specter" alt="npm downloads"></a>
 </p>
 
 <p align="center">
-  <strong>Give your codebase a voice.</strong>
+  <strong>Give your codebase a voice.</strong><br/>
+  A code analysis CLI that speaks <em>as</em> your codebase in first person.<br/>
+  66 commands. 14 MCP tools. 12 personality modes. One ghost.
 </p>
-
-<p align="center">
-  A haunted code analysis tool that speaks <em>as</em> your codebase in first person.<br/>
-  63 commands. 12 personality modes. One ghost.
-</p>
-
-<p align="center">
-  📖 <a href="#documentation">Documentation</a> •
-  🆚 <a href="docs/COMPARISON.md">Why Specter?</a> •
-  🎯 <a href="docs/ACCESSIBILITY.md">Accessibility</a> •
-  🤖 <a href="#github-copilot-cli-integration">MCP Integration</a> •
-  🎬 <a href="#demo">Demo</a>
-</p>
-
-```
-$ specter health
-
-  ╔════════════════════════════════════════════════════════════╗
-  ║  SPECTER HEALTH REPORT                                     ║
-  ╠════════════════════════════════════════════════════════════╣
-  ║  Health Score:  78/100                                     ║
-  ║     [████████████████████████████░░░░░░░░░░░░]             ║
-  ╠════════════════════════════════════════════════════════════╣
-  ║  Complexity Distribution                                   ║
-  ║  ──────────────────────────────────────────────            ║
-  ║  Low (1-5)       [████████████████████]  142               ║
-  ║  Medium (6-10)   [██████░░░░░░░░░░░░░░]   38               ║
-  ║  High (11-20)    [██░░░░░░░░░░░░░░░░░░]   12               ║
-  ║  Critical (21+)  [░░░░░░░░░░░░░░░░░░░░]    2               ║
-  ╚════════════════════════════════════════════════════════════╝
-
-  "I'm feeling pretty good about myself. My complexity hotspots
-   are under control, though src/legacy/parser.ts keeps me up
-   at night..."
-```
-
----
-
-## 🤖 GitHub Copilot CLI Integration
-
-Specter works seamlessly with GitHub Copilot CLI as an MCP server:
-
-```bash
-# Add Specter to your Copilot CLI
-copilot mcp add specter -- npx @purplegumdropz/specter-mcp
-
-# Then use natural language
-copilot -p "Use specter to find complexity hotspots in my codebase"
-copilot -p "Use specter to roast my code"
-copilot -p "Use specter to show my DORA metrics"
-```
-
-**Also works with Claude Code and any MCP-compatible tool.**
 
 ---
 
 ## Quick Start
 
 ```bash
-# Install globally
+# Install
 npm install -g @purplegumdropz/specter
 
-# Initialize a new project (interactive setup)
-specter init
+# Scan your codebase
+specter scan
 
-# Or quick setup
-specter scan && specter health && specter morning
+# See your health report
+specter health
+
+# Get roasted
+specter roast
 ```
 
-**Three commands to understand any codebase:**
-
-1. `specter scan` - Build the knowledge graph
-2. `specter health` - See overall health and hotspots
-3. `specter morning` - Get your daily briefing
-
-### Quick Roast (No Install Required)
-
-Want to try Specter without installing? Get a brutal roast of any codebase:
+**Zero-install roast:**
 
 ```bash
-npx @purplegumdropz/specter-roast          # Normal roast
-npx @purplegumdropz/specter-roast --savage  # Maximum brutality
+npx @purplegumdropz/specter-roast
 ```
-
----
-
-## Documentation
-
-| Guide | Description |
-|-------|-------------|
-| 📘 [MCP Integration Guide](docs/MCP_INTEGRATION.md) | Complete guide to all 14 MCP tools with parameters and examples |
-| 💡 [MCP Example Prompts](docs/MCP_EXAMPLE_PROMPTS.md) | Real-world prompts for using Specter with AI assistants |
-| 🆚 [Comparison Guide](docs/COMPARISON.md) | How Specter compares to SonarQube, Code Climate, Snyk, and others |
-| ♿ [Accessibility Features](docs/ACCESSIBILITY.md) | Colorblind mode, screen reader support, and inclusive design |
-| 📸 [Screenshot Guide](docs/SCREENSHOT_GUIDE.md) | How to capture beautiful terminal screenshots |
-| ✅ [Contest Checklist](docs/CONTEST_CHECKLIST.md) | Readiness tracker and improvement roadmap |
-
----
-
-## Features at a Glance
-
-| Category | Commands | What They Do |
-|----------|----------|--------------|
-| **Fun/Viral** | `roast`, `tinder`, `horoscope`, `wrapped`, `achievements`, `seance`, `dna`, `origin`, `confess`, `fortune`, `vitals`, `leaderboard` | Shareable, personality-driven entertainment + gamification |
-| **Daily Workflow** | `morning`, `precommit`, `compare`, `tour`, `who`, `safe`, `danger`, `predict`, `reviewers`, `why`, `standup`, `fix`, `watch`, `review` | Practical tools for everyday development |
-| **Deep Intelligence** | `drift`, `cycles`, `velocity`, `trajectory`, `knowledge-map`, `search`, `diagram`, `hotspots`, `bus-factor`, `dora`, `coupling`, `report`, `index`, `ask`, `cost`, `breaking-changes`, `changelog` | Advanced analysis and metrics |
-| **Setup & Core** | `init`, `init-hooks`, `scan`, `status`, `health`, `trends`, `risk`, `dashboard`, `clean`, `demo` | Foundation commands |
-
----
-
-## Fun & Viral Commands
-
-### `specter roast`
-Get a comedic critique of your codebase.
-
-```
-$ specter roast
-
-  CODEBASE ROAST
-
-  "Oh, you call this a utils folder? It's more like a
-   graveyard for functions you were too afraid to delete.
-
-   Your helpers.ts has 47 exports. FORTY-SEVEN. That's not
-   a helper, that's a cry for help.
-
-   I've seen cleaner code in a jQuery plugin from 2009."
-```
-
-### `specter tinder`
-Generate a dating profile for your codebase.
-
-```
-$ specter tinder
-
-  CODEBASE DATING PROFILE
-
-  myproject/, 3 months old, TypeScript
-
-  "Healthy, well-maintained, and looking for developers
-   who appreciate clean code. I have 142 functions and
-   I know how to use them."
-
-  Green Flags:
-  • 94% TypeScript (I know my types)
-  • Health score 78 (I work out)
-  • No critical complexity (drama-free)
-
-  Red Flags:
-  • utils/ folder (some skeletons)
-  • Bus factor 1.2 (attachment issues)
-
-  [PASS]     [MERGE]
-```
-
-### `specter horoscope`
-Daily fortune based on your commit patterns.
-
-```
-$ specter horoscope
-
-  Your Code Horoscope for February 11
-
-  Aries Codebase Rising
-
-  "Mercury is in retrograde, and so are your dependencies.
-   Today is NOT the day to run npm update.
-
-   The stars align for refactoring src/utils/. Your lucky
-   function is processData(). Avoid touching anything in
-   the legacy/ folder."
-```
-
-### `specter wrapped`
-Spotify Wrapped-style yearly summary.
-
-```bash
-specter wrapped           # Terminal output
-specter wrapped --png     # Generate shareable image
-```
-
-### `specter achievements`
-Gamified badges for your codebase.
-
-```bash
-specter achievements           # View all unlocked badges
-specter achievements --png     # Generate shareable badge image
-```
-
-### `specter seance [query]`
-Commune with deleted files from git history.
-
-```
-$ specter seance "the old auth system"
-
-  SEANCE - Communing with Deleted Code
-
-  *static* ...I hear whispers from the git history...
-
-  Found 3 spirits matching "auth":
-
-  src/auth/legacy-login.ts (deleted 2024-08-15)
-  "I was removed in the great auth refactor. They said I
-   was too complex, but I WORKED. The new system still
-   doesn't handle edge cases like I did..."
-
-  src/middleware/session.ts (deleted 2024-06-22)
-  "I haunt the git history, waiting to be restored..."
-```
-
-### `specter dna`
-Generate a unique visual fingerprint for your codebase.
-
-```bash
-specter dna           # Terminal art
-specter dna --png     # Generate shareable image
-```
-
-### `specter origin`
-AI-generated origin story for your project.
-
-### `specter confess <file>`
-Files confess their sins.
-
-```
-$ specter confess src/utils/helpers.ts
-
-  FILE CONFESSION
-
-  "Forgive me, developer, for I have sinned...
-
-   I was supposed to be temporary. That was 18 months ago.
-   I have 47 exports, and I've lost track of what half of
-   them even do.
-
-   I import from 12 different modules. Some of them import
-   me back. It's complicated.
-
-   The formatDate function? I copied it from Stack Overflow
-   in 2023. The tests don't cover it."
-```
-
-### `specter fortune`
-Tarot-style code predictions.
-
-### `specter vitals`
-Real-time vital signs dashboard.
-
-```
-$ specter vitals
-
-  ╔═══════════════════════════════════════════════════╗
-  ║  SPECTER VITAL SIGNS              PULSE: STABLE   ║
-  ╠═══════════════════════════════════════════════════╣
-  ║                                                   ║
-  ║  HEALTH      [████████░░] 78/100   +3            ║
-  ║  COMPLEXITY  [████░░░░░░]  8 avg   healthy       ║
-  ║  BUS FACTOR  [██░░░░░░░░] 1.8      at risk       ║
-  ║  DEAD CODE   [█░░░░░░░░░]  5       haunted       ║
-  ║  COVERAGE    [██████░░░░] 62%      decent        ║
-  ╚═══════════════════════════════════════════════════╝
-```
-
-### `specter leaderboard`
-Team gamification - who's improving the codebase?
-
-```
-$ specter leaderboard
-
-  🏆 SPECTER LEADERBOARD
-
-  Who's improving the codebase?
-
-  ════════════════════════════════════════════════════════
-
-  🥇 #1  Alice Smith                              +320 pts
-      ████████████████████ Health Hero
-      12 commits │ -15 complexity │ +2 bus factor
-
-  🥈 #2  Bob Johnson                              +180 pts
-      ██████████░░░░░░░░░░ Code Guardian
-      8 commits │ -5 complexity │ +1 bus factor
-
-  🥉 #3  Charlie Brown                            +90 pts
-      █████░░░░░░░░░░░░░░░ Rising Star
-      6 commits │ +3 complexity │ 0 bus factor
-
-  ────────────────────────────────────────────────────────
-
-  📊 Team Stats (1/15/2026 - 2/12/2026):
-     Total commits: 26
-     Net complexity: -17 (improving!) 📈
-     Active contributors: 5
-```
-
-**Scoring:**
-- +10 pts per commit
-- +5 pts per complexity point reduced
-- -5 pts per complexity point added
-- +50 pts per bus factor improvement
-
-```bash
-specter leaderboard               # Last 30 days (default)
-specter leaderboard --since "7 days ago"
-specter leaderboard --limit 5     # Top 5 only
-```
-
----
-
-## Daily Workflow Commands
-
-### `specter morning`
-Start your day with a health briefing.
-
-```
-$ specter morning
-
-  Good morning! Here's your daily code briefing:
-
-  OVERNIGHT CHANGES
-  • 3 commits since yesterday
-  • 2 files touched in src/api/
-  • No new complexity hotspots
-
-  TODAY'S PRIORITIES
-  1. src/utils/parser.ts grew +15 complexity
-  2. Bus factor dropped in src/core/
-  3. Test coverage down 2%
-
-  WEATHER FORECAST
-  Partly cloudy with a chance of merge conflicts
-```
-
-### `specter precommit`
-Quick risk check before committing.
-
-```bash
-specter precommit              # Check staged changes
-specter precommit --exit-code  # Exit 1 if high-risk (for CI)
-```
-
-### `specter tour`
-Interactive walkthrough for new developers.
-
-```
-$ specter tour
-
-  Welcome to the Specter Guided Tour!
-
-  This codebase is a TypeScript project with 47 files.
-  Let me show you around...
-
-  ENTRY POINTS
-  • src/index.ts - Main entry point
-  • src/cli.ts - CLI interface
-
-  THE IMPORTANT PARTS
-  • src/graph/ - Where the magic happens
-  • src/analyzers/ - Code analysis engine
-
-  THE SCARY PARTS
-  • src/legacy/ - Here be dragons
-  • src/utils/helpers.ts - The junk drawer
-```
-
-### `specter who <file>`
-Find the experts for any file.
-
-```
-$ specter who src/graph/builder.ts
-
-  WHO KNOWS THIS FILE?
-
-  alice@company.com    ████████████████░░░░  78%
-  bob@company.com      ████░░░░░░░░░░░░░░░░  18%
-  charlie@company.com  █░░░░░░░░░░░░░░░░░░░   4%
-
-  Recommendation: Ask Alice. She wrote 78% of this file
-  and touched it 23 times in the last 6 months.
-```
-
-### `specter safe`
-Safe zones for new developers to start contributing.
-
-```
-$ specter safe
-
-  SAFE ZONES FOR NEW CONTRIBUTORS
-
-  These areas have low complexity, good test coverage,
-  and clear ownership:
-
-  src/ui/components/
-  • Complexity: 3.2 avg
-  • Coverage: 89%
-  • Bus factor: 3
-
-  src/utils/formatting.ts
-  • Complexity: 2.8 avg
-  • Coverage: 94%
-  • Bus factor: 2
-```
-
-### `specter danger`
-High-risk areas to avoid.
-
-### `specter predict`
-PR impact prediction before you submit.
-
-```
-$ specter predict
-
-  PR IMPACT PREDICTION
-
-  Based on your staged changes:
-
-  RISK LEVEL: MEDIUM
-
-  Files: 4 changed
-  Complexity Delta: +8
-  Affected Consumers: 12 files
-
-  ESTIMATED REVIEW TIME: 25 minutes
-
-  PREDICTED ISSUES:
-  • May break src/api/handlers.ts (imports changed)
-  • Test coverage will drop 3%
-
-  SUGGESTED REVIEWERS:
-  • alice@company.com (owns 3/4 files)
-  • bob@company.com (reviewed similar PRs)
-```
-
-### `specter reviewers`
-Suggest optimal PR reviewers.
-
-### `specter why <file>`
-Explain why code exists by analyzing git history, comments, and patterns.
-
-```
-$ specter why src/auth/session.ts
-
-  WHY DOES THIS CODE EXIST?
-
-  HISTORICAL CONTEXT:
-  • Created 8 months ago in commit 3a7f2e1
-  • "Refactor: Move session management to dedicated module"
-  • Initial commit had complex session logic from legacy auth.ts
-
-  GIT HISTORY ANALYSIS:
-  • Last touched 2 weeks ago
-  • 14 commits total, averaging 2 per month
-  • 3 authors have contributed
-
-  CODE PATTERNS & INTENT:
-  • Handles JWT token validation and refresh
-  • Manages user session state across requests
-  • Integrates with src/middleware/auth.ts
-
-  ARCHITECTURE ROLE:
-  This file is a critical session provider imported by 12 other files.
-  It bridges the authentication layer and API handlers.
-```
-
-### `specter standup`
-Daily standup summary - what changed overnight and what needs attention.
-
-```
-$ specter standup
-
-  DAILY STANDUP SUMMARY
-
-  OVERNIGHT CHANGES (Last 24 hours)
-  • 5 commits from 3 developers
-  • Files changed: src/api/ (3), src/utils/ (2)
-  • Total lines changed: +247 -89
-
-  WHAT TO KNOW TODAY:
-  1. src/api/handlers.ts grew +12 complexity (now at 24)
-  2. New file created: src/services/payment.ts
-  3. Bus factor in src/core/ dropped to 1.5
-
-  FILES TO REVIEW:
-  • src/api/handlers.ts - High complexity growth
-  • src/services/payment.ts - New code, no tests yet
-  • src/utils/validators.ts - 8 changes by 2 people
-
-  TODAY'S FOCUS:
-  Review new payment service before merging to main.
-```
-
-### `specter fix [file]`
-Actionable fix suggestions for detected issues - the bridge from analysis to action.
-
-```
-$ specter fix src/utils/helpers.ts
-
-  🔧 SPECTER FIX SUGGESTIONS
-
-  Analyzing: src/utils/helpers.ts
-
-  ══════════════════════════════════════════════════════════
-
-  🔴 CRITICAL: Function too complex (complexity: 28)
-
-     Function: processData() at line 45
-
-     Suggested fix:
-     Extract these code blocks into separate functions:
-
-     1. Lines 52-68: Extract to handleValidation()
-        Conditional block (if data.type === ...)
-     2. Lines 75-92: Extract to processItems()
-        Loop block with substantial logic
-     3. Lines 98-115: Extract to handleErrors()
-        Error handling block
-
-     Expected result: Complexity 28 -> ~7 per function
-
-  ──────────────────────────────────────────────────────────
-
-  🟡 WARNING: Low bus factor (1)
-
-     Only Alice has touched this file (95% of commits).
-
-     Suggested fix:
-       - Schedule a pairing session to share knowledge
-       - Add inline documentation for complex logic
-       - Create a README in this directory
-       - Consider code review rotations
-
-  ──────────────────────────────────────────────────────────
-
-  💀 INFO: Unused exports detected
-
-     These exports are never imported elsewhere:
-
-       - formatLegacy (line 142)
-       - helperV1 (line 203)
-
-     Suggested fix:
-       - Remove if truly unused, or
-       - Mark as @public if part of external API
-       - Add to index.ts if meant to be re-exported
-
-  ──────────────────────────────────────────────────────────
-
-  Summary: 3 suggestions (1 critical, 1 warning, 1 info)
-```
-
-**Detects and suggests fixes for:**
-- High complexity functions (with extractable code blocks)
-- Large files (with split suggestions)
-- Circular dependencies (with break strategies)
-- Dead/unused exports
-- Low bus factor (knowledge concentration)
-
-```bash
-specter fix src/utils/helpers.ts    # Single file
-specter fix                         # All files with issues
-specter fix --severity critical     # Only critical issues
-```
-
-### `specter fix --interactive`
-Apply fixes step-by-step interactively.
-
-```
-$ specter fix src/utils/helpers.ts --interactive
-
-  INTERACTIVE FIX MODE
-
-  src/utils/helpers.ts has 3 issues
-
-  ──────────────────────────────────────────────────────────
-
-  1/3 💀 CRITICAL: High complexity (37)
-
-     Function processData() is too complex
-
-     Suggested fix:
-       - Extract validation logic to validateInput()
-       - Extract transformation to transformData()
-       - Extract error handling to handleErrors()
-
-  Apply this fix? (y)es / (n)o / (s)kip all / (q)uit: y
-
-  ✓ Applied fix to line 142
-  
-  [AUTO-SAFE] Unused export removed automatically
-
-  ✓ Removed formatLegacy (line 203) - safe auto-fix
-
-  ──────────────────────────────────────────────────────────
-
-  Summary: 2 applied, 1 skipped
-```
-
-**Features:**
-- Step-by-step walkthrough of each issue
-- Auto-apply safe fixes (unused exports, dead code)
-- Skip or quit at any point  
-- Real AST transformations for safe edits
-
-```bash
-specter fix --interactive              # Interactive mode
-specter fix --interactive --auto-apply # Auto-apply safe fixes
-```
-
-### `specter watch`
-Real-time file monitoring with live analysis.
-
-```
-$ specter watch
-
-  👻 Specter is watching your files...
-  Press Ctrl+C to stop
-
-  [14:32:15] ✏️  src/api/handlers.ts changed (+23 lines)
-  [14:32:15] 📊 Complexity delta: +3
-  [14:32:15] ⚠️  Warning: Function complexity increased to 12
-
-  [14:33:02] ✏️  src/utils/parser.ts changed (+8 lines)
-  [14:33:02] ✨ Nice! Complexity decreased by 2
-
-  [14:35:19] ✏️  tests/api.test.ts changed (+45 lines)
-  [14:35:19] 🎯 Great! Test coverage increased
-
-  ──────────────────────────────────────────────────────────
-
-  Session Summary:
-  • Files changed: 3
-  • Lines added: 76
-  • Lines removed: 12
-  • Complexity delta: +1
-```
-
-**Features:**
-  - Live file monitoring with instant feedback
-- Complexity tracking per change
-- Session statistics on exit
-- Works with all 12 personality modes
-- Debouncing prevents spam
-
-```bash
-specter watch                        # Watch current directory
-specter watch --personality roast    # Watch with roast mode
-specter watch --debounce 1000        # 1 second debounce
-specter watch --all                  # Watch all files (not just git)
-```
-
-### `specter review`
-Review GitHub pull requests with risk analysis.
-
-```
-$ specter review --pr 123 --owner user --repo project --token $GITHUB_TOKEN
-
-  🔍 Reviewing PR #123 in user/project...
-
-  📝 Analyzing 8 changed files...
-
-  ✅ Review posted successfully!
-
-  ## 🔮 Specter PR Review
-
-  ### 📊 Change Summary
-
-  - **Files Changed**: 8
-  - **Lines Added**: +342
-  - **Lines Removed**: -87
-  - **Overall Risk**: 🟠 **HIGH**
-
-  ### 🎯 Risk Breakdown
-
-  - 🔴 **Critical Risk**: 1 file(s)
-  - 🟠 **High Risk**: 2 file(s)
-  - 🟡 **Medium Risk**: 3 file(s)
-  - 🟢 **Low Risk**: 2 file(s)
-
-  ### ⚠️ Files Requiring Extra Attention
-
-  #### 🔴 `src/auth/middleware.ts`
-
-  - Risk Level: **CRITICAL**
-  - Changes: +156/-23
-  - Recommendations:
-    - Extra security review recommended for critical path
-    - Consider adding tests for this change
-```
-
-**Features:**
-- Automated risk scoring by file
-- Complexity and size analysis
-- Security path detection (auth, payment, etc.)
-- Inline comments on high-risk files
-- Works with all 12 personality modes
-- JSON output for CI/CD
-
-```bash
-specter review --pr 123 --owner user --repo project --token $TOKEN
-specter review --pr 123 --owner user --repo project --inline  # Post inline comments
-specter review --pr 123 --owner user --repo project -p roast  # Roast mode
-specter review --pr 123 --owner user --repo project --json    # JSON for CI
-```
-
-**GitHub Actions Integration:**
-
-```yaml
-name: Specter PR Review
-on: pull_request
-
-jobs:
-  review:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - run: npx @purplegumdropz/specter scan
-      - run: npx @purplegumdropz/specter review --pr ${{ github.event.pull_request.number }} --owner ${{ github.repository_owner }} --repo ${{ github.event.repository.name }} --token ${{ secrets.GITHUB_TOKEN }} --inline
-```
-
----
-
-## Deep Intelligence Commands
-
-### `specter drift`
-Detect architecture drift from best practices.
-
-```
-$ specter drift
-
-  ARCHITECTURE DRIFT ANALYSIS
-
-  Your codebase has drifted 23% from ideal patterns.
-
-  VIOLATIONS:
-  • Circular dependency in src/core ←→ src/utils
-  • God object detected: src/services/main.ts (42 methods)
-  • Layer violation: UI imports directly from DB
-
-  RECOMMENDATIONS:
-  1. Extract shared utilities to break the cycle
-  2. Split main.ts into focused services
-  3. Add an API layer between UI and DB
-```
-
-### `specter cycles`
-Find circular dependencies.
-
-```bash
-specter cycles              # Detect cycles
-specter cycles --exit-code  # Exit 1 if cycles found (for CI)
-```
-
-### `specter velocity`
-Track complexity growth over time.
-
-### `specter trajectory`
-Project future health based on trends.
-
-### `specter knowledge-map` (alias: `kmap`)
-Team expertise heatmap.
-
-```
-$ specter kmap
-
-  TEAM EXPERTISE HEATMAP
-
-              alice  bob  charlie
-  src/core/     ███    ░░     ░░
-  src/api/      ██░    ██     ░░
-  src/utils/    ░░░    ███    ██
-  src/tests/    ░░░    ░░░    ███
-
-  Legend: ███ Expert  ██░ Familiar  ░░░ Unknown
-
-  RISK AREAS (Single Point of Failure):
-  • src/core/ - Only Alice knows this
-  • src/graph/ - Only Alice knows this
-```
-
-### `specter search "query"`
-Natural language code search.
-
-```
-$ specter search "authentication middleware"
-
-  SEARCH RESULTS
-
-  TOP MATCHES:
-
-  src/middleware/auth.ts          [████████░░] 89%
-  • Function: validateToken()
-  • Handles JWT validation and user lookup
-
-  src/api/routes/login.ts         [███████░░░] 72%
-  • Function: handleLogin()
-  • Uses auth middleware for session creation
-```
-
-### `specter index`
-Build TF-IDF embedding index for semantic search.
-
-```bash
-specter index              # Build full index
-specter index --force      # Rebuild from scratch
-specter index --watch      # Rebuild on file changes
-specter index --quiet      # Suppress progress output
-```
-
-This command creates a semantic search index that powers the `ask` command with fast, intelligent code understanding.
-
-### `specter ask "question"`
-Natural language Q&A with personality - the wow moment feature.
-
-Ask your codebase anything in plain English and get intelligent answers in your chosen personality.
-
-```bash
-specter ask "what does the auth system do"
-
-# Standard output:
-#   CODEBASE Q&A
-#
-#   Q: What does the auth system do?
-#
-#   A: The authentication system manages user identity verification
-#   and session management. It validates JWT tokens, handles login/logout,
-#   and enforces access control across API routes. Key files:
-#   • src/auth/session.ts - Session state management
-#   • src/middleware/auth.ts - Authentication middleware
-#   • src/api/routes/login.ts - Login handler
-```
-
-With personality:
-
-```bash
-specter ask "what does the auth system do" --personality noir
-
-  CODEBASE Q&A - NOIR MODE
-
-  Q: What does the auth system do?
-
-  A: "The auth system? *lights cigarette* That's where the secrets
-  live, kid. Tokens, sessions, access control. It's a gatekeeper,
-  see? Users can't get past without proving who they are.
-
-  The real players? session.ts handles the state, auth.ts does the
-  checking, and login.ts... well, that's where the deals happen.
-
-  Trust me, you don't want to mess with this stuff. It's the only
-  thing standing between your users and chaos."
-```
-
-Other personality examples:
-
-```bash
-specter ask "what does the auth system do" --personality mentor
-# Educational explanation of design choices
-
-specter ask "what does the auth system do" --personality cheerleader
-# Enthusiastic overview with highlights
-
-specter ask "what does the auth system do" --personality critic
-# Brutally honest assessment of implementation
-```
-
-### `specter diagram`
-Generate architecture diagrams.
-
-```bash
-specter diagram                    # Mermaid format (default)
-specter diagram --format d2        # D2 format
-specter diagram --format ascii     # ASCII art
-specter diagram --output arch.md   # Save to file
-specter diagram --focus src/api/   # Focus on specific area
-specter diagram --complexity       # Show complexity indicators
-```
-
-### `specter hotspots`
-Complexity x Churn analysis - find files that are both complex AND frequently changed.
-
-```
-$ specter hotspots
-
-  COMPLEXITY x CHURN ANALYSIS
-
-  SCATTER PLOT:
-
-  Complexity
-       ▲
-    30 │              ● src/utils/helpers.ts
-       │
-    20 │    ○ legacy.ts    ● parser.ts
-       │
-    10 │  ○ ○ ○    ○
-       │○ ○ ○ ○ ○ ○
-     0 └────────────────────────▶ Churn
-       0   5   10  15  20  25  30
-
-  TOP REFACTORING PRIORITIES:
-  1. src/utils/helpers.ts - Complexity: 28, Churn: 24
-  2. src/graph/parser.ts - Complexity: 22, Churn: 18
-```
-
-### `specter bus-factor` (alias: `bus`)
-Identify knowledge concentration risks.
-
-```bash
-specter bus-factor              # Full analysis
-specter bus-factor --critical-only  # Only show critical risks
-```
-
-### `specter dora`
-Calculate DORA metrics for software delivery performance.
-
-```
-$ specter dora
-
-  DORA METRICS
-
-  Overall Performance: HIGH
-
-  Deployment Frequency    [████████████████░░░░]  HIGH
-  Lead Time for Changes   [████████████░░░░░░░░]  MEDIUM
-  Change Failure Rate     [██████████████████░░]  HIGH
-  Time to Restore         [████████████████████]  ELITE
-
-  Compared to industry benchmarks, your team is
-  performing in the top 25% of engineering organizations.
-```
-
-### `specter coupling`
-Discover hidden couplings - files that change together but have no direct import.
-
-```bash
-specter coupling                    # All couplings
-specter coupling --hidden-only      # Only unexpected couplings
-specter coupling --min-strength 50  # Minimum 50% correlation
-```
-
-### `specter report`
-Generate comprehensive markdown report.
-
-```bash
-specter report                    # Full report to stdout
-specter report --output health.md # Save to file
-specter report --json             # JSON format for CI
-specter report --quick            # Executive summary only
-```
-
-### `specter cost`
-Estimate tech debt in dollar terms - the command that makes managers pay attention.
-
-```
-$ specter cost
-
-  💰 TECH DEBT COST ANALYSIS
-
-  Estimated Annual Cost: $47,520
-
-  ═══════════════════════════════════════════════════════════
-
-  TOP 5 MOST EXPENSIVE FILES:
-
-  1. src/utils/helpers.ts                           $8,640/year
-     │ Complexity: 28  │ Bus Factor: 1  │ Churn: High
-     └─ Maintenance: $4,320  │ Risk: $2,880  │ Training: $1,440
-
-  2. src/graph/parser.ts                            $6,480/year
-     │ Complexity: 22  │ Bus Factor: 2  │ Churn: Medium
-     └─ Maintenance: $3,240  │ Risk: $2,160  │ Training: $1,080
-
-  3. src/core/engine.ts                             $5,760/year
-     ...
-
-  ═══════════════════════════════════════════════════════════
-
-  QUICK WINS (Best ROI):
-
-  │ File                    │ Fix Cost │ Annual Savings │ ROI  │
-  ├─────────────────────────┼──────────┼────────────────┼──────┤
-  │ src/utils/helpers.ts    │ $2,400   │ $8,640         │ 260% │
-  │ src/legacy/auth.ts      │ $1,600   │ $4,320         │ 170% │
-
-  Methodology: Based on $75/hr developer rate, industry benchmarks
-  for maintenance overhead, bug introduction rates, and onboarding costs.
-```
-
-```bash
-specter cost                    # Default $75/hr rate
-specter cost --rate 100         # Custom hourly rate
-specter cost --currency EUR     # Euro currency
-specter cost --png cost.png     # Export for presentations
-```
-
----
-
-## Core Commands
-
-| Command | Description |
-|---------|-------------|
-| `specter init` | Interactive project setup wizard |
-| `specter init-hooks` | Install git hooks (`--husky`, `--simple`, or `--pre-commit`) |
-| `specter scan` | Build the knowledge graph |
-| `specter status` | Show graph freshness and stats |
-| `specter health` | Health report with complexity analysis |
-| `specter trends` | Historical health trends with sparklines |
-| `specter risk` | Analyze risk of staged changes |
-| `specter dashboard` | Launch interactive web visualization |
-| `specter clean` | Remove cached graph |
-
-### Common Options
-
-```bash
-# Most commands support these options:
---dir <path>          # Directory to analyze (default: .)
---personality <mode>  # Output personality mode
---exit-code          # Exit with code 1 on failure (for CI)
-```
-
----
-
-## Personality Modes
-
-Specter speaks in 11 distinct voices. Add `--personality <mode>` to any command:
-
-| Mode | Style | Example |
-|------|-------|---------|
-| `default` | Balanced, professional | "I'm concerned about my complexity hotspots..." |
-| `mentor` | Educational, explains why | "Let me walk you through why this matters..." |
-| `critic` | Harsh, points out flaws | "Frankly, this is a mess. Fix it." |
-| `historian` | Focuses on evolution | "My history shows this file has been troubled..." |
-| `cheerleader` | Positive, encouraging | "We're doing great! This is amazing!" |
-| `minimalist` | Brief, data-only | "Health: 78. Hotspots: 3. Done." |
-| `noir` | Detective mystery voice | "Something doesn't add up here. Follow the imports..." |
-| `therapist` | Gentle, understanding | "I sense some anxiety around this file. Let's explore why." |
-| `roast` | Brutal comedy | "This isn't code, it's a cry for help." |
-| `dramatic` | Epic narrator | "Alas, complexity has claimed another victim..." |
-| `ghost` | Deleted code voice | "*static* ...I am the code that was deleted..." |
-
-```bash
-# Examples
-specter health --personality cheerleader
-specter roast  # Uses roast personality by default
-specter seance "old auth"  # Uses ghost personality
-```
-
----
-
-## CI/CD Integration
-
-### GitHub Action
-
-Add Specter analysis to every PR:
-
-```yaml
-# .github/workflows/specter.yml
-name: Specter Analysis
-on: [pull_request]
-
-jobs:
-  analyze:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: forbiddenlink/specter@v1
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          personality: noir
-          fail-on-high-risk: true
-```
-
-**Outputs:**
-- `health-score` - Overall health (0-100)
-- `risk-level` - PR risk (low/medium/high/critical)
-- `review-minutes` - Estimated review time
-
-### Pre-commit Hook
-
-Using [pre-commit](https://pre-commit.com):
-
-```yaml
-# .pre-commit-config.yaml
-repos:
-  - repo: https://github.com/forbiddenlink/specter
-    rev: v1.0.0
-    hooks:
-      - id: specter-precommit  # Block high-risk commits
-      - id: specter-cycles     # Block circular dependencies
-      - id: specter-health     # Enforce health threshold
-```
-
-### Simple Git Hook
-
-```bash
-# Install with Husky
-specter init-hooks --husky
-
-# Or simple git hook
-specter init-hooks --simple
-```
-
-### CI Commands with Exit Codes
-
-```bash
-specter health --exit-code --threshold 70  # Fail if health < 70
-specter cycles --exit-code                 # Fail if cycles found
-specter precommit --exit-code              # Fail if high-risk
-```
-
-### JSON Output for CI/CD Pipelines
-
-All data commands support `--json` for machine-readable output:
-
-```bash
-specter health --json          # JSON health metrics
-specter risk --json            # JSON risk analysis
-specter hotspots --json        # JSON hotspot data
-specter dora --json            # JSON DORA metrics
-specter bus-factor --json      # JSON bus factor risks
-```
-
-Example output:
-
-```json
-{
-  "command": "health",
-  "timestamp": "2026-02-12T10:30:00.000Z",
-  "success": true,
-  "data": {
-    "healthScore": 78,
-    "totalFiles": 142,
-    "complexityDistribution": {...}
-  },
-  "meta": {
-    "personality": "default"
-  }
-}
-```
-
-Use in CI pipelines to extract metrics:
-
-```bash
-# Get health score as exit code
-HEALTH=$(specter health --json | jq '.data.healthScore')
-if [ "$HEALTH" -lt 70 ]; then exit 1; fi
-
-# Post metrics to dashboard
-specter dora --json | curl -X POST -d @- https://metrics.example.com/dora
-```
-
-**47 commands** support `--json` (all except interactive: `init`, `init-hooks`, `dashboard`)
 
 ---
 
 ## GitHub Copilot CLI Integration
 
-Specter integrates seamlessly with [GitHub Copilot CLI](https://github.com/github/copilot-cli) to provide AI-powered code analysis.
-
-### Prerequisites
+Specter works as an MCP server for GitHub Copilot CLI and any MCP-compatible tool:
 
 ```bash
-# Install GitHub Copilot CLI
-npm install -g @github/copilot
+# Add to Copilot CLI
+copilot mcp add specter -- npx @purplegumdropz/specter-mcp
 
-# Verify installation
-copilot --version
+# Then use natural language
+copilot -p "Use specter to find complexity hotspots in my codebase"
+copilot -p "Use specter to roast my code"
 ```
 
-### AI-Powered Commands
+**14 MCP tools** for file relationships, complexity hotspots, codebase summary, dead code detection, symbol search, call chains, architecture diagrams, change coupling, impact analysis, bus factor, code archaeology, health trends, and risk scoring.
 
+**6 MCP prompt templates**: `specter:introduce`, `specter:review`, `specter:onboard`, `specter:refactor-plan`, `specter:standup-summary`, `specter:health-check`
+
+**4 MCP resources**: `specter://summary`, `specter://health`, `specter://hotspots`, `specter://architecture`
+
+See the [MCP Integration Guide](docs/MCP_INTEGRATION.md) and [Example Prompts](docs/MCP_EXAMPLE_PROMPTS.md) for details.
+
+---
+
+## Commands
+
+### Core
 | Command | Description |
 |---------|-------------|
-| `specter ai-ask <question>` | Ask questions about your codebase with AI + Specter context |
-| `specter ai-commit` | Generate AI-powered commit messages from staged changes |
-| `specter explain-hotspot <file>` | Get AI explanation of why a file is a complexity hotspot |
-| `specter suggest-refactor <file>` | AI-powered refactoring suggestions |
+| `scan` | Build the knowledge graph from your codebase |
+| `health` | Health report with complexity distribution and hotspots |
+| `status` | Show graph freshness and stats |
+| `init` | Interactive project setup |
+| `init-hooks` | Install git hooks (Husky, simple, or pre-commit) |
+| `doctor` | Run environment diagnostics |
+| `clean` | Remove cached graph |
+| `demo` | Guided feature showcase with typewriter effects |
 
-### Example: AI-Powered Q&A
+### Analysis
+| Command | Description |
+|---------|-------------|
+| `hotspots` | Complexity x churn scatter plot with quadrant analysis |
+| `coupling` | Hidden couplings between files that change together |
+| `cycles` | Circular dependency detection |
+| `bus-factor` | Knowledge concentration risks |
+| `dora` | DORA metrics for delivery performance |
+| `cost` | Tech debt estimated in dollars |
+| `drift` | Detect diverged duplicate patterns |
+| `velocity` | Team velocity and productivity |
+| `trajectory` | Project future health from trends |
+| `trends` | Historical health trends with sparklines |
+| `risk` | Risk analysis for staged changes |
+| `vitals` | Codebase vital signs at a glance |
+| `report` | Comprehensive markdown report |
+| `diagram` | Architecture diagrams (ASCII, Mermaid, D2) |
+| `knowledge-map` | Team expertise heatmap |
+
+### Fun & Shareable
+| Command | Description |
+|---------|-------------|
+| `roast` | Comedic codebase roast with animated glitch intro |
+| `tinder` | Dating profile for your code (green/red flags) |
+| `horoscope` | Daily code horoscope based on commit patterns |
+| `fortune` | Tarot-style three-card spread |
+| `wrapped` | Spotify Wrapped-style year in review |
+| `dna` | Visual DNA double helix fingerprint |
+| `anthem` | Generate a theme song (8 genres, stats-driven lyrics) |
+| `fame` | Compare your codebase to famous open-source projects |
+| `origin` | AI-generated origin story |
+| `confess <file>` | Have a file confess its sins |
+| `obituary <file>` | Memorial for a file about to be deleted |
+| `seance` | Summon spirits of deleted code from git history |
+| `meme` | Generate a meme from your codebase metrics |
+| `blame-game` | Gamified blame awards ceremony |
+
+### Daily Workflow
+| Command | Description |
+|---------|-------------|
+| `morning` | Daily standup briefing with health and alerts |
+| `standup` | Generate standup notes from recent activity |
+| `precommit` | Quick risk check before committing |
+| `predict` | PR impact prediction |
+| `compare` | Branch health comparison |
+| `review <pr>` | AI-powered PR review (requires GITHUB_TOKEN) |
+| `reviewers` | Suggest optimal PR reviewers |
+| `who <file>` | Find the experts for any file |
+| `why <file>` | Explain why code exists from git history |
+| `safe` | Find safe zones for new contributors |
+| `danger` | Find high-risk danger zones |
+| `watch` | Real-time file monitoring with live analysis |
+| `tour` | Guided walkthrough for new developers |
+| `fix [file]` | Actionable fix suggestions with interactive mode |
+
+### Engagement
+| Command | Description |
+|---------|-------------|
+| `achievements` | Gamified badges (18 unlockable) |
+| `streaks` | Daily usage streaks with daily challenges |
+| `leaderboard` | Team gamification stats |
+
+### Search & AI
+| Command | Description |
+|---------|-------------|
+| `search <query>` | Semantic code search |
+| `ask <question>` | Natural language Q&A with personality |
+| `index` | Build TF-IDF embedding index |
+| `ai-ask` | AI-powered Q&A via GitHub Copilot CLI |
+| `ai-commit` | AI-generated commit messages |
+| `explain-hotspot` | AI explanation of complexity hotspots |
+| `suggest-refactor` | AI-powered refactoring suggestions |
+
+### Other
+| Command | Description |
+|---------|-------------|
+| `changelog` | Generate changelog from git commits |
+| `breaking-changes` | Detect potential breaking changes vs a branch |
+| `dashboard` | Launch interactive web visualization |
+
+---
+
+## Personality Modes
+
+Add `--personality <mode>` to any command:
+
+| Mode | Style |
+|------|-------|
+| `default` | Balanced, professional |
+| `mentor` | Educational, explains why |
+| `critic` | Harsh, points out flaws |
+| `historian` | Focuses on evolution |
+| `cheerleader` | Positive, encouraging |
+| `minimalist` | Brief, data-only |
+| `noir` | Detective mystery voice |
+| `therapist` | Gentle, understanding |
+| `roast` | Brutal comedy |
+| `dramatic` | Epic narrator |
+| `ghost` | Deleted code voice |
+
+---
+
+## CI/CD Integration
+
+### JSON Output
+
+All analysis commands support `--json` for machine-readable output:
 
 ```bash
-$ specter ai-ask "What are the most complex areas of this codebase?"
-
-🤖 GitHub Copilot says:
-
-Based on Specter's analysis:
-
-1. src/cli.ts (complexity: 53) - Main CLI with many commands
-2. src/who.ts (complexity: 47) - Expert finder with complex git analysis
-3. src/why.ts (complexity: 46) - History explanation engine
-
-These files handle complex logic and would benefit from refactoring...
+specter health --json
+specter scan --json
+specter hotspots --json
+specter dora --json
 ```
 
-### Example: AI Commit Messages
-
-```bash
-$ git add src/auth/
-$ specter ai-commit
-
-📝 Suggested Commit Message:
-
-refactor(auth): simplify token validation logic
-
-- Extract JWT verification to separate function
-- Add type guards for token payload
-- Remove deprecated session handling
-```
-
-### MCP Server for Copilot CLI
-
-Configure Specter as an MCP server for GitHub Copilot CLI:
-
-```bash
-# Add to ~/.copilot/mcp-config.json
+```json
 {
-  "mcpServers": {
-    "specter": {
-      "command": "npx",
-      "args": ["@purplegumdropz/specter-mcp"]
-    }
+  "command": "health",
+  "timestamp": "2026-02-13T10:30:00.000Z",
+  "success": true,
+  "data": {
+    "healthScore": 78,
+    "totalFiles": 142,
+    "complexityDistribution": { "low": 120, "medium": 15, "high": 5, "veryHigh": 2 }
   }
 }
 ```
 
-Then use Specter tools directly in Copilot CLI:
+### Health Gate
 
 ```bash
-copilot -i "Use specter to analyze the complexity hotspots in this project"
+specter health --exit-code --threshold 70  # Exit 1 if health < 70
+specter cycles --exit-code                 # Exit 1 if cycles found
+```
+
+### GitHub Actions
+
+```yaml
+name: Specter Analysis
+on: [pull_request]
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: npx @purplegumdropz/specter scan --json
+      - run: npx @purplegumdropz/specter health --json --exit-code --threshold 60
 ```
 
 ---
 
-## MCP Server
+## Accessibility
 
-Specter exposes 14 tools via the Model Context Protocol:
-
-| Tool | Description |
-|------|-------------|
-| `get_file_relationships` | Get imports, exports, and dependencies |
-| `get_complexity_hotspots` | Find most complex functions |
-| `get_codebase_summary` | Overall statistics with personality |
-| `get_file_history` | Git history for a file |
-| `get_dead_code` | Find unused exports |
-| `search_symbols` | Search for functions/classes by name |
-| `get_call_chain` | Trace dependency path between files |
-| `get_architecture` | Generate architecture diagrams |
-| `get_change_coupling` | Files that change together |
-| `get_impact_analysis` | Ripple effect of changes |
-| `get_bus_factor` | Knowledge concentration risks |
-| `get_archaeology` | How a file evolved over time |
-| `get_health_trends` | Health trends analysis |
-| `get_risk_score` | Commit/PR risk score |
-
-📖 **[Complete MCP Integration Guide](docs/MCP_INTEGRATION.md)** • **[Example Prompts](docs/MCP_EXAMPLE_PROMPTS.md)**
-
-### MCP Resources
-
-Live data endpoints:
-
-| Resource | Description |
-|----------|-------------|
-| `specter://summary` | Current codebase statistics |
-| `specter://health` | Health score and metrics |
-| `specter://hotspots` | Complexity hotspots |
-| `specter://architecture` | Directory structure overview |
-
----
-
-## Web Dashboard
+Specter supports colorblind-friendly output:
 
 ```bash
-specter dashboard
-# Opens http://localhost:3333
+specter health --accessible
+# or
+SPECTER_ACCESSIBLE=true specter health
 ```
 
-Interactive features:
-- Force-directed dependency graph (Cytoscape.js)
-- Complexity heatmap (green to red)
-- Click to inspect any file
-- Search and filter
-- Health timeline sparkline
-- Hotspot navigation
-
----
-
-## Full Command Reference
-
-### Setup Commands
-| Command | Description | Key Options |
-|---------|-------------|-------------|
-| `init` | Interactive project setup | `--yes`, `--no-hooks`, `--no-scan` |
-| `init-hooks` | Install git hooks | `--husky`, `--simple`, `--pre-commit` |
-| `scan` | Build knowledge graph | `--dir`, `--no-git`, `--force`, `--quiet`, `--verbose` |
-| `clean` | Remove cached graph | `--dir` |
-
-### Analysis Commands
-| Command | Description | Key Options |
-|---------|-------------|-------------|
-| `status` | Graph status | `--dir` |
-| `health` | Health report | `--limit`, `--personality`, `--exit-code`, `--threshold`, `--png` |
-| `trends` | Historical trends | `--period`, `--personality` |
-| `risk` | Staged changes risk | `--branch`, `--commit`, `--personality` |
-| `dashboard` | Web visualization | `--port`, `--no-open` |
-
-### Daily Workflow Commands
-| Command | Description | Key Options |
-|---------|-------------|-------------|
-| `morning` | Daily briefing | `--dir` |
-| `precommit` | Pre-commit check | `--exit-code` |
-| `tour` | Guided walkthrough | `--dir` |
-| `who <file>` | Find file experts | `--dir` |
-| `safe` | Safe zones for newbies | `--dir` |
-| `danger` | High-risk areas | `--dir` |
-| `predict` | PR impact prediction | `--dir` |
-| `reviewers` | Suggest reviewers | `--dir` |
-| `why <file>` | Explain why code exists | `--dir` |
-| `standup` | Daily standup summary | `--dir` |
-| `fix [file]` | Actionable fix suggestions | `--severity` |
-
-### Deep Analysis Commands
-| Command | Description | Key Options |
-|---------|-------------|-------------|
-| `drift` | Architecture drift | `--dir` |
-| `cycles` | Circular dependencies | `--exit-code` |
-| `velocity` | Complexity growth | `--dir` |
-| `trajectory` | Health projection | `--dir` |
-| `knowledge-map` | Expertise heatmap | `--dir` |
-| `search <query>` | Natural language search | `--limit` |
-| `index` | Build semantic search index | `--force`, `--watch`, `--quiet` |
-| `ask <question>` | Q&A with personality | `--personality`, `--limit` |
-| `diagram` | Architecture diagrams | `--format`, `--output`, `--focus`, `--depth` |
-| `hotspots` | Complexity x Churn | `--top`, `--since` |
-| `bus-factor` | Bus factor risks | `--critical-only` |
-| `dora` | DORA metrics | `--since`, `--png` |
-| `coupling` | Hidden couplings | `--hidden-only`, `--min-strength` |
-| `report` | Full markdown report | `--output`, `--json`, `--quick` |
-| `cost` | Tech debt in dollars | `--rate`, `--currency`, `--png` |
-
-### Fun Commands
-| Command | Description | Key Options |
-|---------|-------------|-------------|
-| `roast` | Comedic critique | `--dir`, `--png` |
-| `tinder` | Dating profile | `--dir`, `--png` |
-| `horoscope` | Daily fortune | `--dir` |
-| `wrapped` | Yearly summary | `--png` |
-| `achievements` | Gamified badges | `--png` |
-| `seance [query]` | Commune with deleted code | `--dir` |
-| `dna` | Visual fingerprint | `--png` |
-| `origin` | Origin story | `--dir` |
-| `confess <file>` | File confessions | `--dir` |
-| `fortune` | Tarot predictions | `--dir` |
-| `vitals` | Real-time dashboard | `--live` |
-| `leaderboard` | Team gamification | `--since`, `--limit` |
+See the [Accessibility Guide](docs/ACCESSIBILITY.md) for details.
 
 ---
 
 ## Storage
 
-Specter stores data in `.specter/`:
+Specter stores data in `.specter/` (auto-added to `.gitignore`):
 
 ```
 .specter/
-├── graph.json        # Knowledge graph
-├── metadata.json     # Quick-access metadata
-└── history/          # Health snapshots
-    ├── 2024-02-01T10-00-00Z.json
-    └── 2024-02-08T10-00-00Z.json
+  graph.json        # Knowledge graph
+  metadata.json     # Quick-access metadata
+  streaks.json      # Usage streaks
+  history/          # Health snapshots
 ```
-
-This directory is automatically added to `.gitignore`.
 
 ---
 
@@ -1389,32 +261,20 @@ This directory is automatically added to `.gitignore`.
 
 - Node.js 20+
 - TypeScript/JavaScript codebase (for full analysis)
-- Git repository (optional, for history analysis)
+- Git repository (optional, for history features)
 
 ---
 
-## Installation
+## Documentation
 
-```bash
-# Global install
-npm install -g specter-mcp
-
-# Or use with npx
-npx specter-mcp scan
-
-# Or in a project
-npm install --save-dev specter-mcp
-```
-
----
-
-## Contributing
-
-Pull requests welcome! Please ensure:
-
-1. Code compiles: `npm run build`
-2. Tests pass: `npm test`
-3. Follow existing code patterns
+| Guide | Description |
+|-------|-------------|
+| [MCP Integration](docs/MCP_INTEGRATION.md) | Complete guide to all 14 MCP tools |
+| [MCP Prompts](docs/MCP_EXAMPLE_PROMPTS.md) | Real-world prompts for AI assistants |
+| [Accessibility](docs/ACCESSIBILITY.md) | Colorblind mode and inclusive design |
+| [Comparison](docs/COMPARISON.md) | How Specter compares to other tools |
+| [Contributing](CONTRIBUTING.md) | Development setup and guidelines |
+| [Security](SECURITY.md) | Security policy and reporting |
 
 ---
 
