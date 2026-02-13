@@ -7,6 +7,15 @@
 
 import { type SimpleGit, simpleGit } from 'simple-git';
 import type { KnowledgeGraph } from './graph/types.js';
+import {
+  analyzeContributors,
+  analyzeFileChanges,
+  analyzeLanguages,
+  analyzeLinesChanged,
+  analyzeTimePatterns,
+  fetchPeriodCommits,
+  getTopEntry,
+} from './wrapped-helpers.js';
 
 export interface WrappedData {
   codebaseName: string;
@@ -170,22 +179,7 @@ export async function gatherWrappedData(
   }> = [];
 
   try {
-    const afterDate = new Date(range.start);
-    afterDate.setDate(afterDate.getDate() - 1);
-    const beforeDate = new Date(range.end);
-    beforeDate.setDate(beforeDate.getDate() + 1);
-
-    const log = await git.log({
-      '--after': afterDate.toISOString().split('T')[0],
-      '--before': beforeDate.toISOString().split('T')[0],
-    });
-
-    commits = log.all.map((c) => ({
-      hash: c.hash,
-      date: c.date,
-      author: c.author_name,
-      message: c.message,
-    }));
+    commits = await fetchPeriodCommits(git, range);
   } catch {
     return createEmptyWrappedData(codebaseName, targetYear, graph);
   }
@@ -194,110 +188,30 @@ export async function gatherWrappedData(
     return createEmptyWrappedData(codebaseName, targetYear, graph);
   }
 
-  // Analyze contributors
-  const contributorCounts = new Map<string, number>();
-  for (const commit of commits) {
-    contributorCounts.set(commit.author, (contributorCounts.get(commit.author) || 0) + 1);
-  }
-  const topContributors = [...contributorCounts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([name, count]) => ({
-      name,
-      commits: count,
-      percentage: Math.round((count / commits.length) * 100),
-    }));
-
-  // Analyze files changed
-  const fileCounts = new Map<string, number>();
-  for (const commit of commits.slice(0, 500)) {
-    // Limit to avoid too many git calls
-    try {
-      const diff = await git.raw(['diff-tree', '--no-commit-id', '--name-only', '-r', commit.hash]);
-      const files = diff.trim().split('\n').filter(Boolean);
-      for (const file of files) {
-        fileCounts.set(file, (fileCounts.get(file) || 0) + 1);
-      }
-    } catch {
-      // Ignore individual commit errors
-    }
-  }
-  const topFiles = [...fileCounts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([path, count]) => ({
-      path,
-      commits: count,
-      nickname: getFileNickname(path),
-    }));
-
-  // Time patterns
-  const monthCounts = new Map<string, number>();
-  const dayCounts = new Map<string, number>();
-  const hourCounts = new Map<number, number>();
-  let lateNightCommits = 0;
-  let weekendCommits = 0;
-
-  for (const commit of commits) {
-    const date = new Date(commit.date);
-    const month = date.toLocaleDateString('en-US', { month: 'long' });
-    const dayOfWeek = date.getDay();
-    const hour = date.getHours();
-
-    monthCounts.set(month, (monthCounts.get(month) || 0) + 1);
-    dayCounts.set(
-      date.toISOString().split('T')[0],
-      (dayCounts.get(date.toISOString().split('T')[0]) || 0) + 1
-    );
-    hourCounts.set(hour, (hourCounts.get(hour) || 0) + 1);
-
-    if (hour >= 0 && hour < 5) lateNightCommits++;
-    if (dayOfWeek === 0 || dayOfWeek === 6) weekendCommits++;
-  }
-
-  const busiestMonth = [...monthCounts.entries()].sort((a, b) => b[1] - a[1])[0];
-  const busiestDay = [...dayCounts.entries()].sort((a, b) => b[1] - a[1])[0];
-  const busiestHour = [...hourCounts.entries()].sort((a, b) => b[1] - a[1])[0];
+  // Analyze data in parallel where possible
+  const topContributors = analyzeContributors(commits);
+  const { topFiles, totalFilesChanged } = await analyzeFileChanges(git, commits, getFileNickname);
+  const timePatterns = analyzeTimePatterns(commits);
+  const { added: totalLinesAdded, removed: totalLinesRemoved } = await analyzeLinesChanged(
+    git,
+    targetYear
+  );
+  const topLanguages = analyzeLanguages(graph);
 
   // Calculate streaks
   const commitDays = new Set(commits.map((c) => new Date(c.date).toISOString().split('T')[0]));
   const { longestStreak, currentStreak } = calculateStreaks(commitDays, targetYear);
 
-  // Lines added/removed (sample from recent commits)
-  let totalLinesAdded = 0;
-  let totalLinesRemoved = 0;
-  try {
-    const stats = await git.raw([
-      'log',
-      '--numstat',
-      '--format=',
-      `--after=${targetYear - 1}-12-31`,
-      `--before=${targetYear + 1}-01-01`,
-    ]);
-    for (const line of stats.split('\n')) {
-      const match = line.match(/^(\d+)\s+(\d+)/);
-      if (match) {
-        totalLinesAdded += parseInt(match[1], 10) || 0;
-        totalLinesRemoved += parseInt(match[2], 10) || 0;
-      }
-    }
-  } catch {
-    // Ignore
-  }
-
-  // Languages from graph
-  const langEntries = Object.entries(graph.metadata.languages).sort((a, b) => b[1] - a[1]);
-  const totalLangFiles = langEntries.reduce((sum, [, count]) => sum + count, 0);
-  const topLanguages = langEntries.slice(0, 3).map(([lang, count]) => ({
-    lang,
-    percentage: Math.round((count / totalLangFiles) * 100),
-  }));
+  // Get busiest periods
+  const busiestMonth = getTopEntry(timePatterns.monthCounts);
+  const busiestDay = getTopEntry(timePatterns.dayCounts);
+  const busiestHour = getTopEntry(timePatterns.hourCounts);
 
   // Generate fun facts
   const funFacts = generateFunFacts({
     totalCommits: commits.length,
-    lateNightCommits,
-    weekendCommits,
+    lateNightCommits: timePatterns.lateNightCommits,
+    weekendCommits: timePatterns.weekendCommits,
     topContributor: topContributors[0],
     topFile: topFiles[0],
     busiestHour: busiestHour ? busiestHour[0] : null,
@@ -313,14 +227,14 @@ export async function gatherWrappedData(
     totalCommits: commits.length,
     totalLinesAdded,
     totalLinesRemoved,
-    filesChanged: fileCounts.size,
+    filesChanged: totalFilesChanged,
     topContributors,
     topFiles,
     busiestMonth: busiestMonth ? { month: busiestMonth[0], commits: busiestMonth[1] } : null,
     busiestDay: busiestDay ? { day: busiestDay[0], commits: busiestDay[1] } : null,
     busiestHour: busiestHour ? { hour: busiestHour[0], commits: busiestHour[1] } : null,
-    lateNightCommits,
-    weekendCommits,
+    lateNightCommits: timePatterns.lateNightCommits,
+    weekendCommits: timePatterns.weekendCommits,
     longestStreak,
     currentStreak,
     topLanguages,
