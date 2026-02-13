@@ -427,33 +427,22 @@ function groupSymbolsByPattern(symbols: string[]): Record<string, string[]> {
 }
 
 /**
- * Generate fix suggestions for a file
+ * Analyze complexity issues in a file
  */
-export async function generateFix(
+function analyzeComplexityIssues(
   filePath: string,
-  rootDir: string,
   graph: KnowledgeGraph,
-  options: { severity?: SuggestionSeverity } = {}
-): Promise<FixResult> {
-  const minSeverity = options.severity || 'info';
-  const severityOrder: Record<SuggestionSeverity, number> = {
-    critical: 0,
-    warning: 1,
-    info: 2,
-  };
-  const minSeverityLevel = severityOrder[minSeverity];
-
+  absolutePath: string,
+  minSeverityLevel: number,
+  severityOrder: Record<SuggestionSeverity, number>
+): FixSuggestion[] {
   const suggestions: FixSuggestion[] = [];
-  const absolutePath = path.resolve(rootDir, filePath);
-
-  // 1. Analyze complexity
   const complexFunctions = analyzeFileComplexity(graph, filePath);
   const highComplexityThreshold = 20;
   const mediumComplexityThreshold = 10;
 
   for (const func of complexFunctions) {
     if (func.complexity >= highComplexityThreshold) {
-      // Load the source file to analyze extractable blocks
       let codeBlocks: CodeBlock[] = [];
       try {
         const project = new Project({ skipAddingFilesFromTsConfig: true });
@@ -512,40 +501,67 @@ export async function generateFix(
     }
   }
 
-  // 2. Check file size
+  return suggestions;
+}
+
+/**
+ * Analyze file size issues
+ */
+function analyzeFileSizeIssues(
+  filePath: string,
+  graph: KnowledgeGraph,
+  minSeverityLevel: number,
+  severityOrder: Record<SuggestionSeverity, number>
+): FixSuggestion[] {
+  const suggestions: FixSuggestion[] = [];
   const fileInfo = getFileInfo(graph, filePath);
-  if (fileInfo) {
-    if (fileInfo.lineCount > 500) {
-      const suggestion: FixSuggestion = {
-        severity: 'warning',
-        title: `Large file (${fileInfo.lineCount} lines)`,
-        details: suggestFileSplit(filePath, graph, fileInfo.lineCount),
-      };
 
-      if (severityOrder[suggestion.severity] <= minSeverityLevel) {
-        suggestions.push(suggestion);
-      }
-    } else if (fileInfo.lineCount > 300) {
-      const suggestion: FixSuggestion = {
-        severity: 'info',
-        title: `File growing large (${fileInfo.lineCount} lines)`,
-        details: [
-          'Consider organizing into sections or splitting soon.',
-          '',
-          'Tips:',
-          '  - Group related functions together',
-          '  - Move types/interfaces to a separate file',
-          '  - Extract utility functions to helpers.ts',
-        ],
-      };
+  if (!fileInfo) return suggestions;
 
-      if (severityOrder[suggestion.severity] <= minSeverityLevel) {
-        suggestions.push(suggestion);
-      }
+  if (fileInfo.lineCount > 500) {
+    const suggestion: FixSuggestion = {
+      severity: 'warning',
+      title: `Large file (${fileInfo.lineCount} lines)`,
+      details: suggestFileSplit(filePath, graph, fileInfo.lineCount),
+    };
+
+    if (severityOrder[suggestion.severity] <= minSeverityLevel) {
+      suggestions.push(suggestion);
+    }
+  } else if (fileInfo.lineCount > 300) {
+    const suggestion: FixSuggestion = {
+      severity: 'info',
+      title: `File growing large (${fileInfo.lineCount} lines)`,
+      details: [
+        'Consider organizing into sections or splitting soon.',
+        '',
+        'Tips:',
+        '  - Group related functions together',
+        '  - Move types/interfaces to a separate file',
+        '  - Extract utility functions to helpers.ts',
+      ],
+    };
+
+    if (severityOrder[suggestion.severity] <= minSeverityLevel) {
+      suggestions.push(suggestion);
     }
   }
 
-  // 3. Check circular dependencies
+  return suggestions;
+}
+
+/**
+ * Analyze dependency and dead code issues
+ */
+function analyzeDependencyIssues(
+  filePath: string,
+  graph: KnowledgeGraph,
+  minSeverityLevel: number,
+  severityOrder: Record<SuggestionSeverity, number>
+): FixSuggestion[] {
+  const suggestions: FixSuggestion[] = [];
+
+  // Check circular dependencies
   const cyclesResult = detectCycles(graph);
   const fileCycles = getFileCycles(filePath, cyclesResult);
 
@@ -564,8 +580,10 @@ export async function generateFix(
     }
   }
 
-  // 4. Check dead code
-  const deadCodeResult = findDeadCode(graph, { directory: path.dirname(filePath) });
+  // Check dead code
+  const deadCodeResult = findDeadCode(graph, {
+    directory: path.dirname(filePath),
+  });
   const fileDeadExports = getFileDeadExports(filePath, deadCodeResult);
 
   if (fileDeadExports.length > 0) {
@@ -589,7 +607,19 @@ export async function generateFix(
     }
   }
 
-  // 5. Check bus factor
+  return suggestions;
+}
+
+/**
+ * Analyze bus factor issues
+ */
+async function analyzeBusFactorIssues(
+  filePath: string,
+  rootDir: string,
+  minSeverityLevel: number,
+  severityOrder: Record<SuggestionSeverity, number>
+): Promise<FixSuggestion[]> {
+  const suggestions: FixSuggestion[] = [];
   const busFactorInfo = await getFileBusFactor(rootDir, filePath);
 
   if (busFactorInfo.busFactor === 1 && busFactorInfo.contributors.length > 0) {
@@ -612,6 +642,41 @@ export async function generateFix(
       suggestions.push(suggestion);
     }
   }
+
+  return suggestions;
+}
+
+/**
+ * Generate fix suggestions for a file
+ */
+export async function generateFix(
+  filePath: string,
+  rootDir: string,
+  graph: KnowledgeGraph,
+  options: { severity?: SuggestionSeverity } = {}
+): Promise<FixResult> {
+  const minSeverity = options.severity || 'info';
+  const severityOrder: Record<SuggestionSeverity, number> = {
+    critical: 0,
+    warning: 1,
+    info: 2,
+  };
+  const minSeverityLevel = severityOrder[minSeverity];
+
+  const suggestions: FixSuggestion[] = [];
+  const absolutePath = path.resolve(rootDir, filePath);
+
+  // Analyze all issue types in parallel
+  const [complexityIssues, fileSizeIssues, dependencyIssues, busFactorIssues] = await Promise.all([
+    Promise.resolve(
+      analyzeComplexityIssues(filePath, graph, absolutePath, minSeverityLevel, severityOrder)
+    ),
+    Promise.resolve(analyzeFileSizeIssues(filePath, graph, minSeverityLevel, severityOrder)),
+    Promise.resolve(analyzeDependencyIssues(filePath, graph, minSeverityLevel, severityOrder)),
+    analyzeBusFactorIssues(filePath, rootDir, minSeverityLevel, severityOrder),
+  ]);
+
+  suggestions.push(...complexityIssues, ...fileSizeIssues, ...dependencyIssues, ...busFactorIssues);
 
   // Sort by severity
   suggestions.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);

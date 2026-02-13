@@ -92,7 +92,6 @@ export async function generateReport(
   options: ReportOptions
 ): Promise<ReportResult> {
   const generatedAt = new Date();
-  const sections: ReportSection[] = [];
   const stats = getGraphStats(graph);
   const complexityReport = generateComplexityReport(graph);
 
@@ -101,6 +100,65 @@ export async function generateReport(
   const healthGrade = getGrade(healthScore);
 
   // Gather all analysis data
+  const analysisData = await gatherAnalysisData(rootDir, graph, options);
+
+  // Build report data for JSON/output
+  const reportData = buildReportDataObject(
+    healthScore,
+    healthGrade,
+    complexityReport,
+    stats,
+    analysisData
+  );
+
+  // JSON format
+  if (options.format === 'json') {
+    return {
+      content: JSON.stringify(reportData, null, 2),
+      sections: Object.keys(reportData),
+      generatedAt,
+      data: reportData,
+    };
+  }
+
+  // Markdown format
+  const { content, sections } = buildMarkdownReport(
+    rootDir,
+    options,
+    healthScore,
+    healthGrade,
+    analysisData,
+    stats,
+    complexityReport,
+    generatedAt,
+    reportData,
+    graph
+  );
+
+  return {
+    content,
+    sections,
+    generatedAt,
+    data: reportData,
+  };
+}
+
+/**
+ * Gather analysis data by running analyses in parallel
+ */
+async function gatherAnalysisData(
+  rootDir: string,
+  graph: KnowledgeGraph,
+  options: ReportOptions
+): Promise<{
+  drift?: DriftResult;
+  cycles?: CyclesResult;
+  hotspots?: HotspotsResult;
+  busFactor?: BusFactorResult;
+  trajectory?: TrajectoryResult;
+  velocity?: VelocityResult;
+  zones?: ZoneMap;
+}> {
   const analysisData: {
     drift?: DriftResult;
     cycles?: CyclesResult;
@@ -111,7 +169,6 @@ export async function generateReport(
     zones?: ZoneMap;
   } = {};
 
-  // Run analyses in parallel where possible
   const analyses: Promise<void>[] = [];
 
   if (options.includeRisks) {
@@ -120,7 +177,6 @@ export async function generateReport(
         analysisData.drift = r;
       })
     );
-    // detectCycles is synchronous
     analysisData.cycles = detectCycles(graph);
   }
 
@@ -151,7 +207,6 @@ export async function generateReport(
     );
   }
 
-  // Zone analysis is lightweight - always include for recommendations
   analyses.push(
     Promise.resolve().then(() => {
       analysisData.zones = analyzeZones(graph);
@@ -159,9 +214,20 @@ export async function generateReport(
   );
 
   await Promise.all(analyses);
+  return analysisData;
+}
 
-  // Build report data for JSON format
-  const reportData: ReportData = {
+/**
+ * Build report data structure
+ */
+function buildReportDataObject(
+  healthScore: number,
+  healthGrade: string,
+  complexityReport: ReturnType<typeof generateComplexityReport>,
+  stats: ReturnType<typeof getGraphStats>,
+  analysisData: Awaited<ReturnType<typeof gatherAnalysisData>>
+): ReportData {
+  return {
     health: {
       score: Math.round(healthScore),
       grade: healthGrade,
@@ -202,28 +268,32 @@ export async function generateReport(
       edgeCount: stats.edgeCount,
     },
   };
+}
 
-  // JSON format
-  if (options.format === 'json') {
-    return {
-      content: JSON.stringify(reportData, null, 2),
-      sections: Object.keys(reportData),
-      generatedAt,
-      data: reportData,
-    };
-  }
-
-  // Markdown format - build sections
+/**
+ * Build markdown report sections
+ */
+function buildMarkdownReport(
+  rootDir: string,
+  options: ReportOptions,
+  healthScore: number,
+  healthGrade: string,
+  analysisData: Awaited<ReturnType<typeof gatherAnalysisData>>,
+  stats: ReturnType<typeof getGraphStats>,
+  complexityReport: ReturnType<typeof generateComplexityReport>,
+  generatedAt: Date,
+  reportData: ReportData,
+  graph: KnowledgeGraph
+): { content: string; sections: string[] } {
+  const sections: ReportSection[] = [];
   const projectName = rootDir.split('/').pop() || 'Codebase';
 
-  // Header
   sections.push({
     id: 'header',
     title: '',
     content: buildHeader(projectName, generatedAt),
   });
 
-  // Executive Summary
   sections.push({
     id: 'executive-summary',
     title: 'Executive Summary',
@@ -231,17 +301,10 @@ export async function generateReport(
   });
 
   if (options.quick) {
-    // Quick mode - just header and summary
     const content = sections.map((s) => s.content).join('\n\n');
-    return {
-      content,
-      sections: sections.map((s) => s.id),
-      generatedAt,
-      data: reportData,
-    };
+    return { content, sections: sections.map((s) => s.id) };
   }
 
-  // Health Overview
   if (options.includeHealth) {
     sections.push({
       id: 'health-overview',
@@ -250,7 +313,6 @@ export async function generateReport(
     });
   }
 
-  // Top Risks
   if (options.includeRisks && (analysisData.drift || analysisData.cycles)) {
     sections.push({
       id: 'top-risks',
@@ -259,7 +321,6 @@ export async function generateReport(
     });
   }
 
-  // Team Dynamics / Bus Factor
   if (options.includeBusFactor && analysisData.busFactor) {
     sections.push({
       id: 'team-dynamics',
@@ -268,7 +329,6 @@ export async function generateReport(
     });
   }
 
-  // DORA-like Metrics (Velocity)
   if (options.includeDora && analysisData.velocity) {
     sections.push({
       id: 'development-metrics',
@@ -277,7 +337,6 @@ export async function generateReport(
     });
   }
 
-  // Hotspots
   if (options.includeHotspots && analysisData.hotspots) {
     sections.push({
       id: 'hotspots',
@@ -286,7 +345,6 @@ export async function generateReport(
     });
   }
 
-  // Trajectory
   if (options.includeTrajectory && analysisData.trajectory) {
     sections.push({
       id: 'trajectory',
@@ -295,21 +353,18 @@ export async function generateReport(
     });
   }
 
-  // Recommendations
   sections.push({
     id: 'recommendations',
     title: 'Recommendations',
     content: buildRecommendationsSection(analysisData, healthScore),
   });
 
-  // Appendix
   sections.push({
     id: 'appendix',
     title: 'Appendix',
     content: buildAppendixSection(graph, stats, complexityReport),
   });
 
-  // Footer
   sections.push({
     id: 'footer',
     title: '',
@@ -317,13 +372,7 @@ export async function generateReport(
   });
 
   const content = sections.map((s) => s.content).join('\n\n');
-
-  return {
-    content,
-    sections: sections.map((s) => s.id),
-    generatedAt,
-    data: reportData,
-  };
+  return { content, sections: sections.map((s) => s.id) };
 }
 
 /**

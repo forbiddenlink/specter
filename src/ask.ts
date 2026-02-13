@@ -605,86 +605,33 @@ function describeFlow(nodes: GraphNode[], graph: KnowledgeGraph): string[] {
 /**
  * Ask a question about the codebase
  */
-export async function askCodebase(
-  question: string,
-  rootDir: string,
+/**
+ * Generate answer based on question type and search results
+ */
+function generateAnswer(
+  questionType: QuestionType,
+  subject: string,
+  nodes: GraphNode[],
+  directories: string[],
+  relevantFiles: RelevantFile[],
+  templates: Record<string, unknown>,
   graph: KnowledgeGraph,
-  options: { personality?: PersonalityMode } = {}
-): Promise<AskResult> {
-  const personality = options.personality || 'default';
-  const templates = PERSONALITY_TEMPLATES[personality] || PERSONALITY_TEMPLATES.default;
-
-  // Detect question type and extract subject
-  const questionType = detectQuestionType(question);
-  const subject = extractSubject(question, questionType);
-
-  // Search the graph
-  const nodes = searchGraph(subject, graph);
-  const directories = findDirectories(subject, graph);
-
-  // Build relevant files list
-  const relevantFiles: RelevantFile[] = [];
-  const seenPaths = new Set<string>();
-
-  // Add directories first
-  for (const dir of directories.slice(0, 2)) {
-    if (!seenPaths.has(dir)) {
-      seenPaths.add(dir);
-      relevantFiles.push({
-        path: dir,
-        name: dir.split('/').pop() || dir,
-        type: 'directory',
-        relevance: 'Directory matches search',
-      });
-    }
-  }
-
-  // Add matching nodes
-  for (const node of nodes) {
-    if (!seenPaths.has(node.filePath)) {
-      seenPaths.add(node.filePath);
-      relevantFiles.push({
-        path: node.filePath,
-        name: node.name,
-        type: node.type,
-        relevance:
-          node.type === 'file'
-            ? 'File matches search'
-            : `${node.type} in ${node.filePath.split('/').pop()}`,
-        line: node.lineStart > 1 ? node.lineStart : undefined,
-      });
-    }
-  }
-
-  // Calculate confidence based on results
-  let confidence = 0;
-  if (nodes.length > 0) {
-    confidence = Math.min(95, 40 + nodes.length * 10);
-    // Higher confidence for exact matches
-    if (nodes[0].name.toLowerCase() === subject) {
-      confidence = Math.min(95, confidence + 20);
-    }
-  } else if (directories.length > 0) {
-    confidence = 30 + directories.length * 10;
-  }
-
-  // Generate answer based on question type
-  let answer = '';
-
-  if (nodes.length === 0 && directories.length === 0) {
-    answer = templates.notFound(subject);
-  } else {
+  rootDir: string
+): Promise<string> {
+  return (async () => {
     const parts: string[] = [];
 
-    // Intro
-    const intro = templates.intro(questionType, subject);
+    if (nodes.length === 0 && directories.length === 0) {
+      return (templates as any).notFound(subject);
+    }
+
+    const intro = (templates as any).intro(questionType, subject);
     if (intro) parts.push(intro);
 
-    // Main content based on question type
     switch (questionType) {
       case 'what-does':
       case 'general': {
-        parts.push(templates.found(subject, nodes.length + directories.length));
+        parts.push((templates as any).found(subject, nodes.length + directories.length));
         for (const node of nodes.slice(0, 3)) {
           parts.push(`\n${node.name}: ${describeNode(node, graph)}`);
         }
@@ -692,7 +639,7 @@ export async function askCodebase(
       }
 
       case 'where-is': {
-        parts.push(templates.found(subject, relevantFiles.length));
+        parts.push((templates as any).found(subject, relevantFiles.length));
         if (directories.length > 0) {
           parts.push(
             `\nMain location${directories.length > 1 ? 's' : ''}: ${directories.slice(0, 2).join(', ')}`
@@ -709,7 +656,7 @@ export async function askCodebase(
         const authors = await getGitAuthors(rootDir, filePaths);
 
         if (authors.size > 0) {
-          parts.push(templates.found(subject, authors.size));
+          parts.push((templates as any).found(subject, authors.size));
           for (const [path, info] of authors.entries()) {
             const fileName = path.split('/').pop();
             parts.push(`\n${fileName}: ${info.author} (${info.commits} commits)`);
@@ -721,12 +668,10 @@ export async function askCodebase(
       }
 
       case 'why-exists': {
-        parts.push(templates.found(subject, nodes.length));
+        parts.push((templates as any).found(subject, nodes.length));
         for (const node of nodes.slice(0, 2)) {
           const description = describeNode(node, graph);
           parts.push(`\n${node.name}: ${description}`);
-
-          // Check for usage patterns
           const usedBy = graph.edges.filter(
             (e) => e.target === node.id && e.type === 'imports'
           ).length;
@@ -738,7 +683,7 @@ export async function askCodebase(
       }
 
       case 'how-works': {
-        parts.push(templates.found(subject, nodes.length));
+        parts.push((templates as any).found(subject, nodes.length));
         const flows = describeFlow(nodes, graph);
         if (flows.length > 0) {
           parts.push('\nData/Control Flow:');
@@ -753,7 +698,7 @@ export async function askCodebase(
       }
 
       case 'list': {
-        parts.push(templates.found(subject, relevantFiles.length));
+        parts.push((templates as any).found(subject, relevantFiles.length));
         for (const file of relevantFiles.slice(0, 8)) {
           parts.push(`\n- ${file.name} (${file.type}): ${file.path}`);
         }
@@ -761,12 +706,105 @@ export async function askCodebase(
       }
     }
 
-    // Closing
-    const closing = templates.closing();
+    const closing = (templates as any).closing();
     if (closing) parts.push(`\n\n${closing}`);
 
-    answer = parts.join('');
+    return parts.join('');
+  })();
+}
+
+/**
+ * Build relevant files list from search results
+ */
+function buildRelevantFilesList(nodes: GraphNode[], directories: string[]): RelevantFile[] {
+  const relevantFiles: RelevantFile[] = [];
+  const seenPaths = new Set<string>();
+
+  for (const dir of directories.slice(0, 2)) {
+    if (!seenPaths.has(dir)) {
+      seenPaths.add(dir);
+      relevantFiles.push({
+        path: dir,
+        name: dir.split('/').pop() || dir,
+        type: 'directory',
+        relevance: 'Directory matches search',
+      });
+    }
   }
+
+  for (const node of nodes) {
+    if (!seenPaths.has(node.filePath)) {
+      seenPaths.add(node.filePath);
+      relevantFiles.push({
+        path: node.filePath,
+        name: node.name,
+        type: node.type,
+        relevance:
+          node.type === 'file'
+            ? 'File matches search'
+            : `${node.type} in ${node.filePath.split('/').pop()}`,
+        line: node.lineStart > 1 ? node.lineStart : undefined,
+      });
+    }
+  }
+
+  return relevantFiles;
+}
+
+/**
+ * Calculate confidence score for answer
+ */
+function calculateAnswerConfidence(
+  nodes: GraphNode[],
+  directories: string[],
+  subject: string
+): number {
+  let confidence = 0;
+  if (nodes.length > 0) {
+    confidence = Math.min(95, 40 + nodes.length * 10);
+    if (nodes[0].name.toLowerCase() === subject) {
+      confidence = Math.min(95, confidence + 20);
+    }
+  } else if (directories.length > 0) {
+    confidence = 30 + directories.length * 10;
+  }
+  return confidence;
+}
+
+/**
+ * Ask a question about the codebase
+ */
+
+/**
+ * Ask a question about the codebase
+ */
+export async function askCodebase(
+  question: string,
+  rootDir: string,
+  graph: KnowledgeGraph,
+  options: { personality?: PersonalityMode } = {}
+): Promise<AskResult> {
+  const personality = options.personality || 'default';
+  const templates = PERSONALITY_TEMPLATES[personality] || PERSONALITY_TEMPLATES.default;
+
+  const questionType = detectQuestionType(question);
+  const subject = extractSubject(question, questionType);
+
+  const nodes = searchGraph(subject, graph);
+  const directories = findDirectories(subject, graph);
+
+  const relevantFiles = buildRelevantFilesList(nodes, directories);
+  const confidence = calculateAnswerConfidence(nodes, directories, subject);
+  const answer = await generateAnswer(
+    questionType,
+    subject,
+    nodes,
+    directories,
+    relevantFiles,
+    templates,
+    graph,
+    rootDir
+  );
 
   return {
     question,
