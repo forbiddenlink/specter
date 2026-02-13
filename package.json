@@ -50,6 +50,7 @@
   },
   "dependencies": {
     "@fastify/cors": "^11.0.0",
+    "@fastify/rate-limit": "^10.3.0",
     "@fastify/static": "^9.0.0",
     "@modelcontextprotocol/sdk": "^1.0.0",
     "@octokit/rest": "^22.0.1",

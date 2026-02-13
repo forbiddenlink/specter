@@ -17,6 +17,112 @@ import {
 } from '../../search.js';
 import { createSpinner } from '../types.js';
 
+type LineFormatter = (line: string) => string;
+
+interface FormatRule {
+  match: (line: string) => boolean;
+  format: LineFormatter;
+}
+
+/**
+ * Rules for formatting output lines, evaluated in order.
+ * First matching rule wins.
+ */
+const FORMAT_RULES: FormatRule[] = [
+  {
+    match: (line) => line.includes('┏') || line.includes('┗') || line.includes('┃'),
+    format: (line) => chalk.bold.cyan(`  ${line}`),
+  },
+  {
+    match: (line) => line.startsWith('Query:'),
+    format: (line) => chalk.yellow(`  ${line}`),
+  },
+  {
+    match: (line) => line.startsWith('Found:'),
+    format: (line) => chalk.dim(`  ${line}`),
+  },
+  {
+    match: (line) =>
+      line.startsWith('TOP MATCHES') ||
+      line.startsWith('GOOD MATCHES') ||
+      line.startsWith('OTHER MATCHES'),
+    format: (line) => chalk.bold.magenta(`  ${line}`),
+  },
+  {
+    match: (line) => line.startsWith('SUGGESTIONS'),
+    format: (line) => chalk.bold.yellow(`  ${line}`),
+  },
+  {
+    match: (line) => line.startsWith('─') || line.startsWith('━'),
+    format: (line) => chalk.dim(`  ${line}`),
+  },
+  {
+    match: (line) => line.includes('💡'),
+    format: (line) => chalk.italic.cyan(`  ${line}`),
+  },
+  {
+    match: (line) => line.startsWith('📁'),
+    format: (line) => chalk.cyan(`  ${line}`),
+  },
+  {
+    match: (line) => line.startsWith('🔣') || line.startsWith('📦'),
+    format: (line) => chalk.green(`  ${line}`),
+  },
+  {
+    match: (line) => line.startsWith('📋') || line.startsWith('📝'),
+    format: (line) => chalk.blue(`  ${line}`),
+  },
+  {
+    match: (line) => line.includes('📍'),
+    format: (line) => chalk.dim.cyan(`  ${line}`),
+  },
+  {
+    match: (line) => line.includes('✓'),
+    format: (line) => chalk.dim.green(`  ${line}`),
+  },
+  {
+    match: (line) => line.includes('[█') || line.includes('[▓') || line.includes('[░'),
+    format: (line) => formatProgressBar(line),
+  },
+  {
+    match: (line) => line.includes('No matches'),
+    format: (line) => chalk.yellow(`  ${line}`),
+  },
+  {
+    match: (line) => line.includes('... and'),
+    format: (line) => chalk.dim(`  ${line}`),
+  },
+];
+
+function formatProgressBar(line: string): string {
+  if (line.includes('█')) {
+    return chalk.green(`  ${line}`);
+  }
+  if (line.includes('▓')) {
+    return chalk.yellow(`  ${line}`);
+  }
+  return chalk.dim(`  ${line}`);
+}
+
+function formatOutputLine(line: string): string {
+  for (const rule of FORMAT_RULES) {
+    if (rule.match(line)) {
+      return rule.format(line);
+    }
+  }
+  return chalk.white(`  ${line}`);
+}
+
+function displayResults(response: SearchResponse, limit: number): void {
+  const output = formatSearchWithMode(response, limit);
+
+  console.log();
+  for (const line of output.split('\n')) {
+    console.log(formatOutputLine(line));
+  }
+  console.log();
+}
+
 export function register(program: Command): void {
   program
     .command('search <query>')
@@ -96,54 +202,6 @@ export function register(program: Command): void {
         return;
       }
 
-      const output = formatSearchWithMode(response, limit);
-
-      console.log();
-      for (const line of output.split('\n')) {
-        if (line.includes('┏') || line.includes('┗') || line.includes('┃')) {
-          console.log(chalk.bold.cyan(`  ${line}`));
-        } else if (line.startsWith('Query:')) {
-          console.log(chalk.yellow(`  ${line}`));
-        } else if (line.startsWith('Found:')) {
-          console.log(chalk.dim(`  ${line}`));
-        } else if (
-          line.startsWith('TOP MATCHES') ||
-          line.startsWith('GOOD MATCHES') ||
-          line.startsWith('OTHER MATCHES')
-        ) {
-          console.log(chalk.bold.magenta(`  ${line}`));
-        } else if (line.startsWith('SUGGESTIONS')) {
-          console.log(chalk.bold.yellow(`  ${line}`));
-        } else if (line.startsWith('─') || line.startsWith('━')) {
-          console.log(chalk.dim(`  ${line}`));
-        } else if (line.includes('💡')) {
-          console.log(chalk.italic.cyan(`  ${line}`));
-        } else if (line.startsWith('📁')) {
-          console.log(chalk.cyan(`  ${line}`));
-        } else if (line.startsWith('🔣') || line.startsWith('📦')) {
-          console.log(chalk.green(`  ${line}`));
-        } else if (line.startsWith('📋') || line.startsWith('📝')) {
-          console.log(chalk.blue(`  ${line}`));
-        } else if (line.includes('📍')) {
-          console.log(chalk.dim.cyan(`  ${line}`));
-        } else if (line.includes('✓')) {
-          console.log(chalk.dim.green(`  ${line}`));
-        } else if (line.includes('[█') || line.includes('[▓') || line.includes('[░')) {
-          if (line.includes('█')) {
-            console.log(chalk.green(`  ${line}`));
-          } else if (line.includes('▓')) {
-            console.log(chalk.yellow(`  ${line}`));
-          } else {
-            console.log(chalk.dim(`  ${line}`));
-          }
-        } else if (line.includes('No matches')) {
-          console.log(chalk.yellow(`  ${line}`));
-        } else if (line.includes('... and')) {
-          console.log(chalk.dim(`  ${line}`));
-        } else {
-          console.log(chalk.white(`  ${line}`));
-        }
-      }
-      console.log();
+      displayResults(response, limit);
     });
 }

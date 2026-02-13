@@ -6,6 +6,7 @@ import path from 'node:path';
 import chalk from 'chalk';
 import type { Command } from 'commander';
 import { generateComplexityReport } from '../../analyzers/complexity.js';
+import { showNextSteps } from '../../cli-utils.js';
 import { getGraphStats } from '../../graph/builder.js';
 import { loadGraph } from '../../graph/persistence.js';
 import { loadSnapshots } from '../../history/storage.js';
@@ -15,6 +16,7 @@ import { coloredSparkline } from '../../ui/index.js';
 export function register(program: Command): void {
   program
     .command('vitals')
+    .alias('vit')
     .description('Show codebase vital signs')
     .option('-d, --dir <path>', 'Directory to analyze', '.')
     .option('--live', 'Live updating mode')
@@ -269,5 +271,33 @@ export function register(program: Command): void {
 
       console.log(B(`╚${'═'.repeat(W)}╝`));
       console.log();
+
+      // Show next steps suggestions
+      if (!options.json) {
+        const suggestions = [
+          {
+            description: 'Get detailed health metrics',
+            command: 'specter health',
+          },
+          {
+            description: 'Track trends over time',
+            command: 'specter trajectory',
+          },
+          {
+            description: "See yesterday's summary",
+            command: 'specter morning',
+          },
+        ];
+
+        // Add context-specific suggestion based on health
+        if (healthScore < 60) {
+          suggestions.unshift({
+            description: 'Find critical hotspots to refactor',
+            command: 'specter hotspots',
+          });
+        }
+
+        showNextSteps(suggestions);
+      }
     });
 }

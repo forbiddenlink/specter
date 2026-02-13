@@ -13,6 +13,7 @@ import { createSpinner } from '../types.js';
 export function register(program: Command): void {
   program
     .command('standup')
+    .alias('stand')
     .description('Generate standup notes based on recent activity')
     .option('-d, --dir <path>', 'Directory to analyze', '.')
     .option('--since <date>', 'Start date for activity', 'yesterday')

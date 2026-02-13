@@ -10,6 +10,7 @@ import { loadGraph } from '../../graph/persistence.js';
 export function register(program: Command): void {
   program
     .command('dashboard')
+    .alias('dash')
     .description('Launch interactive web dashboard')
     .option('-d, --dir <path>', 'Directory to analyze', '.')
     .option('-p, --port <port>', 'Port to listen on', '3333')

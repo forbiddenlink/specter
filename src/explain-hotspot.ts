@@ -127,7 +127,7 @@ export async function explainHotspot(
         encoding: 'utf-8',
         stdio: ['pipe', 'pipe', 'pipe'],
         cwd: rootDir,
-        timeout: 60000, // 60 second timeout
+        timeout: 30000, // 30 second timeout
       });
 
       if (spawnResult.error) throw spawnResult.error;

@@ -222,6 +222,226 @@ async function extractComments(filePath: string): Promise<string[]> {
 }
 
 /**
+ * Get git history for a file (creation and major changes)
+ */
+async function getGitHistory(git: SimpleGit, relativePath: string): Promise<WhyResult['history']> {
+  const history: WhyResult['history'] = {
+    created: null,
+    majorChanges: [],
+  };
+
+  try {
+    // Get creation info (first commit)
+    try {
+      const firstCommit = await git.raw([
+        'log',
+        '--diff-filter=A',
+        '--follow',
+        '--format=%aI|%an|%s',
+        '--reverse',
+        '-1',
+        '--',
+        relativePath,
+      ]);
+
+      if (firstCommit.trim()) {
+        const parts = firstCommit.trim().split('|');
+        if (parts.length >= 3) {
+          history.created = {
+            date: parts[0],
+            author: parts[1],
+            message: parts.slice(2).join('|'),
+          };
+        }
+      }
+    } catch {
+      // File might not have git history
+    }
+
+    // Get major changes (commits with significant changes)
+    try {
+      const commitDetails = await git.raw([
+        'log',
+        '--numstat',
+        '--format=%H|%aI|%an|%s',
+        '-20',
+        '--',
+        relativePath,
+      ]);
+
+      const commitLines = commitDetails.split('\n');
+      let currentCommit: { hash: string; date: string; author: string; message: string } | null =
+        null;
+      const majorCommits: Array<{ date: string; author: string; message: string; lines: number }> =
+        [];
+
+      for (const line of commitLines) {
+        if (line.includes('|') && line.split('|').length >= 4) {
+          const parts = line.split('|');
+          currentCommit = {
+            hash: parts[0],
+            date: parts[1],
+            author: parts[2],
+            message: parts.slice(3).join('|'),
+          };
+        } else if (line.match(/^\d+\s+\d+/) && currentCommit) {
+          const match = line.match(/^(\d+)\s+(\d+)/);
+          if (match) {
+            const added = parseInt(match[1], 10) || 0;
+            const removed = parseInt(match[2], 10) || 0;
+            const totalChanged = added + removed;
+
+            // Consider it a major change if > 20 lines changed
+            if (totalChanged > 20) {
+              majorCommits.push({
+                date: currentCommit.date,
+                author: currentCommit.author,
+                message: currentCommit.message,
+                lines: totalChanged,
+              });
+            }
+          }
+          currentCommit = null;
+        }
+      }
+
+      // Take top 5 major changes
+      history.majorChanges = majorCommits
+        .sort((a, b) => b.lines - a.lines)
+        .slice(0, 5)
+        .map((c) => ({
+          date: c.date,
+          author: c.author,
+          message: c.message,
+        }));
+    } catch {
+      // Ignore git errors
+    }
+  } catch {
+    // Not a git repository
+  }
+
+  return history;
+}
+
+/**
+ * Check if two file paths match (considering .ts/.js variants)
+ */
+function pathMatches(edgePath: string, targetPath: string): boolean {
+  if (edgePath === targetPath) return true;
+  const edgeWithoutExt = edgePath.replace(/\.(js|ts|tsx|jsx)$/, '');
+  const targetWithoutExt = targetPath.replace(/\.(js|ts|tsx|jsx)$/, '');
+  return edgeWithoutExt === targetWithoutExt;
+}
+
+/**
+ * Analyze relationships from the knowledge graph
+ */
+function analyzeContextRelationships(
+  graph: KnowledgeGraph,
+  relativePath: string,
+  jsVariant: string
+): WhyResult['context'] {
+  const context: WhyResult['context'] = {
+    importedBy: [],
+    imports: [],
+    relatedFiles: [],
+  };
+
+  const matchingFilePath = relativePath;
+
+  // Find files that import this one and files this one imports
+  for (const edge of graph.edges) {
+    if (edge.type === 'imports') {
+      // edge.target is the imported file's path
+      if (pathMatches(edge.target, matchingFilePath) || pathMatches(edge.target, jsVariant)) {
+        context.importedBy.push({
+          file: edge.source,
+          reason: 'Direct import',
+        });
+      }
+
+      // Find files this one imports
+      // edge.source is the importing file's path
+      if (pathMatches(edge.source, matchingFilePath) || pathMatches(edge.source, jsVariant)) {
+        context.imports.push({
+          file: edge.target,
+          reason: 'Depends on',
+        });
+      }
+    }
+  }
+
+  // Limit to top results
+  context.importedBy = context.importedBy.slice(0, 5);
+  context.imports = context.imports.slice(0, 5);
+
+  // Find related files (same directory or similar name pattern)
+  const dirPath = path.dirname(relativePath);
+  const baseName = path.basename(relativePath, path.extname(relativePath));
+
+  for (const node of Object.values(graph.nodes)) {
+    if (node.type === 'file' && node.filePath !== relativePath) {
+      const nodeDir = path.dirname(node.filePath);
+      const nodeBase = path.basename(node.filePath, path.extname(node.filePath));
+
+      // Same directory
+      if (nodeDir === dirPath && context.relatedFiles.length < 5) {
+        context.relatedFiles.push({
+          file: node.filePath,
+          reason: 'Same directory',
+        });
+      } else if (
+        (nodeBase.includes(baseName) || baseName.includes(nodeBase)) &&
+        context.relatedFiles.length < 5
+      ) {
+        // Similar name (e.g., user.ts and user.test.ts)
+        const existingIndex = context.relatedFiles.findIndex((r) => r.file === node.filePath);
+        if (existingIndex === -1) {
+          context.relatedFiles.push({
+            file: node.filePath,
+            reason: 'Related by naming',
+          });
+        }
+      }
+    }
+  }
+
+  return context;
+}
+
+/**
+ * Generate suggestions for a file analysis result
+ */
+function generateSuggestionsForWhy(result: WhyResult): string[] {
+  const suggestions: string[] = [];
+
+  if (
+    result.context.importedBy.length === 0 &&
+    !result.file.endsWith('.test.ts') &&
+    !result.file.endsWith('.spec.ts')
+  ) {
+    suggestions.push('Not imported anywhere - might be dead code or an entry point.');
+  }
+
+  if (result.history.majorChanges.length >= 5) {
+    suggestions.push('Frequently modified file - consider if it has too many responsibilities.');
+  }
+
+  if (result.patterns.length === 0) {
+    suggestions.push(
+      'No standard pattern detected - consider if naming could be more descriptive.'
+    );
+  }
+
+  if (result.comments.length === 0) {
+    suggestions.push('No documentation comments found - consider adding JSDoc.');
+  }
+
+  return suggestions;
+}
+
+/**
  * Analyze why a file exists
  */
 export async function explainWhy(
@@ -293,203 +513,20 @@ export async function explainWhy(
   // Get git history
   try {
     await git.status(); // Check if git repo
-
-    // Get creation info (first commit)
-    try {
-      const firstCommit = await git.raw([
-        'log',
-        '--diff-filter=A',
-        '--follow',
-        '--format=%aI|%an|%s',
-        '--reverse',
-        '-1',
-        '--',
-        relativePath,
-      ]);
-
-      if (firstCommit.trim()) {
-        const parts = firstCommit.trim().split('|');
-        if (parts.length >= 3) {
-          result.history.created = {
-            date: parts[0],
-            author: parts[1],
-            message: parts.slice(2).join('|'),
-          };
-        }
-      }
-    } catch {
-      // File might not have git history
-    }
-
-    // Get major changes (commits with significant changes)
-    try {
-      const _log = await git.log({
-        file: relativePath,
-        maxCount: 20,
-      });
-
-      // Get commits with significant line changes
-      const commitDetails = await git.raw([
-        'log',
-        '--numstat',
-        '--format=%H|%aI|%an|%s',
-        '-20',
-        '--',
-        relativePath,
-      ]);
-
-      const commitLines = commitDetails.split('\n');
-      let currentCommit: { hash: string; date: string; author: string; message: string } | null =
-        null;
-      const majorCommits: Array<{ date: string; author: string; message: string; lines: number }> =
-        [];
-
-      for (const line of commitLines) {
-        if (line.includes('|') && line.split('|').length >= 4) {
-          const parts = line.split('|');
-          currentCommit = {
-            hash: parts[0],
-            date: parts[1],
-            author: parts[2],
-            message: parts.slice(3).join('|'),
-          };
-        } else if (line.match(/^\d+\s+\d+/) && currentCommit) {
-          const match = line.match(/^(\d+)\s+(\d+)/);
-          if (match) {
-            const added = parseInt(match[1], 10) || 0;
-            const removed = parseInt(match[2], 10) || 0;
-            const totalChanged = added + removed;
-
-            // Consider it a major change if > 20 lines changed
-            if (totalChanged > 20) {
-              majorCommits.push({
-                date: currentCommit.date,
-                author: currentCommit.author,
-                message: currentCommit.message,
-                lines: totalChanged,
-              });
-            }
-          }
-          currentCommit = null;
-        }
-      }
-
-      // Take top 5 major changes
-      result.history.majorChanges = majorCommits
-        .sort((a, b) => b.lines - a.lines)
-        .slice(0, 5)
-        .map((c) => ({
-          date: c.date,
-          author: c.author,
-          message: c.message,
-        }));
-    } catch {
-      // Ignore git errors
-    }
+    result.history = await getGitHistory(git, relativePath);
   } catch {
     result.suggestions.push('Not a git repository - history unavailable.');
   }
 
-  // Analyze relationships from the graph
-  // Note: Import edges use file paths as source/target, not node IDs
-  // Also, targets may use .js extension while we have .ts
-  const matchingFilePath = fileNode?.filePath || relativePath;
+  // Analyze relationships
   const jsVariant = relativePath.replace(/\.tsx?$/, '.js');
-
-  // Helper to check if paths match (considering .ts/.js variants)
-  const pathMatches = (edgePath: string, targetPath: string): boolean => {
-    if (edgePath === targetPath) return true;
-    // Check if the edge path (which might be .js) matches our .ts file
-    const edgeWithoutExt = edgePath.replace(/\.(js|ts|tsx|jsx)$/, '');
-    const targetWithoutExt = targetPath.replace(/\.(js|ts|tsx|jsx)$/, '');
-    return edgeWithoutExt === targetWithoutExt;
-  };
-
-  // Find files that import this one
-  for (const edge of graph.edges) {
-    if (edge.type === 'imports') {
-      // edge.target is the imported file's path
-      if (pathMatches(edge.target, matchingFilePath) || pathMatches(edge.target, jsVariant)) {
-        // edge.source is the importing file's path
-        result.context.importedBy.push({
-          file: edge.source,
-          reason: 'Direct import',
-        });
-      }
-
-      // Find files this one imports
-      // edge.source is the importing file's path
-      if (pathMatches(edge.source, matchingFilePath) || pathMatches(edge.source, jsVariant)) {
-        result.context.imports.push({
-          file: edge.target,
-          reason: 'Depends on',
-        });
-      }
-    }
-  }
-
-  // Limit to top results
-  result.context.importedBy = result.context.importedBy.slice(0, 5);
-  result.context.imports = result.context.imports.slice(0, 5);
-
-  // Find related files (same directory or similar name pattern)
-  const dirPath = path.dirname(relativePath);
-  const baseName = path.basename(relativePath, path.extname(relativePath));
-
-  for (const node of Object.values(graph.nodes)) {
-    if (node.type === 'file' && node.filePath !== relativePath) {
-      const nodeDir = path.dirname(node.filePath);
-      const nodeBase = path.basename(node.filePath, path.extname(node.filePath));
-
-      // Same directory
-      if (nodeDir === dirPath && result.context.relatedFiles.length < 5) {
-        result.context.relatedFiles.push({
-          file: node.filePath,
-          reason: 'Same directory',
-        });
-      }
-      // Similar name (e.g., user.ts and user.test.ts)
-      else if (nodeBase.includes(baseName) || baseName.includes(nodeBase)) {
-        const existingIndex = result.context.relatedFiles.findIndex(
-          (r) => r.file === node.filePath
-        );
-        if (existingIndex === -1 && result.context.relatedFiles.length < 5) {
-          result.context.relatedFiles.push({
-            file: node.filePath,
-            reason: 'Related by naming',
-          });
-        }
-      }
-    }
-  }
+  result.context = analyzeContextRelationships(graph, relativePath, jsVariant);
 
   // Generate summary
   result.summary = generateSummary(result);
 
   // Generate suggestions
-  if (
-    result.context.importedBy.length === 0 &&
-    !relativePath.endsWith('.test.ts') &&
-    !relativePath.endsWith('.spec.ts')
-  ) {
-    result.suggestions.push('Not imported anywhere - might be dead code or an entry point.');
-  }
-
-  if (result.history.majorChanges.length >= 5) {
-    result.suggestions.push(
-      'Frequently modified file - consider if it has too many responsibilities.'
-    );
-  }
-
-  if (result.patterns.length === 0) {
-    result.suggestions.push(
-      'No standard pattern detected - consider if naming could be more descriptive.'
-    );
-  }
-
-  if (result.comments.length === 0) {
-    result.suggestions.push('No documentation comments found - consider adding JSDoc.');
-  }
+  result.suggestions = generateSuggestionsForWhy(result);
 
   return result;
 }

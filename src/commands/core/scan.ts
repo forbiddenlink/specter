@@ -7,6 +7,7 @@ import chalk from 'chalk';
 import type { Command } from 'commander';
 import gradient from 'gradient-string';
 import { getComplexityEmoji } from '../../analyzers/complexity.js';
+import { showNextSteps } from '../../cli-utils.js';
 import { buildKnowledgeGraph, getGraphStats } from '../../graph/builder.js';
 import { graphExists, isGraphStale, saveGraph } from '../../graph/persistence.js';
 import { outputJson } from '../../json-output.js';
@@ -16,6 +17,7 @@ import { createSpinner } from '../types.js';
 export function register(program: Command): void {
   program
     .command('scan')
+    .alias('s')
     .description('Scan the codebase and build the knowledge graph')
     .option('-d, --dir <path>', 'Directory to scan', '.')
     .option('--no-git', 'Skip git history analysis')
@@ -23,6 +25,15 @@ export function register(program: Command): void {
     .option('-q, --quiet', 'Minimal output')
     .option('-v, --verbose', 'Show detailed progress (file names being analyzed)')
     .option('--json', 'Output as JSON for CI/CD integration')
+    .addHelpText(
+      'after',
+      `
+Examples:
+  $ specter scan
+  $ specter s --force
+  $ specter scan --dir ./my-project
+  $ specter s --quiet --json | jq '.stats'`
+    )
     .action(async (options) => {
       const rootDir = path.resolve(options.dir);
       const projectName = path.basename(rootDir);
@@ -185,6 +196,29 @@ export function register(program: Command): void {
         console.log(chalk.bold.green('  ✨ I am ready to talk!'));
         console.log(chalk.dim('  Ask me: @specter Tell me about yourself'));
         console.log();
+
+        // Show next steps suggestions
+        if (!quiet) {
+          const suggestions = [
+            {
+              description: 'See your codebase health report',
+              command: 'specter health',
+            },
+            {
+              description: 'Find the most problematic files',
+              command: 'specter hotspots',
+            },
+            {
+              description: 'Ask questions about your code',
+              command: 'specter ask "Tell me about the architecture"',
+            },
+            {
+              description: 'Open interactive dashboard',
+              command: 'specter dashboard',
+            },
+          ];
+          showNextSteps(suggestions);
+        }
       } catch (error) {
         spinner?.fail('Failed to awaken');
         console.error(chalk.red(error instanceof Error ? error.message : String(error)));

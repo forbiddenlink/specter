@@ -65,10 +65,10 @@ export function register(program: Command): void {
 
       // Animated glitch intro (TTY only)
       if (process.stdout.isTTY && !options.png) {
-        const fireGrad = gradient(['#ff6b6b', '#ee5a24', '#f9ca24']);
-        const glitch = chalkAnimation.glitch(fireGrad('  🔥 CODEBASE ROAST 🔥'));
+        const glitch = chalkAnimation.glitch('  🔥 CODEBASE ROAST 🔥');
         await new Promise((r) => setTimeout(r, 1500));
         glitch.stop();
+        console.log(''); // Clear the line after animation
       }
 
       // Build output as array of lines

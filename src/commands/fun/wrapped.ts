@@ -5,6 +5,7 @@
 import path from 'node:path';
 import chalk from 'chalk';
 import type { Command } from 'commander';
+import { showNextSteps } from '../../cli-utils.js';
 import { loadGraph } from '../../graph/persistence.js';
 import { outputJson, outputJsonError } from '../../json-output.js';
 import { formatWrapped, gatherWrappedData, type WrappedPeriod } from '../../wrapped.js';
@@ -13,10 +14,23 @@ import { createSpinner } from '../types.js';
 export function register(program: Command): void {
   program
     .command('wrapped')
+    .alias('wrap')
     .description('Get your codebase year in review (Spotify Wrapped style)')
     .option('-d, --dir <path>', 'Directory to analyze', '.')
     .option('--period <period>', 'Time period: year, quarter, month', 'year')
+    .option('--png', 'Export as PNG image')
     .option('--json', 'Output as JSON for CI/CD integration')
+    .addHelpText(
+      'after',
+      `
+Examples:
+  $ specter wrapped
+  $ specter wrapped --period quarter --png
+  $ specter wrapped --json | jq '.topFiles'
+  
+Share your wrapped stats with: specter wrapped --png && open wrapped.png
+`
+    )
     .action(async (options) => {
       const rootDir = path.resolve(options.dir);
       const period = options.period as WrappedPeriod;
@@ -60,5 +74,24 @@ export function register(program: Command): void {
         }
       }
       console.log();
+
+      // Show next steps suggestions
+      if (!options.json) {
+        const suggestions = [
+          {
+            description: 'See your origin story',
+            command: 'specter origin',
+          },
+          {
+            description: 'View achievement badges',
+            command: 'specter achievements',
+          },
+          {
+            description: 'Check contributor leaderboard',
+            command: 'specter fame',
+          },
+        ];
+        showNextSteps(suggestions);
+      }
     });
 }

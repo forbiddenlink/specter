@@ -5,6 +5,7 @@
 import path from 'node:path';
 import chalk from 'chalk';
 import type { Command } from 'commander';
+import { showNextSteps } from '../../cli-utils.js';
 import { analyzeCoupling, formatCoupling } from '../../coupling.js';
 import { loadGraph } from '../../graph/persistence.js';
 import { outputJson, outputJsonError } from '../../json-output.js';
@@ -13,11 +14,24 @@ import { createSpinner } from '../types.js';
 export function register(program: Command): void {
   program
     .command('coupling')
+    .alias('couple')
     .description('Find hidden couplings - files that change together but have no direct dependency')
     .option('-d, --dir <path>', 'Directory to analyze', '.')
     .option('--hidden-only', 'Only show hidden couplings (no expected couplings)')
     .option('--min-strength <n>', 'Minimum coupling strength (0-100)', '30')
     .option('--json', 'Output as JSON for CI/CD integration')
+    .addHelpText(
+      'after',
+      `
+Examples:
+  $ specter coupling
+  $ specter coupling --hidden-only
+  $ specter coupling --min-strength 50
+  $ specter coupling --json | jq '.pairs[] | select(.couplingStrength > 70)'
+  
+Hidden couplings reveal missing abstractions and architectural issues.
+`
+    )
     .action(async (options) => {
       const rootDir = path.resolve(options.dir);
 
@@ -99,5 +113,28 @@ export function register(program: Command): void {
         }
       }
       console.log();
+
+      // Show next steps suggestions
+      if (!options.json) {
+        const suggestions = [
+          {
+            description: 'Visualize architectural dependencies',
+            command: 'specter diagram',
+          },
+          {
+            description: 'Find circular dependencies',
+            command: 'specter cycles',
+          },
+          {
+            description: 'See files that change together',
+            command: 'specter drift',
+          },
+          {
+            description: 'Get refactoring suggestions',
+            command: 'specter fix',
+          },
+        ];
+        showNextSteps(suggestions);
+      }
     });
 }

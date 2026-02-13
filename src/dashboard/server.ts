@@ -7,6 +7,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fastifyCors from '@fastify/cors';
+import fastifyRateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
 import Fastify from 'fastify';
 import { getConfig } from '../config/index.js';
@@ -27,6 +28,12 @@ export async function startDashboard(
   const { port = config.dashboard.port, host = config.dashboard.host, rootDir } = options;
 
   const app = Fastify({ logger: false });
+
+  // Rate limiting to prevent abuse
+  await app.register(fastifyRateLimit, {
+    max: 100, // 100 requests per minute
+    timeWindow: '1 minute',
+  });
 
   // Enable CORS - restrict to localhost for security
   await app.register(fastifyCors, {

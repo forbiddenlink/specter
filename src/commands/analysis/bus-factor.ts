@@ -6,6 +6,7 @@ import path from 'node:path';
 import chalk from 'chalk';
 import type { Command } from 'commander';
 import { analyzeBusFactor, formatBusFactor } from '../../bus-factor.js';
+import { showNextSteps } from '../../cli-utils.js';
 import { loadGraph } from '../../graph/persistence.js';
 import { outputJson, outputJsonError } from '../../json-output.js';
 import { createSpinner } from '../types.js';
@@ -20,6 +21,17 @@ export function register(program: Command): void {
     .option('-d, --dir <path>', 'Directory to analyze', '.')
     .option('--critical-only', 'Only show critical risks')
     .option('--json', 'Output as JSON for CI/CD integration')
+    .addHelpText(
+      'after',
+      `
+Examples:
+  $ specter bus-factor
+  $ specter bus-factor --critical-only
+  $ specter bus-factor --json | jq '.risks[] | select(.criticality=="critical")'
+  
+Use this to identify knowledge silos and plan knowledge sharing sessions.
+`
+    )
     .action(async (options) => {
       const rootDir = path.resolve(options.dir);
 
@@ -106,5 +118,24 @@ export function register(program: Command): void {
         }
       }
       console.log();
+
+      // Show next steps suggestions
+      if (!options.json) {
+        const suggestions = [
+          {
+            description: 'See who worked on specific files',
+            command: 'specter who',
+          },
+          {
+            description: 'Visualize knowledge distribution',
+            command: 'specter knowledge-map',
+          },
+          {
+            description: 'Get reviewer recommendations',
+            command: 'specter reviewers',
+          },
+        ];
+        showNextSteps(suggestions);
+      }
     });
 }

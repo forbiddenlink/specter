@@ -7,6 +7,7 @@ import chalk from 'chalk';
 import type { Command } from 'commander';
 import gradient from 'gradient-string';
 import { generateComplexityReport, getComplexityEmoji } from '../../analyzers/complexity.js';
+import { showNextSteps } from '../../cli-utils.js';
 import { exportToPng, getRepoUrl, isPngExportAvailable } from '../../export-png.js';
 import { loadGraph } from '../../graph/persistence.js';
 import { outputJson, outputJsonError } from '../../json-output.js';
@@ -18,6 +19,7 @@ import { createSpinner, showShareLinks } from '../types.js';
 export function register(program: Command): void {
   program
     .command('health')
+    .alias('h')
     .description('Generate a codebase health report')
     .option('-d, --dir <path>', 'Directory to analyze', '.')
     .option('-l, --limit <n>', 'Number of hotspots to show', '10')
@@ -32,6 +34,15 @@ export function register(program: Command): void {
     .option('--social', 'Optimize PNG for Twitter/LinkedIn (1200x630)')
     .option('--qr', 'Add QR code linking to repo (with --png)')
     .option('--json', 'Output as JSON for CI/CD integration')
+    .addHelpText(
+      'after',
+      `
+Examples:
+  $ specter health
+  $ specter h --personality critic
+  $ specter health --exit-code --threshold 70
+  $ specter h --png health.png --social`
+    )
     .action(async (options) => {
       const rootDir = path.resolve(options.dir);
       const limit = parseInt(options.limit, 10);
@@ -109,6 +120,16 @@ export function register(program: Command): void {
 
       const g = gradient(['#9b59b6', '#6c5ce7', '#a29bfe']);
 
+      // Helper to calculate visible length (strips ANSI codes)
+      const stripAnsi = (str: string): string => {
+        // eslint-disable-next-line no-control-regex
+        return str.replace(/\x1b\[[0-9;]*m/g, '');
+      };
+
+      const visibleLength = (str: string): number => {
+        return stripAnsi(str).length;
+      };
+
       // Build output as array of lines
       const lines: string[] = [];
       lines.push('');
@@ -123,7 +144,7 @@ export function register(program: Command): void {
       const scoreLine = `  ${scoreEmoji} Health Score: ${scoreDisplay}/100`;
       lines.push(g('║') + scoreLine + ' '.repeat(W - scoreLine.length + 4) + g('║'));
       const barLine = `     ${progressBar(healthScore, 100, 40, scoreColor)}`;
-      lines.push(g('║') + barLine + ' '.repeat(W - 45) + g('║'));
+      lines.push(g('║') + barLine + ' '.repeat(W - visibleLength(barLine)) + g('║'));
       lines.push(g(`╠${'═'.repeat(W)}╣`));
 
       // Complexity distribution with bars
@@ -140,7 +161,8 @@ export function register(program: Command): void {
         const countStr = String(count).padStart(4);
         const bar = progressBar(count, totalFunctions || 1, barWidth, color);
         const line = `  ${emoji} ${label.padEnd(16)} ${bar} ${countStr}`;
-        return g('║') + line + ' '.repeat(W - line.length + 6) + g('║');
+        const padding = Math.max(0, W - visibleLength(line) + 6);
+        return g('║') + line + ' '.repeat(padding) + g('║');
       };
 
       lines.push(formatRow('🟢', 'Low (1-5)', report.distribution.low, chalk.green));
@@ -163,21 +185,19 @@ export function register(program: Command): void {
           const complexity = String(hotspot.complexity).padStart(2);
 
           const line1 = `  ${emoji} ${location}`;
-          lines.push(g('║') + chalk.cyan(line1) + ' '.repeat(W - line1.length + 2) + g('║'));
+          const padding1 = Math.max(0, W - line1.length + 2);
+          lines.push(g('║') + chalk.cyan(line1) + ' '.repeat(padding1) + g('║'));
           const line2 = `     ${info}`;
           const cplx = `C:${complexity}`;
+          const padding2 = Math.max(0, W - line2.length - cplx.length - 1);
           lines.push(
-            g('║') +
-              chalk.dim(line2) +
-              ' '.repeat(W - line2.length - cplx.length - 1) +
-              chalk.yellow(cplx) +
-              ' ' +
-              g('║')
+            g('║') + chalk.dim(line2) + ' '.repeat(padding2) + chalk.yellow(cplx) + ' ' + g('║')
           );
         }
       } else {
         const noHotspots = '  ✨ No complexity hotspots found! Great job!';
-        lines.push(g('║') + chalk.green(noHotspots) + ' '.repeat(W - noHotspots.length) + g('║'));
+        const padding = Math.max(0, W - noHotspots.length);
+        lines.push(g('║') + chalk.green(noHotspots) + ' '.repeat(padding) + g('║'));
       }
 
       lines.push(g(`╚${'═'.repeat(W)}╝`));
@@ -230,6 +250,34 @@ export function register(program: Command): void {
       }
 
       console.log(output);
+
+      // Show next steps suggestions
+      if (!options.json) {
+        const suggestions = [
+          {
+            description: 'Find the most problematic files',
+            command: 'specter hotspots',
+          },
+          {
+            description: 'Get AI suggestions for improvements',
+            command: 'specter ask "How can I improve code quality?"',
+          },
+          {
+            description: 'Track health over time',
+            command: 'specter trajectory',
+          },
+        ];
+
+        // Adjust suggestions based on health score
+        if (healthScore < 60) {
+          suggestions.unshift({
+            description: 'Get immediate refactoring suggestions',
+            command: 'specter fix',
+          });
+        }
+
+        showNextSteps(suggestions);
+      }
 
       // Exit with error code if health is below threshold
       if (exitCode && healthScore < threshold) {

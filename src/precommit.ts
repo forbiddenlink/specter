@@ -23,6 +23,115 @@ export interface PrecommitResult {
 }
 
 /**
+ * Assess risk based on file size changes
+ */
+function assessFileSizeRisk(
+  additions: number,
+  deletions: number
+): { risk: PrecommitFile['risk']; reasons: string[] } {
+  const reasons: string[] = [];
+  let risk: PrecommitFile['risk'] = 'low';
+
+  const totalLines = additions + deletions;
+  if (totalLines > 200) {
+    risk = 'high';
+    reasons.push(`Large change (${totalLines} lines)`);
+  } else if (totalLines > 50) {
+    risk = 'medium';
+    reasons.push(`Moderate change (${totalLines} lines)`);
+  }
+
+  return { risk, reasons };
+}
+
+/**
+ * Assess risk based on file path patterns
+ */
+function assessFilePatternRisk(filePath: string): {
+  risk: PrecommitFile['risk'];
+  reasons: string[];
+} {
+  const reasons: string[] = [];
+  let risk: PrecommitFile['risk'] = 'low';
+
+  if (filePath.includes('config') || filePath.endsWith('.env')) {
+    risk = 'high';
+    reasons.push('Configuration file');
+  }
+  if (filePath.includes('package.json') || filePath.includes('Cargo.toml')) {
+    if (risk === 'low') risk = 'medium';
+    reasons.push('Dependency file');
+  }
+  if (filePath.includes('migration') || filePath.includes('schema')) {
+    risk = 'high';
+    reasons.push('Database change');
+  }
+
+  return { risk, reasons };
+}
+
+/**
+ * Assess risk based on knowledge graph data
+ */
+function assessGraphBasedRisk(
+  node: GraphNode | undefined,
+  graph: KnowledgeGraph
+): { risk: PrecommitFile['risk']; reasons: string[] } {
+  const reasons: string[] = [];
+  let risk: PrecommitFile['risk'] = 'low';
+
+  if (!node) return { risk, reasons };
+
+  // Check complexity
+  if (node.complexity !== undefined && node.complexity > 20) {
+    risk = 'high';
+    reasons.push('High complexity file');
+  }
+
+  // Check dependents
+  const dependents = graph.edges.filter(
+    (e) => e.type === 'imports' && graph.nodes[e.target]?.filePath === node.filePath
+  );
+  if (dependents.length > 5) {
+    if (risk === 'low') risk = 'medium';
+    reasons.push(`${dependents.length} dependents`);
+  }
+
+  return { risk, reasons };
+}
+
+/**
+ * Generate suggestions based on precommit analysis
+ */
+function generatePrecommitSuggestions(result: Omit<PrecommitResult, 'suggestions'>): string[] {
+  const suggestions: string[] = [];
+
+  if (result.totalChanges > 300) {
+    suggestions.push('Consider splitting into smaller commits');
+  }
+
+  const highRiskCount = result.files.filter((f) => f.risk === 'high').length;
+  if (highRiskCount > 0) {
+    suggestions.push('Get a second pair of eyes on high-risk changes');
+  }
+
+  const hasTests = result.files.some((f) => f.path.includes('test') || f.path.includes('spec'));
+  const hasCode = result.files.some(
+    (f) =>
+      f.path.endsWith('.ts') ||
+      f.path.endsWith('.js') ||
+      f.path.endsWith('.py') ||
+      f.path.endsWith('.go')
+  );
+
+  if (hasCode && !hasTests) {
+    suggestions.push('Consider adding tests');
+  }
+
+  return suggestions;
+}
+
+/**
  * Quick risk check for staged changes
  */
 export async function runPrecommitCheck(
@@ -58,8 +167,6 @@ export async function runPrecommitCheck(
   const files: PrecommitFile[] = [];
   let totalAdditions = 0;
   let totalDeletions = 0;
-  let highRiskCount = 0;
-  let mediumRiskCount = 0;
 
   for (const line of stagedOutput.split('\n')) {
     if (!line.trim()) continue;
@@ -74,58 +181,29 @@ export async function runPrecommitCheck(
     totalAdditions += additions;
     totalDeletions += deletions;
 
-    // Quick risk assessment
-    const reasons: string[] = [];
-    let risk: PrecommitFile['risk'] = 'low';
+    // Assess risk from multiple sources
+    const sizeRisk = assessFileSizeRisk(additions, deletions);
+    const patternRisk = assessFilePatternRisk(filePath);
 
-    // Size-based risk
-    const totalLines = additions + deletions;
-    if (totalLines > 200) {
-      risk = 'high';
-      reasons.push(`Large change (${totalLines} lines)`);
-    } else if (totalLines > 50) {
-      if (risk === 'low') risk = 'medium';
-      reasons.push(`Moderate change (${totalLines} lines)`);
+    // Combine size and pattern risk
+    let reasons = [...sizeRisk.reasons, ...patternRisk.reasons];
+    let risk: PrecommitFile['risk'] = sizeRisk.risk;
+    if (patternRisk.risk === 'high' || (patternRisk.risk === 'medium' && risk === 'low')) {
+      risk = patternRisk.risk === 'high' ? 'high' : 'medium';
     }
 
-    // File pattern risk
-    if (filePath.includes('config') || filePath.endsWith('.env')) {
-      risk = 'high';
-      reasons.push('Configuration file');
-    }
-    if (filePath.includes('package.json') || filePath.includes('Cargo.toml')) {
-      if (risk === 'low') risk = 'medium';
-      reasons.push('Dependency file');
-    }
-    if (filePath.includes('migration') || filePath.includes('schema')) {
-      risk = 'high';
-      reasons.push('Database change');
-    }
-
-    // Graph-based risk (if available)
+    // Check graph-based risk
     const node = Object.values(graph.nodes).find(
       (n) => n.type === 'file' && n.filePath === filePath
     ) as GraphNode | undefined;
 
-    if (node) {
-      // Check complexity
-      if (node.complexity !== undefined && node.complexity > 20) {
-        risk = 'high';
-        reasons.push('High complexity file');
-      }
-
-      // Check dependents
-      const dependents = graph.edges.filter(
-        (e) => e.type === 'imports' && graph.nodes[e.target]?.filePath === node.filePath
-      );
-      if (dependents.length > 5) {
-        if (risk === 'low') risk = 'medium';
-        reasons.push(`${dependents.length} dependents`);
-      }
+    const graphRisk = assessGraphBasedRisk(node, graph);
+    reasons = [...reasons, ...graphRisk.reasons];
+    if (graphRisk.risk === 'high') {
+      risk = 'high';
+    } else if (graphRisk.risk === 'medium' && risk === 'low') {
+      risk = 'medium';
     }
-
-    if (risk === 'high') highRiskCount++;
-    if (risk === 'medium') mediumRiskCount++;
 
     if (reasons.length === 0) {
       reasons.push('Standard change');
@@ -138,6 +216,9 @@ export async function runPrecommitCheck(
   let status: PrecommitResult['status'] = 'pass';
   let summary = '';
 
+  const highRiskCount = files.filter((f) => f.risk === 'high').length;
+  const mediumRiskCount = files.filter((f) => f.risk === 'medium').length;
+
   if (highRiskCount > 0) {
     status = 'fail';
     summary = `${highRiskCount} high-risk file(s) detected`;
@@ -148,42 +229,23 @@ export async function runPrecommitCheck(
     summary = 'All changes look safe';
   }
 
-  // Generate suggestions
-  const suggestions: string[] = [];
-
-  if (totalAdditions + totalDeletions > 300) {
-    suggestions.push('Consider splitting into smaller commits');
-  }
-
-  if (highRiskCount > 0) {
-    suggestions.push('Get a second pair of eyes on high-risk changes');
-  }
-
-  const hasTests = files.some((f) => f.path.includes('test') || f.path.includes('spec'));
-  const hasCode = files.some(
-    (f) =>
-      f.path.endsWith('.ts') ||
-      f.path.endsWith('.js') ||
-      f.path.endsWith('.py') ||
-      f.path.endsWith('.go')
-  );
-
-  if (hasCode && !hasTests) {
-    suggestions.push('Consider adding tests');
-  }
-
   // Sort by risk level
   files.sort((a, b) => {
     const order = { high: 0, medium: 1, low: 2 };
     return order[a.risk] - order[b.risk];
   });
 
-  return {
+  // Create temporary result for suggestions generation
+  const tempResult: Omit<PrecommitResult, 'suggestions'> = {
     status,
     files,
     totalChanges: totalAdditions + totalDeletions,
     summary,
-    suggestions,
+  };
+
+  return {
+    ...tempResult,
+    suggestions: generatePrecommitSuggestions(tempResult),
   };
 }
 
