@@ -4,6 +4,11 @@
       "type": "stdio",
       "command": "npx",
       "args": ["-y", "specter-mcp"]
+    },
+    "mcp-tsmorph-refactor": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@sirosuzume/mcp-tsmorph-refactor"]
     }
   }
 }

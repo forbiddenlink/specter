@@ -1,6 +1,6 @@
 {
   "name": "@purplegumdropz/specter",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Give your codebase a voice. A Copilot CLI plugin that builds a knowledge graph and lets you talk to your code.",
   "type": "module",
   "main": "dist/index.js",
