@@ -1,0 +1,81 @@
+name: Security Audit
+
+on:
+  schedule:
+    # Run monthly on the 1st at midnight UTC
+    - cron: '0 0 1 * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+
+      - name: Run npm audit (JSON output)
+        run: npm audit --json > audit-report.json || true
+
+      - name: Check for vulnerabilities
+        id: audit-check
+        run: |
+          VULNS=$(npm audit --json 2>/dev/null | jq '.metadata.vulnerabilities.total // 0')
+          echo "vulnerabilities=$VULNS" >> $GITHUB_OUTPUT
+          if [ "$VULNS" -gt 0 ]; then
+            echo "::warning::Found $VULNS vulnerabilities"
+          fi
+
+      - name: Upload audit report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: audit-report
+          path: audit-report.json
+          retention-days: 30
+
+      - name: Create issue for vulnerabilities
+        if: steps.audit-check.outputs.vulnerabilities > 0
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = JSON.parse(fs.readFileSync('audit-report.json', 'utf8'));
+            const vulns = report.metadata?.vulnerabilities || {};
+
+            const body = `## Monthly Security Audit Report
+
+            **Date:** ${new Date().toISOString().split('T')[0]}
+
+            ### Vulnerabilities Found
+            - Critical: ${vulns.critical || 0}
+            - High: ${vulns.high || 0}
+            - Moderate: ${vulns.moderate || 0}
+            - Low: ${vulns.low || 0}
+
+            ### Next Steps
+            1. Review the audit report artifact
+            2. Run \`npm audit fix\` locally
+            3. Update dependencies as needed
+
+            ---
+            *This issue was automatically created by the security audit workflow.*`;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[Security] Monthly audit found ${vulns.total || 0} vulnerabilities`,
+              body: body,
+              labels: ['security', 'dependencies']
+            });
