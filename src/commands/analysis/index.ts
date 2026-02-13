@@ -1,6 +1,6 @@
 /**
  * Analysis commands - health, hotspots, coupling, cycles, drift, velocity, cost, dora, bus-factor,
- * trends, risk, vitals, report, trajectory
+ * trends, risk, vitals, report, trajectory, who, why
  */
 
 import type { Command } from 'commander';
@@ -18,6 +18,8 @@ import { register as registerTrajectory } from './trajectory.js';
 import { register as registerTrends } from './trends.js';
 import { register as registerVelocity } from './velocity.js';
 import { register as registerVitals } from './vitals.js';
+import { register as registerWho } from './who.js';
+import { register as registerWhy } from './why.js';
 
 export function registerAnalysisCommands(program: Command): void {
   registerHealth(program);
@@ -34,4 +36,6 @@ export function registerAnalysisCommands(program: Command): void {
   registerVitals(program);
   registerReport(program);
   registerTrajectory(program);
+  registerWho(program);
+  registerWhy(program);
 }
