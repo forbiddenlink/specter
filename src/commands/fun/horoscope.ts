@@ -5,6 +5,7 @@
 import path from 'node:path';
 import chalk from 'chalk';
 import type { Command } from 'commander';
+import gradient from 'gradient-string';
 import { loadGraph } from '../../graph/persistence.js';
 import { formatHoroscope, generateHoroscope } from '../../horoscope.js';
 import { outputJson, outputJsonError } from '../../json-output.js';
@@ -38,9 +39,11 @@ export function register(program: Command): void {
 
       const output = formatHoroscope(reading);
 
+      const g = gradient(['#9b59b6', '#6c5ce7', '#a29bfe']);
+
       console.log();
       // Add some mystical styling
-      console.log(chalk.bold.magenta(`  ${'─'.repeat(50)}`));
+      console.log(`  ${g('─'.repeat(50))}`);
       for (const line of output.split('\n')) {
         if (line.startsWith('\uD83D\uDD2E')) {
           console.log(chalk.bold.magenta(`  ${line}`));
@@ -64,7 +67,7 @@ export function register(program: Command): void {
           console.log(chalk.white(`  ${line}`));
         }
       }
-      console.log(chalk.bold.magenta(`  ${'─'.repeat(50)}`));
+      console.log(`  ${g('─'.repeat(50))}`);
       console.log();
     });
 }

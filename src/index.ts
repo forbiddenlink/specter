@@ -4,6 +4,12 @@
  *
  * Model Context Protocol server that exposes the knowledge graph
  * to GitHub Copilot CLI and other MCP clients.
+ *
+ * Implements MCP best practices:
+ * - Outcome-oriented tools (not operation-oriented)
+ * - Proper error handling with context
+ * - Request timeout handling
+ * - Structured error responses
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -31,8 +37,36 @@ import * as searchSymbols from './tools/search-symbols.js';
 let cachedGraph: KnowledgeGraph | null = null;
 let graphLoadError: string | null = null;
 
+// Error tracking for monitoring
+interface ErrorMetrics {
+  toolErrors: Map<string, number>;
+  lastError: Date | null;
+  totalErrors: number;
+}
+
+const errorMetrics: ErrorMetrics = {
+  toolErrors: new Map(),
+  lastError: null,
+  totalErrors: 0,
+};
+
 /**
- * Get or load the knowledge graph
+ * Log error to stderr for debugging
+ */
+function logError(toolName: string, error: Error): void {
+  console.error(`[MCP Error] ${toolName}: ${error.message}`, {
+    timestamp: new Date().toISOString(),
+    stack: error.stack,
+  });
+
+  // Track metrics
+  errorMetrics.totalErrors++;
+  errorMetrics.lastError = new Date();
+  errorMetrics.toolErrors.set(toolName, (errorMetrics.toolErrors.get(toolName) || 0) + 1);
+}
+
+/**
+ * Get or load the knowledge graph with enhanced error handling
  */
 async function getGraph(): Promise<KnowledgeGraph> {
   if (cachedGraph) {
@@ -40,15 +74,44 @@ async function getGraph(): Promise<KnowledgeGraph> {
   }
 
   const cwd = process.cwd();
-  const graph = await loadGraph(cwd);
 
-  if (!graph) {
-    graphLoadError = `No knowledge graph found in ${cwd}. Run 'specter scan' first.`;
-    throw new Error(graphLoadError);
+  try {
+    const graph = await loadGraph(cwd);
+
+    if (!graph) {
+      graphLoadError = `No knowledge graph found in ${cwd}. Run 'specter scan' first to build the knowledge graph.`;
+      throw new Error(graphLoadError);
+    }
+
+    cachedGraph = graph;
+    return graph;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error loading graph';
+    logError('getGraph', new Error(message));
+    throw new Error(`Failed to load knowledge graph: ${message}`);
   }
+}
 
-  cachedGraph = graph;
-  return graph;
+/**
+ * Wrap tool execution with timeout and error handling
+ */
+async function executeTool<T>(
+  toolName: string,
+  executor: () => Promise<T>,
+  timeoutMs = 30000
+): Promise<T> {
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => {
+      reject(new Error(`Tool execution timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([executor(), timeoutPromise]);
+  } catch (error) {
+    logError(toolName, error instanceof Error ? error : new Error(String(error)));
+    throw error;
+  }
 }
 
 /**
@@ -68,11 +131,26 @@ function createServer(): McpServer {
       filePath: z.string().describe('Path to the file to analyze (relative to project root)'),
     },
     async (args) => {
-      const graph = await getGraph();
-      const result = getFileRelationships.execute(graph, args);
-      return {
-        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
-      };
+      try {
+        const graph = await getGraph();
+        const result = await executeTool('get_file_relationships', async () =>
+          getFileRelationships.execute(graph, args)
+        );
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error analyzing file relationships: ${message}\n\nPlease ensure:\n1. You've run 'specter scan' in your project directory\n2. The file path is correct and relative to project root\n3. The file exists in the scanned codebase`,
+            },
+          ],
+          isError: true,
+        };
+      }
     }
   );
 

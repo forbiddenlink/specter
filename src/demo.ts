@@ -7,12 +7,13 @@
  */
 
 import chalk from 'chalk';
-import type { KnowledgeGraph } from './graph/types.js';
+import gradient from 'gradient-string';
 import { getGraphStats } from './graph/builder.js';
-import { applyPersonality } from './personality/formatter.js';
-import type { PersonalityMode } from './personality/types.js';
+import type { KnowledgeGraph } from './graph/types.js';
 import { generateHoroscope } from './horoscope.js';
 import { analyzeHotspots } from './hotspots.js';
+import { applyPersonality } from './personality/formatter.js';
+import type { PersonalityMode } from './personality/types.js';
 
 export interface DemoOptions {
   personality: PersonalityMode;
@@ -54,21 +55,23 @@ function sleep(ms: number): Promise<void> {
  * Type text character by character for dramatic effect
  */
 async function typeText(text: string, speed: number = 30): Promise<void> {
-  for (const char of text) {
-    process.stdout.write(char);
+  const cursor = '\u2588';
+  for (let i = 0; i < text.length; i++) {
+    process.stdout.write(`\r${text.slice(0, i + 1)}${chalk.dim(cursor)}`);
     await sleep(speed);
   }
-  console.log();
+  process.stdout.write(`\r${text} \n`);
 }
 
 /**
  * Display a section header with animation
  */
 async function showHeader(emoji: string, title: string): Promise<void> {
+  const specterGradient = gradient(['#9b59b6', '#6c5ce7', '#a29bfe']);
   console.log();
-  console.log(chalk.dim('\u2501'.repeat(50)));
+  console.log(specterGradient('\u2501'.repeat(50)));
   await typeText(`${emoji}  ${chalk.bold.cyan(title)}`, 20);
-  console.log(chalk.dim('\u2501'.repeat(50)));
+  console.log(specterGradient('\u2501'.repeat(50)));
   console.log();
 }
 
@@ -85,8 +88,9 @@ async function demoHealth(ctx: DemoContext): Promise<string> {
   // Health score with visual bar
   const barWidth = 30;
   const filled = Math.round((healthScore / 100) * barWidth);
+  const healthGradient = gradient(['#ff6b6b', '#ffd93d', '#6bcb77']);
   const bar =
-    chalk.green('\u2588'.repeat(filled)) + chalk.dim('\u2591'.repeat(barWidth - filled));
+    healthGradient('\u2588'.repeat(filled)) + chalk.dim('\u2591'.repeat(barWidth - filled));
 
   lines.push(`  Health Score: ${chalk.bold(healthScore.toString())}/100`);
   lines.push(`  ${bar}`);
@@ -291,8 +295,9 @@ export async function runDemo(
   const ctx: DemoContext = { graph, personality, rootDir };
 
   // Opening banner
+  const specterGradient = gradient(['#9b59b6', '#6c5ce7', '#a29bfe']);
   console.log();
-  console.log(chalk.bold.magenta('  \u{1F47B} SPECTER DEMO'));
+  console.log(specterGradient('  \u{1F47B} SPECTER DEMO'));
   console.log(chalk.dim('  The ghost in your git history'));
   console.log();
 
@@ -314,7 +319,7 @@ export async function runDemo(
 
   // Closing
   console.log();
-  console.log(chalk.dim('\u2501'.repeat(50)));
+  console.log(specterGradient('\u2501'.repeat(50)));
   console.log();
   await typeText(
     `  ${chalk.bold.green('Demo complete!')} Your codebase has been thoroughly haunted.`,

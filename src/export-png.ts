@@ -105,9 +105,9 @@ function parseAnsiText(text: string, theme: 'dark' | 'light'): ParsedLine[] {
     // ANSI escape code regex
     const ansiRegex = /\x1b\[([0-9;]+)m/g;
     let lastIndex = 0;
-    let match: RegExpExecArray | null;
+    let match: RegExpExecArray | null = ansiRegex.exec(rawLine);
 
-    while ((match = ansiRegex.exec(rawLine)) !== null) {
+    while (match !== null) {
       // Add text before this escape code
       if (match.index > lastIndex) {
         const textBefore = rawLine.substring(lastIndex, match.index);
@@ -152,6 +152,7 @@ function parseAnsiText(text: string, theme: 'dark' | 'light'): ParsedLine[] {
       }
 
       lastIndex = ansiRegex.lastIndex;
+      match = ansiRegex.exec(rawLine);
     }
 
     // Add remaining text
@@ -331,7 +332,7 @@ export async function exportToPng(
   } = options;
 
   // Use social media dimensions if requested
-  const width = socialFormat ? SOCIAL_DIMENSIONS.width : (options.width || 1200);
+  const width = socialFormat ? SOCIAL_DIMENSIONS.width : options.width || 1200;
 
   // Detect content type for styling
   const contentType = detectContentType(content);
@@ -348,8 +349,8 @@ export async function exportToPng(
   // Calculate height - force social dimensions if requested
   const calculatedHeight = socialFormat
     ? SOCIAL_DIMENSIONS.height
-    : (options.height ||
-        calculateHeight(parsedLines, tempCtx, fontSize, lineHeight, padding, watermark, !!qrUrl));
+    : options.height ||
+      calculateHeight(parsedLines, tempCtx, fontSize, lineHeight, padding, watermark, !!qrUrl);
 
   // Create main canvas
   const canvas = createCanvas(width, calculatedHeight);

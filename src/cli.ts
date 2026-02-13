@@ -10,6 +10,7 @@
 import path from 'node:path';
 import chalk from 'chalk';
 import { Command } from 'commander';
+import gradient from 'gradient-string';
 import ora, { type Ora } from 'ora';
 
 // Create a spinner that works in both TTY and non-TTY environments
@@ -60,22 +61,28 @@ import { suggestRefactoring } from './suggest-refactor.js';
 
 const program = new Command();
 
+// Global accessibility flag - can also be set via environment variable
+export const isAccessibleMode = process.env.SPECTER_ACCESSIBLE === 'true';
+
 /**
  * ASCII banner for Specter CLI
  * Ghost-themed, compact (5-7 lines), purple/magenta theme
  */
 function printBanner(): void {
-  const ghost = chalk.magenta;
-  const bright = chalk.bold.magentaBright;
-  const dim = chalk.dim;
+  const banner = [
+    '   ____                  _            ',
+    '  / ___| _ __   ___  ___| |_ ___ _ __ ',
+    "  \\___ \\| '_ \\ / _ \\/ __| __/ _ \\ '__|",
+    '   ___) | |_) |  __/ (__| ||  __/ |   ',
+    '  |____/| .__/ \\___|\\___|\\___|\\__|_|   ',
+    '        |_|                            ',
+  ].join('\n');
+
+  const specterGradient = gradient(['#9b59b6', '#6c5ce7', '#a29bfe']);
 
   console.log();
-  console.log(ghost('   ____                  _            '));
-  console.log(ghost('  / ___| _ __   ___  ___| |_ ___ _ __ '));
-  console.log(bright("  \\___ \\| '_ \\ / _ \\/ __| __/ _ \\ '__|"));
-  console.log(bright('   ___) | |_) |  __/ (__| ||  __/ |   '));
-  console.log(ghost('  |____/| .__/ \\___|\\___|\\___|\\__|_|   '));
-  console.log(ghost('        |_|   ') + dim('Give your codebase a voice'));
+  console.log(specterGradient.multiline(banner));
+  console.log(chalk.dim('        Give your codebase a voice'));
   console.log();
 }
 
@@ -84,7 +91,7 @@ function printBanner(): void {
  */
 function printVersion(): void {
   printBanner();
-  console.log(chalk.dim(`  v1.0.0`));
+  console.log(chalk.dim(`  v1.1.0`));
   console.log();
 }
 
@@ -97,6 +104,9 @@ if (hasVersionFlag) {
   process.exit(0);
 }
 
+// Set up global options before command registration
+program.option('--accessible', 'Enable accessibility mode (color-blind friendly)');
+
 if (hasNoCommand) {
   printBanner();
 }
@@ -104,7 +114,7 @@ if (hasNoCommand) {
 program
   .name('specter')
   .description('Give your codebase a voice. Build a knowledge graph and talk to your code.')
-  .version('1.0.0')
+  .version('1.1.0')
   .showSuggestionAfterError(true);
 
 // Register all modular commands

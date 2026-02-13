@@ -3,9 +3,31 @@
  *
  * Centralized color scheme for consistent terminal output.
  * Uses semantic naming for different severity levels and UI elements.
+ * Supports accessibility mode for color-blind users.
  */
 
 import chalk from 'chalk';
+import gradient from 'gradient-string';
+
+type GradientFn = ReturnType<typeof gradient>;
+
+/**
+ * Check if accessible mode is enabled
+ */
+export const isAccessibleMode =
+  process.env.SPECTER_ACCESSIBLE === 'true' || process.argv.includes('--accessible');
+
+/**
+ * Prefix symbols for accessible mode
+ */
+export const symbols = {
+  success: isAccessibleMode ? '✅ ' : '',
+  warning: isAccessibleMode ? '⚠️  ' : '',
+  error: isAccessibleMode ? '❌ ' : '',
+  info: isAccessibleMode ? 'ℹ️  ' : '',
+  critical: isAccessibleMode ? '🔴 ' : '',
+  healthy: isAccessibleMode ? '🟢 ' : '',
+};
 
 /**
  * Centralized color palette for Specter UI
@@ -34,6 +56,37 @@ export const colors = {
   // Box drawing
   border: chalk.bold,
   header: chalk.bold.white,
+};
+
+/**
+ * Gradient presets for Specter UI
+ * Uses HSV interpolation for vibrant, eye-catching gradients
+ */
+export const gradients: Record<string, GradientFn> = {
+  /** Brand gradient for banners and headers (purple -> blue -> lavender) */
+  specter: gradient(['#9b59b6', '#6c5ce7', '#a29bfe']),
+  /** Health score gradient (red -> yellow -> green) */
+  health: gradient(['#ff6b6b', '#ffd93d', '#6bcb77']),
+  /** Danger/fire gradient for roasts and warnings */
+  fire: gradient(['#ff6b6b', '#ee5a24', '#f9ca24']),
+  /** Cool ocean gradient for info displays */
+  ocean: gradient(['#6c5ce7', '#74b9ff', '#00cec9']),
+  /** DNA/genome gradient */
+  dna: gradient(['#00b894', '#00cec9', '#0984e3', '#6c5ce7']),
+  /** Achievement gold gradient */
+  gold: gradient(['#f9ca24', '#f0932b', '#e17055']),
+  /** Spectral divider gradient */
+  spectral: gradient(['#9b59b6', '#6c5ce7', '#a29bfe', '#74b9ff']),
+};
+
+/**
+ * Pattern fills for accessible mode (charts without relying on color)
+ */
+export const patterns = {
+  high: '████',
+  medium: '▓▓▓▓',
+  low: '▒▒▒▒',
+  none: '░░░░',
 };
 
 /**

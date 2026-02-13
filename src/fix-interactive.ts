@@ -6,10 +6,10 @@
  * where possible.
  */
 
-import { readFileSync, writeFileSync } from 'node:fs';
 import { stdin as input, stdout as output } from 'node:process';
 import * as readline from 'node:readline/promises';
 import chalk from 'chalk';
+import gradient from 'gradient-string';
 import { Project, SyntaxKind } from 'ts-morph';
 import type { FixResult, FixSuggestion } from './fix.js';
 
@@ -37,13 +37,10 @@ export async function runInteractiveFix(
   const rl = readline.createInterface({ input, output });
 
   console.log();
-  console.log(chalk.bold.magenta('  ╔═══════════════════════════════════════════╗'));
-  console.log(
-    chalk.bold.magenta('  ║') +
-      chalk.bold.white('        🔧 INTERACTIVE FIX SESSION         ') +
-      chalk.bold.magenta('║')
-  );
-  console.log(chalk.bold.magenta('  ╚═══════════════════════════════════════════╝'));
+  const g = gradient(['#9b59b6', '#6c5ce7', '#a29bfe']);
+  console.log(g('  ╔═══════════════════════════════════════════╗'));
+  console.log(g('  ║') + chalk.bold.white('        🔧 INTERACTIVE FIX SESSION         ') + g('║'));
+  console.log(g('  ╚═══════════════════════════════════════════╝'));
   console.log();
   console.log(chalk.dim(`  File: ${result.filePath}`));
   console.log(chalk.dim(`  Suggestions: ${result.suggestions.length}`));
@@ -147,7 +144,7 @@ export async function runInteractiveFix(
 
     if (!isLast) {
       console.log();
-      console.log(chalk.dim('  ' + '─'.repeat(60)));
+      console.log(chalk.dim(`  ${'─'.repeat(60)}`));
       console.log();
     }
   }
@@ -156,13 +153,10 @@ export async function runInteractiveFix(
 
   // Show session summary
   console.log();
-  console.log(chalk.bold.magenta('  ╔═══════════════════════════════════════════╗'));
-  console.log(
-    chalk.bold.magenta('  ║') +
-      chalk.bold.white('          SESSION COMPLETE                ') +
-      chalk.bold.magenta('║')
-  );
-  console.log(chalk.bold.magenta('  ╚═══════════════════════════════════════════╝'));
+  const g2 = gradient(['#9b59b6', '#6c5ce7', '#a29bfe']);
+  console.log(g2('  ╔═══════════════════════════════════════════╗'));
+  console.log(g2('  ║') + chalk.bold.white('          SESSION COMPLETE                ') + g2('║'));
+  console.log(g2('  ╚═══════════════════════════════════════════╝'));
   console.log();
   console.log(chalk.green(`  ✅ Applied: ${session.applied}`));
   console.log(chalk.yellow(`  ⏭️  Skipped: ${session.skipped}`));
@@ -248,10 +242,11 @@ async function applyFix(filePath: string, suggestion: FixSuggestion): Promise<bo
             decl.getKind() === SyntaxKind.InterfaceDeclaration ||
             decl.getKind() === SyntaxKind.TypeAliasDeclaration
           ) {
-            const name = (decl as any).getName?.();
+            const name = 'getName' in decl ? (decl as { getName(): string }).getName() : undefined;
             if (name === exportName) {
               // Remove export keyword but keep declaration
-              (decl as any).setIsExported?.(false);
+              if ('setIsExported' in decl)
+                (decl as { setIsExported(value: boolean): void }).setIsExported(false);
               modified = true;
               break;
             }

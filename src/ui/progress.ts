@@ -6,6 +6,9 @@
  */
 
 import chalk from 'chalk';
+import gradient from 'gradient-string';
+import logUpdate from 'log-update';
+import terminalLink from 'terminal-link';
 import { colors, getComplexityColor, getHealthColor } from './colors.js';
 
 /**
@@ -292,4 +295,83 @@ export function percentIndicator(
   const percent = Math.round((value / max) * 100);
   const color = colorFn || getHealthColor(percent);
   return color(`${percent}%`);
+}
+
+/**
+ * Animate a score counting up from 0 to the target value with a gradient bar.
+ * Only animates in TTY environments; falls back to static display otherwise.
+ *
+ * @param label - Label to show before the score
+ * @param target - Target score to animate to
+ * @param max - Maximum possible score (default: 100)
+ * @param barWidth - Width of the progress bar (default: 30)
+ */
+export async function animateScore(
+  label: string,
+  target: number,
+  max: number = 100,
+  barWidth: number = 30
+): Promise<void> {
+  const healthGrad = gradient(['#ff6b6b', '#ffd93d', '#6bcb77']);
+
+  if (!process.stdout.isTTY) {
+    const filled = Math.round((target / max) * barWidth);
+    const bar = healthGrad('\u2588'.repeat(filled)) + chalk.dim('\u2591'.repeat(barWidth - filled));
+    console.log(`  ${label}: ${chalk.bold(String(target))}/${max}`);
+    console.log(`  ${bar}`);
+    return;
+  }
+
+  const steps = Math.min(target, 40);
+  for (let i = 0; i <= steps; i++) {
+    const current = Math.round((i / steps) * target);
+    const filled = Math.round((current / max) * barWidth);
+    const bar = healthGrad('\u2588'.repeat(filled)) + chalk.dim('\u2591'.repeat(barWidth - filled));
+    logUpdate(`  ${label}: ${chalk.bold(String(current))}/${max}\n  ${bar}`);
+    await new Promise((r) => setTimeout(r, 15));
+  }
+  logUpdate.done();
+}
+
+/**
+ * Create a clickable terminal link if supported, with graceful fallback.
+ *
+ * @param text - Display text
+ * @param url - URL or file:// path
+ * @returns Clickable link string (or plain text in unsupported terminals)
+ */
+export function fileLink(text: string, url: string): string {
+  return terminalLink(text, url, { fallback: (text) => text });
+}
+
+/**
+ * Create a clickable file path link using file:// protocol.
+ *
+ * @param filePath - Absolute or relative file path
+ * @param rootDir - Root directory to resolve relative paths against
+ * @returns Clickable path string
+ */
+export function clickablePath(filePath: string, rootDir?: string): string {
+  const displayPath = filePath;
+  let fullPath = filePath;
+  if (rootDir && !filePath.startsWith('/')) {
+    fullPath = `${rootDir}/${filePath}`;
+  }
+  const fileUrl = `file://${fullPath}`;
+  return terminalLink(colors.file(displayPath), fileUrl, {
+    fallback: () => colors.file(displayPath),
+  });
+}
+
+/**
+ * Format a duration in milliseconds as a human-readable timing badge.
+ *
+ * @param ms - Duration in milliseconds
+ * @returns Formatted string like "(42ms)" or "(1.2s)"
+ */
+export function timingBadge(ms: number): string {
+  if (ms < 1000) {
+    return chalk.dim(`(${Math.round(ms)}ms)`);
+  }
+  return chalk.dim(`(${(ms / 1000).toFixed(1)}s)`);
 }

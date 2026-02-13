@@ -5,12 +5,14 @@
 import path from 'node:path';
 import chalk from 'chalk';
 import type { Command } from 'commander';
+import gradient from 'gradient-string';
 import { generateComplexityReport, getComplexityEmoji } from '../../analyzers/complexity.js';
 import { exportToPng, getRepoUrl, isPngExportAvailable } from '../../export-png.js';
 import { loadGraph } from '../../graph/persistence.js';
 import { outputJson, outputJsonError } from '../../json-output.js';
 import { formatHealthComment } from '../../personality/formatter.js';
 import type { PersonalityMode } from '../../personality/types.js';
+import { animateScore, timingBadge } from '../../ui/progress.js';
 import { createSpinner, showShareLinks } from '../types.js';
 
 export function register(program: Command): void {
@@ -47,6 +49,7 @@ export function register(program: Command): void {
         return;
       }
 
+      const startTime = Date.now();
       const report = generateComplexityReport(graph);
       const healthScore = Math.max(0, 100 - report.averageComplexity * 5);
 
@@ -104,35 +107,29 @@ export function register(program: Command): void {
 
       const W = 60; // inner width
 
+      const g = gradient(['#9b59b6', '#6c5ce7', '#a29bfe']);
+
       // Build output as array of lines
       const lines: string[] = [];
       lines.push('');
-      lines.push(chalk.bold(`╔${'═'.repeat(W)}╗`));
+      lines.push(g(`╔${'═'.repeat(W)}╗`));
       lines.push(
-        chalk.bold('║') +
-          '  👻 ' +
-          chalk.bold.white('SPECTER HEALTH REPORT') +
-          ' '.repeat(W - 27) +
-          chalk.bold('║')
+        g('║') + '  👻 ' + chalk.bold.white('SPECTER HEALTH REPORT') + ' '.repeat(W - 27) + g('║')
       );
-      lines.push(chalk.bold(`╠${'═'.repeat(W)}╣`));
+      lines.push(g(`╠${'═'.repeat(W)}╣`));
 
       // Health score with large display
       const scoreDisplay = `${Math.round(healthScore)}`.padStart(3);
       const scoreLine = `  ${scoreEmoji} Health Score: ${scoreDisplay}/100`;
-      lines.push(
-        chalk.bold('║') + scoreLine + ' '.repeat(W - scoreLine.length + 4) + chalk.bold('║')
-      );
+      lines.push(g('║') + scoreLine + ' '.repeat(W - scoreLine.length + 4) + g('║'));
       const barLine = `     ${progressBar(healthScore, 100, 40, scoreColor)}`;
-      lines.push(chalk.bold('║') + barLine + ' '.repeat(W - 45) + chalk.bold('║'));
-      lines.push(chalk.bold(`╠${'═'.repeat(W)}╣`));
+      lines.push(g('║') + barLine + ' '.repeat(W - 45) + g('║'));
+      lines.push(g(`╠${'═'.repeat(W)}╣`));
 
       // Complexity distribution with bars
       const distTitle = '  📊 Complexity Distribution';
-      lines.push(
-        chalk.bold('║') + distTitle + ' '.repeat(W - distTitle.length + 2) + chalk.bold('║')
-      );
-      lines.push(chalk.bold('║') + chalk.dim(`  ${'─'.repeat(W - 4)}`) + chalk.bold('║'));
+      lines.push(g('║') + distTitle + ' '.repeat(W - distTitle.length + 2) + g('║'));
+      lines.push(g('║') + chalk.dim(`  ${'─'.repeat(W - 4)}`) + g('║'));
 
       const formatRow = (
         emoji: string,
@@ -143,7 +140,7 @@ export function register(program: Command): void {
         const countStr = String(count).padStart(4);
         const bar = progressBar(count, totalFunctions || 1, barWidth, color);
         const line = `  ${emoji} ${label.padEnd(16)} ${bar} ${countStr}`;
-        return chalk.bold('║') + line + ' '.repeat(W - line.length + 6) + chalk.bold('║');
+        return g('║') + line + ' '.repeat(W - line.length + 6) + g('║');
       };
 
       lines.push(formatRow('🟢', 'Low (1-5)', report.distribution.low, chalk.green));
@@ -151,15 +148,13 @@ export function register(program: Command): void {
       lines.push(formatRow('🟠', 'High (11-20)', report.distribution.high, chalk.hex('#FFA500')));
       lines.push(formatRow('🔴', 'Critical (21+)', report.distribution.veryHigh, chalk.red));
 
-      lines.push(chalk.bold(`╠${'═'.repeat(W)}╣`));
+      lines.push(g(`╠${'═'.repeat(W)}╣`));
 
       // Hotspots
       if (report.hotspots.length > 0) {
         const hotspotTitle = `  🔥 Top ${Math.min(limit, report.hotspots.length)} Complexity Hotspots`;
-        lines.push(
-          chalk.bold('║') + hotspotTitle + ' '.repeat(W - hotspotTitle.length + 2) + chalk.bold('║')
-        );
-        lines.push(chalk.bold('║') + chalk.dim(`  ${'─'.repeat(W - 4)}`) + chalk.bold('║'));
+        lines.push(g('║') + hotspotTitle + ' '.repeat(W - hotspotTitle.length + 2) + g('║'));
+        lines.push(g('║') + chalk.dim(`  ${'─'.repeat(W - 4)}`) + g('║'));
 
         for (const hotspot of report.hotspots.slice(0, limit)) {
           const emoji = getComplexityEmoji(hotspot.complexity);
@@ -168,31 +163,24 @@ export function register(program: Command): void {
           const complexity = String(hotspot.complexity).padStart(2);
 
           const line1 = `  ${emoji} ${location}`;
-          lines.push(
-            chalk.bold('║') + chalk.cyan(line1) + ' '.repeat(W - line1.length + 2) + chalk.bold('║')
-          );
+          lines.push(g('║') + chalk.cyan(line1) + ' '.repeat(W - line1.length + 2) + g('║'));
           const line2 = `     ${info}`;
           const cplx = `C:${complexity}`;
           lines.push(
-            chalk.bold('║') +
+            g('║') +
               chalk.dim(line2) +
               ' '.repeat(W - line2.length - cplx.length - 1) +
               chalk.yellow(cplx) +
               ' ' +
-              chalk.bold('║')
+              g('║')
           );
         }
       } else {
         const noHotspots = '  ✨ No complexity hotspots found! Great job!';
-        lines.push(
-          chalk.bold('║') +
-            chalk.green(noHotspots) +
-            ' '.repeat(W - noHotspots.length) +
-            chalk.bold('║')
-        );
+        lines.push(g('║') + chalk.green(noHotspots) + ' '.repeat(W - noHotspots.length) + g('║'));
       }
 
-      lines.push(chalk.bold(`╚${'═'.repeat(W)}╝`));
+      lines.push(g(`╚${'═'.repeat(W)}╝`));
 
       // Summary line with personality
       lines.push('');
@@ -204,6 +192,10 @@ export function register(program: Command): void {
       } else {
         lines.push(chalk.red(`  ${healthComment}`));
       }
+
+      const duration = Date.now() - startTime;
+      lines.push('');
+      lines.push(chalk.dim(`  Analyzed in ${timingBadge(duration)}`));
 
       const output = lines.join('\n');
 
@@ -229,6 +221,12 @@ export function register(program: Command): void {
         spinner.succeed(`Image saved to ${outputPath}`);
         showShareLinks('health', qrUrl);
         return;
+      }
+
+      // Animate score reveal if in TTY, then show full report
+      if (process.stdout.isTTY && !options.png) {
+        await animateScore('Health Score', Math.round(healthScore));
+        console.log();
       }
 
       console.log(output);

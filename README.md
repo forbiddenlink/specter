@@ -19,6 +19,14 @@
   63 commands. 12 personality modes. One ghost.
 </p>
 
+<p align="center">
+  📖 <a href="#documentation">Documentation</a> •
+  🆚 <a href="docs/COMPARISON.md">Why Specter?</a> •
+  🎯 <a href="docs/ACCESSIBILITY.md">Accessibility</a> •
+  🤖 <a href="#github-copilot-cli-integration">MCP Integration</a> •
+  🎬 <a href="#demo">Demo</a>
+</p>
+
 ```
 $ specter health
 
@@ -88,6 +96,19 @@ Want to try Specter without installing? Get a brutal roast of any codebase:
 npx @purplegumdropz/specter-roast          # Normal roast
 npx @purplegumdropz/specter-roast --savage  # Maximum brutality
 ```
+
+---
+
+## Documentation
+
+| Guide | Description |
+|-------|-------------|
+| 📘 [MCP Integration Guide](docs/MCP_INTEGRATION.md) | Complete guide to all 14 MCP tools with parameters and examples |
+| 💡 [MCP Example Prompts](docs/MCP_EXAMPLE_PROMPTS.md) | Real-world prompts for using Specter with AI assistants |
+| 🆚 [Comparison Guide](docs/COMPARISON.md) | How Specter compares to SonarQube, Code Climate, Snyk, and others |
+| ♿ [Accessibility Features](docs/ACCESSIBILITY.md) | Colorblind mode, screen reader support, and inclusive design |
+| 📸 [Screenshot Guide](docs/SCREENSHOT_GUIDE.md) | How to capture beautiful terminal screenshots |
+| ✅ [Contest Checklist](docs/CONTEST_CHECKLIST.md) | Readiness tracker and improvement roadmap |
 
 ---
 
@@ -1243,6 +1264,8 @@ Specter exposes 14 tools via the Model Context Protocol:
 | `get_archaeology` | How a file evolved over time |
 | `get_health_trends` | Health trends analysis |
 | `get_risk_score` | Commit/PR risk score |
+
+📖 **[Complete MCP Integration Guide](docs/MCP_INTEGRATION.md)** • **[Example Prompts](docs/MCP_EXAMPLE_PROMPTS.md)**
 
 ### MCP Resources
 

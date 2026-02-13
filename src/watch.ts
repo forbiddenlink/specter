@@ -8,8 +8,8 @@
 import { existsSync, readdirSync, readFileSync, statSync, watch } from 'node:fs';
 import path from 'node:path';
 import chalk from 'chalk';
+import gradient from 'gradient-string';
 import { loadGraph, saveGraph } from './graph/persistence.js';
-import type { KnowledgeGraph } from './graph/types.js';
 import type { PersonalityMode } from './personality/types.js';
 
 export interface WatchOptions {
@@ -126,7 +126,7 @@ function analyzeChangedFile(filePath: string, rootDir: string): FileChange | nul
     };
 
     return change;
-  } catch (error) {
+  } catch (_error) {
     // File might be temporarily unavailable
     return null;
   }
@@ -352,7 +352,7 @@ export async function startWatch(options: WatchOptions): Promise<void> {
             }
           }
         }
-      } catch (error) {
+      } catch (_error) {
         // Ignore errors during initialization
       }
     };
@@ -368,13 +368,10 @@ export async function startWatch(options: WatchOptions): Promise<void> {
 
   // Display header
   console.log();
-  console.log(chalk.bold.magenta('  ╔═══════════════════════════════════════════╗'));
-  console.log(
-    chalk.bold.magenta('  ║') +
-      chalk.bold.white('          👻 SPECTER WATCHING...           ') +
-      chalk.bold.magenta('║')
-  );
-  console.log(chalk.bold.magenta('  ╚═══════════════════════════════════════════╝'));
+  const g = gradient(['#9b59b6', '#6c5ce7', '#a29bfe']);
+  console.log(g('  ╔═══════════════════════════════════════════╗'));
+  console.log(g('  ║') + chalk.bold.white('          👻 SPECTER WATCHING...           ') + g('║'));
+  console.log(g('  ╚═══════════════════════════════════════════╝'));
   console.log();
   console.log(chalk.dim(`  Monitoring: ${rootDir}`));
   console.log(chalk.dim(`  Personality: ${mode}`));
@@ -382,7 +379,7 @@ export async function startWatch(options: WatchOptions): Promise<void> {
   console.log();
 
   // Start watching recursively
-  const watcher = watch(rootDir, { recursive: true }, (eventType, filename) => {
+  const watcher = watch(rootDir, { recursive: true }, (_eventType, filename) => {
     if (!filename) return;
 
     const filePath = path.join(rootDir, filename);
@@ -431,13 +428,12 @@ export async function startWatch(options: WatchOptions): Promise<void> {
   // Handle graceful shutdown
   process.on('SIGINT', async () => {
     console.log('\n');
-    console.log(chalk.bold.magenta('  ╔═══════════════════════════════════════════╗'));
+    const g2 = gradient(['#9b59b6', '#6c5ce7', '#a29bfe']);
+    console.log(g2('  ╔═══════════════════════════════════════════╗'));
     console.log(
-      chalk.bold.magenta('  ║') +
-        chalk.bold.white('        👻 SPECTER SESSION SUMMARY         ') +
-        chalk.bold.magenta('║')
+      g2('  ║') + chalk.bold.white('        👻 SPECTER SESSION SUMMARY         ') + g2('║')
     );
-    console.log(chalk.bold.magenta('  ╚═══════════════════════════════════════════╝'));
+    console.log(g2('  ╚═══════════════════════════════════════════╝'));
     console.log();
     console.log(chalk.cyan(`  Files changed: ${stats.filesChanged}`));
     console.log(chalk.dim(`  Lines added: +${stats.linesAdded}`));

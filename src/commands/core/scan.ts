@@ -5,10 +5,12 @@
 import path from 'node:path';
 import chalk from 'chalk';
 import type { Command } from 'commander';
+import gradient from 'gradient-string';
 import { getComplexityEmoji } from '../../analyzers/complexity.js';
 import { buildKnowledgeGraph, getGraphStats } from '../../graph/builder.js';
 import { graphExists, isGraphStale, saveGraph } from '../../graph/persistence.js';
 import { outputJson } from '../../json-output.js';
+import { timingBadge } from '../../ui/progress.js';
 import { createSpinner } from '../types.js';
 
 export function register(program: Command): void {
@@ -28,14 +30,13 @@ export function register(program: Command): void {
 
       // Cool intro banner
       if (!quiet) {
+        const g = gradient(['#9b59b6', '#6c5ce7', '#a29bfe']);
         console.log();
-        console.log(chalk.bold.magenta('  ╔═══════════════════════════════════════════╗'));
+        console.log(g('  ╔═══════════════════════════════════════════╗'));
         console.log(
-          chalk.bold.magenta('  ║') +
-            chalk.bold.white('          👻 SPECTER AWAKENING...          ') +
-            chalk.bold.magenta('║')
+          g('  ║') + chalk.bold.white('          👻 SPECTER AWAKENING...          ') + g('║')
         );
-        console.log(chalk.bold.magenta('  ╚═══════════════════════════════════════════╝'));
+        console.log(g('  ╚═══════════════════════════════════════════╝'));
         console.log();
       }
 
@@ -103,59 +104,56 @@ export function register(program: Command): void {
         }
 
         if (!quiet) {
+          const sg = gradient(['#9b59b6', '#6c5ce7', '#a29bfe']);
           console.log();
-          console.log(chalk.bold('┌─────────────────────────────────────────────┐'));
+          console.log(sg('┌─────────────────────────────────────────────┐'));
           console.log(
-            chalk.bold('│') +
-              chalk.cyan(`  👻 I am ${chalk.bold(projectName)}`.padEnd(44)) +
-              chalk.bold('│')
+            sg('│') + chalk.cyan(`  👻 I am ${chalk.bold(projectName)}`.padEnd(44)) + sg('│')
           );
-          console.log(chalk.bold('├─────────────────────────────────────────────┤'));
+          console.log(sg('├─────────────────────────────────────────────┤'));
           console.log(
-            chalk.bold('│') +
+            sg('│') +
               `  📁 Files:       ${chalk.cyan(String(stats.fileCount).padStart(6))}`.padEnd(50) +
-              chalk.bold('│')
+              sg('│')
           );
           console.log(
-            chalk.bold('│') +
+            sg('│') +
               `  📝 Lines:       ${chalk.cyan(stats.totalLines.toLocaleString().padStart(6))}`.padEnd(
                 50
               ) +
-              chalk.bold('│')
+              sg('│')
           );
           console.log(
-            chalk.bold('│') +
+            sg('│') +
               `  🔣 Symbols:     ${chalk.cyan(String(stats.nodeCount - stats.fileCount).padStart(6))}`.padEnd(
                 50
               ) +
-              chalk.bold('│')
+              sg('│')
           );
           console.log(
-            chalk.bold('│') +
+            sg('│') +
               `  🔗 Relations:   ${chalk.cyan(String(stats.edgeCount).padStart(6))}`.padEnd(50) +
-              chalk.bold('│')
+              sg('│')
           );
-          console.log(chalk.bold('├─────────────────────────────────────────────┤'));
+          console.log(sg('├─────────────────────────────────────────────┤'));
 
           // Complexity personality
           const mood = healthScore >= 80 ? '😊' : healthScore >= 60 ? '😐' : '😰';
           console.log(
-            chalk.bold('│') +
+            sg('│') +
               `  ${mood} Health:     ${getComplexityEmoji(stats.avgComplexity)} ${chalk.yellow(Math.round(healthScore))}/100`.padEnd(
                 48
               ) +
-              chalk.bold('│')
+              sg('│')
           );
 
           if (stats.maxComplexity > 15) {
             console.log(
-              chalk.bold('│') +
-                chalk.yellow(`  ⚠️  I have some complex areas...`).padEnd(48) +
-                chalk.bold('│')
+              sg('│') + chalk.yellow(`  ⚠️  I have some complex areas...`).padEnd(48) + sg('│')
             );
           }
 
-          console.log(chalk.bold('└─────────────────────────────────────────────┘'));
+          console.log(sg('└─────────────────────────────────────────────┘'));
 
           // Languages
           console.log();
@@ -163,7 +161,7 @@ export function register(program: Command): void {
             .map(([lang, count]) => `${lang}: ${count}`)
             .join(', ');
           console.log(chalk.dim(`  Languages: ${langs}`));
-          console.log(chalk.dim(`  Scan time: ${stats.scanDurationMs}ms`));
+          console.log(chalk.dim(`  Scanned in ${timingBadge(stats.scanDurationMs)}`));
         }
 
         // Show errors/warnings (keep these concise)
