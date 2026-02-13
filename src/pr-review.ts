@@ -1,5 +1,4 @@
 import { Octokit } from '@octokit/rest';
-import { loadGraph } from './graph/persistence.js';
 import type { KnowledgeGraph } from './graph/types.js';
 import { applyPersonality, type PersonalityMode } from './personality/index.js';
 
@@ -27,8 +26,8 @@ interface ReviewResult {
 }
 
 export async function reviewPullRequest(
-  rootDir: string,
-  graph: KnowledgeGraph,
+  _rootDir: string,
+  _graph: KnowledgeGraph,
   options: ReviewOptions
 ): Promise<ReviewResult> {
   const { owner, repo, pullNumber, token, mode = 'default', postInlineComments = false } = options;
@@ -133,7 +132,7 @@ export async function reviewPullRequest(
 
 function calculateFileRisk(
   file: { filename: string; additions: number; deletions: number },
-  analyses: FileAnalysis[]
+  _analyses: FileAnalysis[]
 ): 'low' | 'medium' | 'high' | 'critical' {
   let riskScore = 0;
 
@@ -192,13 +191,11 @@ function generateReviewBody(analyses: FileAnalysis[], personality: PersonalityMo
 
   // Add personality-based opening
   if (personality === 'roast') {
-    body += applyPersonality(`Buckle up buttercup, I've got opinions...`, personality) + `\n\n`;
+    body += `${applyPersonality(`Buckle up buttercup, I've got opinions...`, personality)}\n\n`;
   } else if (personality === 'noir') {
-    body +=
-      applyPersonality(`In this city of code, every PR tells a story...`, personality) + `\n\n`;
+    body += `${applyPersonality(`In this city of code, every PR tells a story...`, personality)}\n\n`;
   } else if (personality === 'dramatic') {
-    body +=
-      applyPersonality(`Behold! A pull request emerges from the depths!`, personality) + `\n\n`;
+    body += `${applyPersonality(`Behold! A pull request emerges from the depths!`, personality)}\n\n`;
   }
 
   body += `### 📊 Change Summary\n\n`;

@@ -1,9 +1,9 @@
 #!/usr/bin/env node
+import { spawnSync } from 'node:child_process';
+import { resolve } from 'node:path';
 import chalk from 'chalk';
-import { spawnSync } from 'child_process';
 import type { Command } from 'commander';
 import ora from 'ora';
-import { resolve } from 'path';
 import { simpleGit } from 'simple-git';
 
 interface CommitOptions {
@@ -51,7 +51,7 @@ async function getStagedDiff(rootDir: string): Promise<string> {
     }
 
     // Truncate if too long (keep first 3000 chars)
-    return diff.length > 3000 ? diff.slice(0, 3000) + '\n... (diff truncated)' : diff;
+    return diff.length > 3000 ? `${diff.slice(0, 3000)}\n... (diff truncated)` : diff;
   } catch {
     return '';
   }
@@ -128,7 +128,7 @@ Generate a clear, concise commit message.`;
 
       spinner.succeed('Commit message generated');
 
-      console.log('\n' + chalk.bold.cyan('📝 Suggested Commit Message:\n'));
+      console.log(`\n${chalk.bold.cyan('📝 Suggested Commit Message:\n')}`);
       console.log(chalk.green(spawnResult.stdout.trim()));
 
       if (options.verbose) {
@@ -148,7 +148,7 @@ Generate a clear, concise commit message.`;
           )
         );
       }
-    } catch (copilotError) {
+    } catch (_copilotError) {
       spinner.fail('Failed to generate message');
       console.log(chalk.yellow('\n⚠️  GitHub Copilot is unavailable.'));
       console.log(chalk.white('Staged changes:'));

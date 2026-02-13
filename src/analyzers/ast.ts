@@ -16,7 +16,7 @@ import type { ClassNode, FileNode, FunctionNode, GraphNode, NodeType } from '../
  */
 function safeGetReturnType(
   func: { getReturnType: () => { getText: () => string } },
-  timeoutMs: number = 100
+  _timeoutMs: number = 100
 ): string | undefined {
   try {
     // Use a simple approach: just get the declared return type annotation if present

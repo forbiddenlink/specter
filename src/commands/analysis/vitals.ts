@@ -233,7 +233,7 @@ export function register(program: Command): void {
         const sparkline = coloredSparkline(heartbeatData, true);
         const sparklineVisibleLen = sparkline.replace(/\x1b\[[0-9;]*m/g, '').length;
         console.log(
-          B('║') + `  ${sparkline}` + ' '.repeat(Math.max(0, W - sparklineVisibleLen - 2)) + B('║')
+          `${B('║')}  ${sparkline}${' '.repeat(Math.max(0, W - sparklineVisibleLen - 2))}${B('║')}`
         );
       } else {
         console.log(

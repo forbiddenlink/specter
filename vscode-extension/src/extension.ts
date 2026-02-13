@@ -42,8 +42,9 @@ async function runSpecterCommand(command: string): Promise<string> {
       cwd: workspaceFolder,
     });
     return stdout;
-  } catch (error: any) {
-    throw new Error(error.stderr || error.message);
+  } catch (error: unknown) {
+    const err = error as { stderr?: string; message?: string };
+    throw new Error(err.stderr || err.message || 'Unknown error');
   }
 }
 
@@ -78,9 +79,10 @@ async function showHealth() {
   try {
     const output = await runSpecterCommand('health');
     outputChannel.appendLine(output);
-  } catch (error: any) {
-    outputChannel.appendLine(`Error: ${error.message}`);
-    vscode.window.showErrorMessage(`Specter health check failed: ${error.message}`);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    outputChannel.appendLine(`Error: ${message}`);
+    vscode.window.showErrorMessage(`Specter health check failed: ${message}`);
   }
 }
 
@@ -92,9 +94,10 @@ async function showMorningBriefing() {
   try {
     const output = await runSpecterCommand('morning');
     outputChannel.appendLine(output);
-  } catch (error: any) {
-    outputChannel.appendLine(`Error: ${error.message}`);
-    vscode.window.showErrorMessage(`Specter morning briefing failed: ${error.message}`);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    outputChannel.appendLine(`Error: ${message}`);
+    vscode.window.showErrorMessage(`Specter morning briefing failed: ${message}`);
   }
 }
 
@@ -108,9 +111,10 @@ async function scanCodebase() {
     outputChannel.appendLine(output);
     await updateStatusBar();
     vscode.window.showInformationMessage('Specter scan complete!');
-  } catch (error: any) {
-    outputChannel.appendLine(`Error: ${error.message}`);
-    vscode.window.showErrorMessage(`Specter scan failed: ${error.message}`);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    outputChannel.appendLine(`Error: ${message}`);
+    vscode.window.showErrorMessage(`Specter scan failed: ${message}`);
   }
 }
 

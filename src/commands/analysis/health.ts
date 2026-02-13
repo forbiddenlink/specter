@@ -114,7 +114,7 @@ export function register(program: Command): void {
       lines.push('');
       lines.push(g(`╔${'═'.repeat(W)}╗`));
       lines.push(
-        g('║') + '  👻 ' + chalk.bold.white('SPECTER HEALTH REPORT') + ' '.repeat(W - 27) + g('║')
+        `${g('║')}  👻 ${chalk.bold.white('SPECTER HEALTH REPORT')}${' '.repeat(W - 27)}${g('║')}`
       );
       lines.push(g(`╠${'═'.repeat(W)}╣`));
 

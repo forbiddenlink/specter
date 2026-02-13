@@ -1,14 +1,13 @@
 #!/usr/bin/env node
+import { spawnSync } from 'node:child_process';
+import { resolve } from 'node:path';
 import chalk from 'chalk';
-import { spawnSync } from 'child_process';
 import type { Command } from 'commander';
-import { existsSync, readFileSync } from 'fs';
 import ora from 'ora';
-import { resolve } from 'path';
 import { findComplexityHotspots, generateComplexityReport } from './analyzers/complexity.js';
 import { loadGraph } from './graph/persistence.js';
-import type { KnowledgeGraph } from './graph/types.js';
-import { analyzeHotspots, type HotspotsResult } from './hotspots.js';
+import type { ComplexityHotspot } from './graph/types.js';
+import { analyzeHotspots, type Hotspot } from './hotspots.js';
 
 interface AskOptions {
   context?: string;
@@ -45,9 +44,9 @@ async function gatherSpecterContext(rootDir: string, query: string): Promise<str
     if (query.toLowerCase().includes('hotspot') || query.toLowerCase().includes('complex')) {
       contextParts.push(`\n## Code Hotspots`);
       const hotspotsResult = await analyzeHotspots(rootDir, graph, { top: 5 });
-      if (hotspotsResult && hotspotsResult.hotspots) {
-        hotspotsResult.hotspots.forEach((h: any, i: number) => {
-          contextParts.push(`${i + 1}. ${h.file} - ${h.changes} changes`);
+      if (hotspotsResult?.hotspots) {
+        hotspotsResult.hotspots.forEach((h: Hotspot, i: number) => {
+          contextParts.push(`${i + 1}. ${h.file} - ${h.churn} changes`);
         });
       }
     }
@@ -55,9 +54,10 @@ async function gatherSpecterContext(rootDir: string, query: string): Promise<str
     // Check for complexity data
     if (query.toLowerCase().includes('complexity') || query.toLowerCase().includes('refactor')) {
       contextParts.push(`\n## Complexity Analysis`);
-      const complexityReport = generateComplexityReport(graph);
+      // Generate report for side effects, use hotspots for display
+      generateComplexityReport(graph);
       const hotspots = findComplexityHotspots(graph, { limit: 5 });
-      hotspots.forEach((c: any, i: number) => {
+      hotspots.forEach((c: ComplexityHotspot, i: number) => {
         contextParts.push(`${i + 1}. ${c.name} - Complexity: ${c.complexity}`);
       });
     }
@@ -116,17 +116,17 @@ export async function askQuestion(
       if (result.status !== 0) throw new Error(result.stderr || 'Copilot failed');
 
       spinner.succeed('Answer ready');
-      console.log('\n' + chalk.bold.cyan('🤖 GitHub Copilot says:\n'));
+      console.log(`\n${chalk.bold.cyan('🤖 GitHub Copilot says:\n')}`);
       console.log(result.stdout);
 
       if (options.verbose && specterContext) {
         console.log(chalk.dim('\n📊 Context used:'));
         console.log(chalk.dim(specterContext));
       }
-    } catch (error) {
+    } catch (_error) {
       // If copilot fails, provide a helpful response with our data
       spinner.warn('Copilot unavailable, using Specter analysis');
-      console.log('\n' + chalk.bold.cyan('📊 Based on Specter analysis:\n'));
+      console.log(`\n${chalk.bold.cyan('📊 Based on Specter analysis:\n')}`);
 
       if (specterContext) {
         console.log(specterContext);

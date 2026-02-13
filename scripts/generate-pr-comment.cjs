@@ -184,7 +184,7 @@ function getChangedFilesCount(content) {
   }
 
   // Count file entries
-  const fileMatches = content.match(/[✏️🆕🗑️📝]\s+\S+/g);
+  const fileMatches = content.match(/(?:✏️|🆕|🗑️|📝)\s+\S+/g);
   return fileMatches ? fileMatches.length : 0;
 }
 

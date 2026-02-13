@@ -4,9 +4,8 @@
  * Tests for knowledge graph orchestration and building.
  */
 
-import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { GraphEdge, GraphNode, KnowledgeGraph } from '../../src/graph/types.js';
+import type { KnowledgeGraph } from '../../src/graph/types.js';
 
 // Mock dependencies before importing the module
 const mockProject = {
