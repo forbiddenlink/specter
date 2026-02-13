@@ -11,6 +11,13 @@ import { getGraphStats } from '../../graph/builder.js';
 import { loadGraph } from '../../graph/persistence.js';
 import { outputJson, outputJsonError } from '../../json-output.js';
 import { createSpinner, showShareLinks } from '../types.js';
+import {
+  generateBioLines,
+  generateConversationStarters,
+  generateGreenFlags,
+  generateRedFlags,
+  type TinderData,
+} from './tinder-helpers.js';
 
 export function register(program: Command): void {
   program
@@ -89,109 +96,29 @@ export function register(program: Command): void {
       // Count tools/functions
       const functionCount = Object.values(graph.nodes).filter((n) => n.type === 'function').length;
 
-      // Generate bio based on stats
-      const generateBio = (): string[] => {
-        const lines: string[] = [];
+      // Check for git history
+      const hasGitHistory = Object.values(graph.nodes).some((n) => n.lastModified);
 
-        if (healthScore >= 80) {
-          lines.push('Healthy, well-maintained, and looking for');
-          lines.push('developers who appreciate clean code.');
-        } else if (healthScore >= 60) {
-          lines.push('Complex on the inside, well-documented');
-          lines.push('on the outside. Looking for developers');
-          lines.push('who appreciate a good type system.');
-        } else {
-          lines.push("I'm a work in progress, but I've got");
-          lines.push('potential. Seeking patient developers');
-          lines.push('who enjoy a challenge.');
-        }
-
-        lines.push('');
-
-        if (functionCount > 50) {
-          lines.push(`I have ${functionCount} functions and I know how to`);
-          lines.push('use them.');
-        } else if (functionCount > 20) {
-          lines.push(`Compact but capable with ${functionCount} functions.`);
-        } else {
-          lines.push(`Small but mighty with ${functionCount} functions.`);
-        }
-
-        if (hotspotCount > 0) {
-          lines.push(`Swipe right if you can handle my`);
-          lines.push(`${hotspotCount} complexity hotspot${hotspotCount !== 1 ? 's' : ''}. `);
-        }
-
-        return lines;
+      // Prepare data for helper functions
+      const tinderData: TinderData = {
+        healthScore,
+        functionCount,
+        hotspotCount,
+        langPercent,
+        primaryLang,
+        busFactorValue,
+        hasGitHistory,
+        hasHelpers,
+        hasUtils,
+        circularCount,
+        edgeCount: stats.edgeCount,
       };
 
-      // Generate green flags
-      const greenFlags: string[] = [];
-      if (langPercent >= 90) {
-        greenFlags.push(`${langPercent}% ${primaryLang} (I know my types)`);
-      } else if (langPercent >= 70) {
-        greenFlags.push(`${langPercent}% ${primaryLang} (mostly typed)`);
-      }
-
-      const hasGitHistory = Object.values(graph.nodes).some((n) => n.lastModified);
-      if (hasGitHistory) {
-        greenFlags.push("Active git history (I'm not ghosting)");
-      }
-
-      if (healthScore >= 80) {
-        greenFlags.push(`Health score ${Math.round(healthScore)} (I work out)`);
-      } else if (healthScore >= 60) {
-        greenFlags.push(`Health score ${Math.round(healthScore)} (room to grow)`);
-      }
-
-      if (report.distribution.veryHigh === 0) {
-        greenFlags.push('No critical complexity (drama-free)');
-      }
-
-      if (busFactorValue >= 3) {
-        greenFlags.push(`Bus factor ${busFactorValue.toFixed(1)} (team player)`);
-      }
-
-      // Generate red flags
-      const redFlags: string[] = [];
-      if (hasHelpers) {
-        redFlags.push('helpers.ts exists (I have baggage)');
-      }
-      if (hasUtils) {
-        redFlags.push('utils/ folder (some skeletons)');
-      }
-      if (busFactorValue < 2) {
-        redFlags.push(`Bus factor ${busFactorValue.toFixed(1)} (attachment issues)`);
-      }
-      if (circularCount > 0) {
-        redFlags.push(`${circularCount} circular dependencies (it's complex)`);
-      }
-      if (hotspotCount > 10) {
-        redFlags.push(`${hotspotCount} complexity hotspots (high maintenance)`);
-      }
-      if (healthScore < 60) {
-        redFlags.push(`Health score ${Math.round(healthScore)} (needs TLC)`);
-      }
-
-      // Ensure we have at least one of each
-      if (greenFlags.length === 0) {
-        greenFlags.push("Still standing (I'm resilient)");
-      }
-      if (redFlags.length === 0) {
-        redFlags.push("Too good to be true? (I'm real!)");
-      }
-
-      // Generate conversation starters based on features
-      const starters: string[] = [];
-      starters.push('"What\'s your complexity score?"');
-      starters.push('"Come here often... to refactor?"');
-
-      if (stats.edgeCount > 100) {
-        starters.push('"Is that a knowledge graph or are you');
-        starters.push(' just happy to see me?"');
-      } else {
-        starters.push('"Want to see my import graph?"');
-      }
+      // Generate bio, flags, and starters using helpers
+      const bio = generateBioLines(tinderData);
+      const greenFlags = generateGreenFlags(tinderData);
+      const redFlags = generateRedFlags(tinderData);
+      const starters = generateConversationStarters(tinderData);
 
       // JSON output for CI/CD
       if (options.json) {
@@ -207,7 +134,7 @@ export function register(program: Command): void {
           circularDependencies: circularCount,
           greenFlags,
           redFlags,
-          bio: generateBio(),
+          bio,
           conversationStarters: starters,
         });
         return;
@@ -258,7 +185,7 @@ export function register(program: Command): void {
 
       // Bio
       lines.push(chalk.dim('|') + chalk.bold('  Bio:') + ' '.repeat(W - 6) + chalk.dim('|'));
-      for (const bioContent of generateBio()) {
+      for (const bioContent of bio) {
         const bioLine = `  ${bioContent}`;
         lines.push(
           chalk.dim('|') +
