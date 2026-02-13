@@ -8,6 +8,7 @@
  */
 
 import path from 'node:path';
+import cfonts from 'cfonts';
 import chalk from 'chalk';
 import { Command } from 'commander';
 import gradient from 'gradient-string';
@@ -66,22 +67,20 @@ export const isAccessibleMode = process.env.SPECTER_ACCESSIBLE === 'true';
 
 /**
  * ASCII banner for Specter CLI
- * Ghost-themed, compact (5-7 lines), purple/magenta theme
+ * Uses cfonts chrome font for a striking 3D metallic effect
  */
 function printBanner(): void {
-  const banner = [
-    '   ____                  _            ',
-    '  / ___| _ __   ___  ___| |_ ___ _ __ ',
-    "  \\___ \\| '_ \\ / _ \\/ __| __/ _ \\ '__|",
-    '   ___) | |_) |  __/ (__| ||  __/ |   ',
-    '  |____/| .__/ \\___|\\___|\\___|\\__|_|   ',
-    '        |_|                            ',
-  ].join('\n');
-
-  const specterGradient = gradient(['#9b59b6', '#6c5ce7', '#a29bfe']);
-
-  console.log();
-  console.log(specterGradient.multiline(banner));
+  if (process.stdout.isTTY) {
+    cfonts.say('Specter', {
+      font: 'chrome',
+      colors: ['#9b59b6', '#6c5ce7', '#a29bfe'],
+      space: false,
+    });
+  } else {
+    // Fallback for non-TTY (CI, piped output)
+    const specterGradient = gradient(['#9b59b6', '#6c5ce7', '#a29bfe']);
+    console.log(specterGradient('  SPECTER'));
+  }
   console.log(chalk.dim('        Give your codebase a voice'));
   console.log();
 }

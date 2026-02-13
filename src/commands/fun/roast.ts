@@ -4,7 +4,10 @@
 
 import path from 'node:path';
 import chalk from 'chalk';
+// @ts-expect-error no types
+import chalkAnimation from 'chalk-animation';
 import type { Command } from 'commander';
+import gradient from 'gradient-string';
 import { exportToPng, getRepoUrl, isPngExportAvailable } from '../../export-png.js';
 import { loadGraph } from '../../graph/persistence.js';
 import { outputJson, outputJsonError } from '../../json-output.js';
@@ -58,6 +61,14 @@ export function register(program: Command): void {
           averageComplexity: report.averageComplexity,
         });
         return;
+      }
+
+      // Animated glitch intro (TTY only)
+      if (process.stdout.isTTY && !options.png) {
+        const fireGrad = gradient(['#ff6b6b', '#ee5a24', '#f9ca24']);
+        const glitch = chalkAnimation.glitch(fireGrad('  🔥 CODEBASE ROAST 🔥'));
+        await new Promise((r) => setTimeout(r, 1500));
+        glitch.stop();
       }
 
       // Build output as array of lines
