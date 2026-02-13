@@ -450,8 +450,40 @@ export async function explainWhy(
   graph: KnowledgeGraph
 ): Promise<WhyResult> {
   const git: SimpleGit = simpleGit(rootDir);
+  const { relativePath, absolutePath } = normalizeFilePath(rootDir, filePath);
+  const { fileExists, fileNode } = await validateFileAndFindNode(
+    rootDir,
+    relativePath,
+    absolutePath,
+    graph
+  );
 
-  // Normalize the file path
+  // Initialize result with basic info
+  const result = initializeResult(relativePath, fileExists);
+
+  if (!fileExists) {
+    result.summary = 'File not found in the codebase.';
+    result.suggestions.push('Check if the file path is correct.');
+    return result;
+  }
+
+  // Gather analysis data for this file
+  await gatherFileAnalysisData(result, git, absolutePath, relativePath, fileNode, graph);
+
+  // Generate final summary and suggestions
+  result.summary = generateSummary(result);
+  result.suggestions = generateSuggestionsForWhy(result);
+
+  return result;
+}
+
+/**
+ * Normalize file path to relative and absolute versions
+ */
+function normalizeFilePath(
+  rootDir: string,
+  filePath: string
+): { relativePath: string; absolutePath: string } {
   const relativePath = filePath.startsWith(rootDir)
     ? path.relative(rootDir, filePath)
     : filePath.startsWith('/')
@@ -459,8 +491,18 @@ export async function explainWhy(
       : filePath;
 
   const absolutePath = path.join(rootDir, relativePath);
+  return { relativePath, absolutePath };
+}
 
-  // Check if file exists
+/**
+ * Validate file exists and find its node in the graph
+ */
+async function validateFileAndFindNode(
+  rootDir: string,
+  relativePath: string,
+  absolutePath: string,
+  graph: KnowledgeGraph
+): Promise<{ fileExists: boolean; fileNode: (typeof graph.nodes)[string] | null }> {
   let fileExists = false;
   try {
     await fs.access(absolutePath);
@@ -469,7 +511,6 @@ export async function explainWhy(
     fileExists = false;
   }
 
-  // Find the file node in the graph
   const fileNode =
     Object.values(graph.nodes).find(
       (n) =>
@@ -479,8 +520,14 @@ export async function explainWhy(
           n.filePath.endsWith(relativePath))
     ) || null;
 
-  // Initialize result
-  const result: WhyResult = {
+  return { fileExists, fileNode };
+}
+
+/**
+ * Initialize result structure with basic file info
+ */
+function initializeResult(relativePath: string, fileExists: boolean): WhyResult {
+  return {
     file: relativePath,
     exists: fileExists,
     summary: '',
@@ -497,13 +544,19 @@ export async function explainWhy(
     },
     suggestions: [],
   };
+}
 
-  if (!fileExists) {
-    result.summary = 'File not found in the codebase.';
-    result.suggestions.push('Check if the file path is correct.');
-    return result;
-  }
-
+/**
+ * Gather all analysis data for a file: comments, patterns, history, and relationships
+ */
+async function gatherFileAnalysisData(
+  result: WhyResult,
+  git: SimpleGit,
+  absolutePath: string,
+  relativePath: string,
+  fileNode: (typeof graph.nodes)[string] | null,
+  graph: KnowledgeGraph
+): Promise<void> {
   // Extract comments from the file
   result.comments = await extractComments(absolutePath);
 
@@ -521,14 +574,6 @@ export async function explainWhy(
   // Analyze relationships
   const jsVariant = relativePath.replace(/\.tsx?$/, '.js');
   result.context = analyzeContextRelationships(graph, relativePath, jsVariant);
-
-  // Generate summary
-  result.summary = generateSummary(result);
-
-  // Generate suggestions
-  result.suggestions = generateSuggestionsForWhy(result);
-
-  return result;
 }
 
 /**

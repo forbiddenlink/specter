@@ -58,7 +58,7 @@ copilot -p "Use specter to roast my code"
 
 **4 MCP resources**: `specter://summary`, `specter://health`, `specter://hotspots`, `specter://architecture`
 
-See the [MCP Integration Guide](docs/MCP_INTEGRATION.md), [Copilot CLI Integration](docs/COPILOT_CLI_INTEGRATION.md), and [Example Prompts](docs/MCP_EXAMPLE_PROMPTS.md) for details.
+See the [MCP Integration Guide](https://github.com/forbiddenlink/specter/blob/main/docs/MCP_INTEGRATION.md), [Copilot CLI Integration](https://github.com/forbiddenlink/specter/blob/main/docs/COPILOT_CLI_INTEGRATION.md), and [Example Prompts](https://github.com/forbiddenlink/specter/blob/main/docs/MCP_EXAMPLE_PROMPTS.md) for details.
 
 ---
 
@@ -240,7 +240,7 @@ specter health --accessible
 SPECTER_ACCESSIBLE=true specter health
 ```
 
-See the [Accessibility Guide](docs/ACCESSIBILITY.md) for details.
+See the [Accessibility Guide](https://github.com/forbiddenlink/specter/blob/main/docs/ACCESSIBILITY.md) for details.
 
 ---
 
@@ -270,13 +270,13 @@ Specter stores data in `.specter/` (auto-added to `.gitignore`):
 
 | Guide | Description |
 |-------|-------------|
-| [Copilot CLI Integration](docs/COPILOT_CLI_INTEGRATION.md) | ⭐ Using Specter with GitHub Copilot CLI |
-| [MCP Integration](docs/MCP_INTEGRATION.md) | Complete guide to all 14 MCP tools |
-| [MCP Prompts](docs/MCP_EXAMPLE_PROMPTS.md) | Real-world prompts for AI assistants |
-| [Accessibility](docs/ACCESSIBILITY.md) | Colorblind mode and inclusive design |
-| [Comparison](docs/COMPARISON.md) | How Specter compares to other tools |
-| [Contributing](CONTRIBUTING.md) | Development setup and guidelines |
-| [Security](SECURITY.md) | Security policy and reporting |
+| [Copilot CLI Integration](https://github.com/forbiddenlink/specter/blob/main/docs/COPILOT_CLI_INTEGRATION.md) | ⭐ Using Specter with GitHub Copilot CLI |
+| [MCP Integration](https://github.com/forbiddenlink/specter/blob/main/docs/MCP_INTEGRATION.md) | Complete guide to all 14 MCP tools |
+| [MCP Prompts](https://github.com/forbiddenlink/specter/blob/main/docs/MCP_EXAMPLE_PROMPTS.md) | Real-world prompts for AI assistants |
+| [Accessibility](https://github.com/forbiddenlink/specter/blob/main/docs/ACCESSIBILITY.md) | Colorblind mode and inclusive design |
+| [Comparison](https://github.com/forbiddenlink/specter/blob/main/docs/COMPARISON.md) | How Specter compares to other tools |
+| [Contributing](https://github.com/forbiddenlink/specter/blob/main/CONTRIBUTING.md) | Development setup and guidelines |
+| [Security](https://github.com/forbiddenlink/specter/blob/main/SECURITY.md) | Security policy and reporting |
 
 ---
 

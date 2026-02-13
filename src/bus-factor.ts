@@ -54,58 +54,30 @@ export async function analyzeBusFactor(
   const rootDir = graph.metadata.rootDir;
   const git: SimpleGit = simpleGit(rootDir);
 
-  // Check if git repo
-  try {
-    await git.status();
-  } catch {
-    return {
-      overallBusFactor: 0,
-      riskLevel: 'critical',
-      risks: [],
-      summary: { soloOwnedFiles: 0, soloOwnedLines: 0, percentageAtRisk: 0 },
-      recommendations: ['This is not a git repository.'],
-    };
+  // Validate we have a git repository and source files
+  const validationResult = await validateGitRepository(git);
+  if (!validationResult.isValid) {
+    return validationResult.errorResult!;
   }
 
-  // Get all source files from the graph
-  const sourceFiles = Object.values(graph.nodes)
-    .filter((n) => n.type === 'file')
-    .map((n) => n.filePath);
-
+  const sourceFiles = getSourceFiles(graph);
   if (sourceFiles.length === 0) {
-    return {
-      overallBusFactor: 0,
-      riskLevel: 'critical',
-      risks: [],
-      summary: { soloOwnedFiles: 0, soloOwnedLines: 0, percentageAtRisk: 0 },
-      recommendations: ['No source files found in the knowledge graph.'],
-    };
+    return getNoSourceFilesResult();
   }
 
-  // Group files by directory area
+  // Gather analysis data
   const areaStats = groupFilesByArea(sourceFiles, graph);
-
-  // Analyze git history for contributions
   await analyzeGitHistory(git, areaStats, sourceFiles);
 
-  // Calculate bus factor per area
+  // Calculate risks and build results
   const risks = calculateAreaRisks(areaStats, graph);
-
-  // Filter to critical only if requested
   const filteredRisks = options.criticalOnly
     ? risks.filter((r) => r.criticality === 'critical')
     : risks;
 
-  // Calculate summary statistics
   const summary = calculateSummary(risks, graph);
-
-  // Calculate overall bus factor
   const overallBusFactor = calculateOverallBusFactor(risks);
-
-  // Determine risk level
   const riskLevel = determineRiskLevel(overallBusFactor, summary.percentageAtRisk);
-
-  // Generate recommendations
   const recommendations = generateRecommendations(filteredRisks, summary, riskLevel);
 
   return {
@@ -114,6 +86,52 @@ export async function analyzeBusFactor(
     risks: filteredRisks,
     summary,
     recommendations,
+  };
+}
+
+/**
+ * Validate that we have a valid git repository
+ */
+async function validateGitRepository(git: SimpleGit): Promise<{
+  isValid: boolean;
+  errorResult?: BusFactorResult;
+}> {
+  try {
+    await git.status();
+    return { isValid: true };
+  } catch {
+    return {
+      isValid: false,
+      errorResult: {
+        overallBusFactor: 0,
+        riskLevel: 'critical',
+        risks: [],
+        summary: { soloOwnedFiles: 0, soloOwnedLines: 0, percentageAtRisk: 0 },
+        recommendations: ['This is not a git repository.'],
+      },
+    };
+  }
+}
+
+/**
+ * Extract source files from the knowledge graph
+ */
+function getSourceFiles(graph: KnowledgeGraph): string[] {
+  return Object.values(graph.nodes)
+    .filter((n) => n.type === 'file')
+    .map((n) => n.filePath);
+}
+
+/**
+ * Return error result when no source files found
+ */
+function getNoSourceFilesResult(): BusFactorResult {
+  return {
+    overallBusFactor: 0,
+    riskLevel: 'critical',
+    risks: [],
+    summary: { soloOwnedFiles: 0, soloOwnedLines: 0, percentageAtRisk: 0 },
+    recommendations: ['No source files found in the knowledge graph.'],
   };
 }
 
