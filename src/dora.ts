@@ -9,6 +9,13 @@
  */
 
 import { type SimpleGit, simpleGit } from 'simple-git';
+import {
+  aggregateMetrics,
+  analyzeChangeFailures,
+  calculateLeadTimes,
+  calculateMTTR,
+  getDeployments,
+} from './dora-helpers.js';
 
 // Types
 export type PerformanceLevel = 'elite' | 'high' | 'medium' | 'low';
@@ -228,32 +235,13 @@ export async function calculateDora(
   const msPerWeek = 7 * 24 * 60 * 60 * 1000;
   const weeksAnalyzed = Math.max(1, (endDate.getTime() - startDate.getTime()) / msPerWeek);
 
-  // Initialize raw data
-  let deployCount = 0;
-  let commitCount = 0;
-  let revertCount = 0;
-  let mergeCount = 0;
-  const deployTimes: Date[] = [];
-  const leadTimes: number[] = [];
-  const recoveryTimes: number[] = [];
-
   try {
-    // 1. Get tags/releases for deployment frequency
-    const tags = await git.tags();
-    for (const tag of tags.all) {
-      try {
-        const tagInfo = await git.raw(['log', '-1', '--format=%aI', tag]);
-        const tagDate = new Date(tagInfo.trim());
-        if (tagDate >= startDate && tagDate <= endDate) {
-          deployCount++;
-          deployTimes.push(tagDate);
-        }
-      } catch {
-        // Skip tags we can't parse
-      }
-    }
+    // Fetch git data using helper functions
+    const deployments = await getDeployments(git, startDate, endDate);
 
-    // 2. Get all commits for lead time calculation
+    const tags = await git.tags();
+    const leadTimes = await calculateLeadTimes(git, tags, since, startDate, endDate);
+
     const log = await git.log({
       '--since': since,
       format: {
@@ -264,176 +252,99 @@ export async function calculateDora(
       },
     });
 
-    commitCount = log.all.length;
+    const changeFailures = analyzeChangeFailures(log.all as any[]);
+    const recoveryTimes = calculateMTTR(log.all as any[]);
 
-    // Track commits that became part of releases
-    const _tagCommits = new Map<string, Date>();
+    // Aggregate metrics
+    const metrics = aggregateMetrics({
+      deployCount: deployments.count,
+      weeksAnalyzed,
+      leadTimes,
+      commitCount: log.all.length,
+      revertCount: changeFailures.reverts,
+      mergeCount: changeFailures.merges,
+      recoveryTimes,
+    });
 
-    // For each tag, find when its commits were first authored
-    for (const tag of tags.all) {
-      try {
-        const tagDateStr = await git.raw(['log', '-1', '--format=%aI', tag]);
-        const tagDate = new Date(tagDateStr.trim());
+    // Build metrics with levels and descriptions
+    const deploymentFrequency: DoraMetric = {
+      value: Math.round(metrics.deploysPerWeek * 100) / 100,
+      level: getDeployFrequencyLevel(metrics.deploysPerWeek),
+      description: getDeployFrequencyDescription(metrics.deploysPerWeek),
+    };
 
-        if (tagDate >= startDate && tagDate <= endDate) {
-          // Get commits in this tag that aren't in previous tag
-          const prevTag = await git
-            .raw(['describe', '--tags', '--abbrev=0', `${tag}^`])
-            .catch(() => '');
-          const range = prevTag.trim() ? `${prevTag.trim()}..${tag}` : tag;
+    const leadTimeForChanges: DoraMetric = {
+      value: Math.round(metrics.avgLeadTime * 10) / 10,
+      level: getLeadTimeLevel(metrics.avgLeadTime),
+      description: getLeadTimeDescription(metrics.avgLeadTime),
+    };
 
-          try {
-            const commits = await git.raw(['log', '--format=%H %aI', range]);
-            for (const line of commits.trim().split('\n')) {
-              if (!line) continue;
-              const [hash, dateStr] = line.split(' ');
-              if (hash && dateStr) {
-                const commitDate = new Date(dateStr);
-                const leadTimeHours = (tagDate.getTime() - commitDate.getTime()) / (1000 * 60 * 60);
-                if (leadTimeHours >= 0 && leadTimeHours < 24 * 365) {
-                  leadTimes.push(leadTimeHours);
-                }
-              }
-            }
-          } catch {
-            // Skip if we can't get commits for this range
-          }
-        }
-      } catch {
-        // Skip tags we can't analyze
-      }
-    }
+    const changeFailureRate: DoraMetric = {
+      value: Math.round(metrics.failureRate * 10) / 10,
+      level: getFailureRateLevel(metrics.failureRate),
+      description: getFailureRateDescription(metrics.failureRate),
+    };
 
-    // 3. Count reverts and merges for change failure rate
-    for (const commit of log.all) {
-      const msg = commit.message.toLowerCase();
+    const meanTimeToRecovery: DoraMetric = {
+      value: Math.round(metrics.avgMTTR * 10) / 10,
+      level: getMTTRLevel(metrics.avgMTTR),
+      description: getMTTRDescription(metrics.avgMTTR),
+    };
 
-      // Count reverts
-      if (msg.startsWith('revert') || msg.includes('revert "')) {
-        revertCount++;
-
-        // Try to find the recovery time (time between original commit and revert)
-        // This is a simplification - in reality we'd need to find the original commit
-        // For now, estimate based on typical patterns
-      }
-
-      // Count merges to base branch
-      if (
-        msg.startsWith('merge') ||
-        commit.refs?.includes('main') ||
-        commit.refs?.includes('master')
-      ) {
-        mergeCount++;
-      }
-    }
-
-    // 4. Estimate MTTR from revert patterns
-    // Look for revert -> fix patterns
-    const sortedCommits = [...log.all].sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-    );
-
-    for (let i = 0; i < sortedCommits.length; i++) {
-      const commit = sortedCommits[i];
-      if (commit.message.toLowerCase().includes('revert')) {
-        // Look for fix commit within the next 50 commits
-        for (let j = i + 1; j < Math.min(i + 50, sortedCommits.length); j++) {
-          const nextCommit = sortedCommits[j];
-          const nextMsg = nextCommit.message.toLowerCase();
-
-          if (
-            nextMsg.includes('fix') ||
-            nextMsg.includes('hotfix') ||
-            nextMsg.includes('patch') ||
-            nextMsg.includes('restore')
-          ) {
-            const revertDate = new Date(commit.date);
-            const fixDate = new Date(nextCommit.date);
-            const recoveryHours = (fixDate.getTime() - revertDate.getTime()) / (1000 * 60 * 60);
-
-            if (recoveryHours > 0 && recoveryHours < 24 * 30) {
-              recoveryTimes.push(recoveryHours);
-            }
-            break;
-          }
-        }
-      }
-    }
-  } catch (_error) {
-    // Not a git repo or other error - return defaults
-  }
-
-  // Calculate metrics
-  const deploysPerWeek = deployCount / weeksAnalyzed;
-
-  // Average lead time (or estimate if no data)
-  let avgLeadTime = 0;
-  if (leadTimes.length > 0) {
-    avgLeadTime = leadTimes.reduce((sum, t) => sum + t, 0) / leadTimes.length;
-  } else if (commitCount > 0 && deployCount > 0) {
-    // Estimate: commits spread across deploys
-    const hoursInPeriod = weeksAnalyzed * 7 * 24;
-    avgLeadTime = hoursInPeriod / deployCount / 2;
-  }
-
-  // Change failure rate
-  const totalChanges = Math.max(mergeCount, deployCount, 1);
-  const failureRate = (revertCount / totalChanges) * 100;
-
-  // MTTR
-  let avgMTTR = 0;
-  if (recoveryTimes.length > 0) {
-    avgMTTR = recoveryTimes.reduce((sum, t) => sum + t, 0) / recoveryTimes.length;
-  } else if (revertCount > 0) {
-    // Estimate based on typical patterns
-    avgMTTR = 24; // Default to 1 day if we have reverts but can't find recovery
-  }
-
-  // Build metrics
-  const deploymentFrequency: DoraMetric = {
-    value: Math.round(deploysPerWeek * 100) / 100,
-    level: getDeployFrequencyLevel(deploysPerWeek),
-    description: getDeployFrequencyDescription(deploysPerWeek),
-  };
-
-  const leadTimeForChanges: DoraMetric = {
-    value: Math.round(avgLeadTime * 10) / 10,
-    level: getLeadTimeLevel(avgLeadTime),
-    description: getLeadTimeDescription(avgLeadTime),
-  };
-
-  const changeFailureRate: DoraMetric = {
-    value: Math.round(failureRate * 10) / 10,
-    level: getFailureRateLevel(failureRate),
-    description: getFailureRateDescription(failureRate),
-  };
-
-  const meanTimeToRecovery: DoraMetric = {
-    value: Math.round(avgMTTR * 10) / 10,
-    level: getMTTRLevel(avgMTTR),
-    description: getMTTRDescription(avgMTTR),
-  };
-
-  return {
-    deploymentFrequency,
-    leadTimeForChanges,
-    changeFailureRate,
-    meanTimeToRecovery,
-    overallLevel: calculateOverallLevel({
+    return {
       deploymentFrequency,
       leadTimeForChanges,
       changeFailureRate,
       meanTimeToRecovery,
-    }),
-    period: { start: startDate, end: endDate },
-    rawData: {
-      deployCount,
-      commitCount,
-      revertCount,
-      mergeCount,
-      weeksAnalyzed: Math.round(weeksAnalyzed * 10) / 10,
-    },
-  };
+      overallLevel: calculateOverallLevel({
+        deploymentFrequency,
+        leadTimeForChanges,
+        changeFailureRate,
+        meanTimeToRecovery,
+      }),
+      period: { start: startDate, end: endDate },
+      rawData: {
+        deployCount: deployments.count,
+        commitCount: log.all.length,
+        revertCount: changeFailures.reverts,
+        mergeCount: changeFailures.merges,
+        weeksAnalyzed: Math.round(weeksAnalyzed * 10) / 10,
+      },
+    };
+  } catch (_error) {
+    // Not a git repo or other error - return defaults
+    return {
+      deploymentFrequency: {
+        value: 0,
+        level: 'low',
+        description: 'No deployment data available',
+      },
+      leadTimeForChanges: {
+        value: 0,
+        level: 'low',
+        description: 'No commit data available',
+      },
+      changeFailureRate: {
+        value: 0,
+        level: 'elite',
+        description: 'No failures detected',
+      },
+      meanTimeToRecovery: {
+        value: 0,
+        level: 'elite',
+        description: 'No recovery data',
+      },
+      overallLevel: 'low',
+      period: { start: startDate, end: endDate },
+      rawData: {
+        deployCount: 0,
+        commitCount: 0,
+        revertCount: 0,
+        mergeCount: 0,
+        weeksAnalyzed: 0,
+      },
+    };
+  }
 }
 
 /**
