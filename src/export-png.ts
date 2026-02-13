@@ -10,6 +10,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { type CanvasRenderingContext2D, createCanvas, loadImage } from 'canvas';
 import QRCode from 'qrcode';
+import { type SimpleGit, simpleGit } from 'simple-git';
 
 export interface PngExportOptions {
   width?: number; // Default 1200 (Twitter-optimized)
@@ -629,11 +630,14 @@ export async function isPngExportAvailable(): Promise<boolean> {
  */
 export async function getRepoUrl(rootDir: string = '.'): Promise<string | null> {
   try {
-    const { execSync } = await import('node:child_process');
-    const remote = execSync('git config --get remote.origin.url', {
-      cwd: rootDir,
-      encoding: 'utf8',
-    }).trim();
+    const git: SimpleGit = simpleGit(rootDir);
+    const remotes = await git.getRemotes(true);
+    const origin = remotes.find((r) => r.name === 'origin');
+    const remote = origin?.refs?.fetch || '';
+
+    if (!remote) {
+      return null;
+    }
 
     // Convert SSH URL to HTTPS
     // git@github.com:user/repo.git -> https://github.com/user/repo

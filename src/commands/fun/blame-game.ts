@@ -29,7 +29,7 @@ export function register(program: Command): void {
       }
 
       const { generateBlameGame } = await import('../../blame-game.js');
-      const output = generateBlameGame(graph, rootDir);
+      const output = await generateBlameGame(graph, rootDir);
 
       if (options.json) {
         outputJson('blame-game', { output });

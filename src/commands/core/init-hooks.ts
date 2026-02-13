@@ -46,6 +46,8 @@ export function register(program: Command): void {
           console.log(chalk.yellow('  Husky not installed. Installing...'));
           const { execSync } = await import('node:child_process');
           try {
+            // Note: execSync is safe here - 'npx husky init' is a hardcoded command
+            // with no user input. Using simple-git is not applicable for npx commands.
             execSync('npx husky init', { cwd: rootDir, stdio: 'inherit' });
           } catch {
             console.log(chalk.red('  Failed to initialize Husky. Install manually:'));

@@ -4,7 +4,7 @@
  * Gamified blame analysis with funny awards for contributors.
  */
 
-import { execSync } from 'node:child_process';
+import { type SimpleGit, simpleGit } from 'simple-git';
 import type { KnowledgeGraph } from './graph/types.js';
 
 interface ContributorStats {
@@ -29,22 +29,28 @@ interface Award {
   stat: string;
 }
 
-function getContributorStats(rootDir: string): Map<string, ContributorStats> {
+async function getContributorStats(rootDir: string): Promise<Map<string, ContributorStats>> {
   const stats = new Map<string, ContributorStats>();
 
   try {
-    // Get commit stats per author
-    const log = execSync(
-      `git log --format="%aN|%ad|%s" --date=format:"%u %H" --numstat --since="1 year ago"`,
-      { cwd: rootDir, encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024 }
-    );
+    const git: SimpleGit = simpleGit(rootDir);
+
+    // Get commit log with stats using simple-git
+    // Use raw to get the custom format we need
+    const logResult = await git.raw([
+      'log',
+      '--format=%aN|%ad|%s',
+      '--date=format:%u %H',
+      '--numstat',
+      '--since=1 year ago',
+    ]);
 
     let currentAuthor = '';
     let currentDay = 0;
     let currentHour = 0;
     let currentMessage = '';
 
-    for (const line of log.split('\n')) {
+    for (const line of logResult.split('\n')) {
       if (line.includes('|')) {
         const parts = line.split('|');
         if (parts.length >= 3) {
@@ -228,8 +234,8 @@ function generateAwards(stats: Map<string, ContributorStats>): Award[] {
   return awards;
 }
 
-export function generateBlameGame(_graph: KnowledgeGraph, rootDir: string): string {
-  const stats = getContributorStats(rootDir);
+export async function generateBlameGame(_graph: KnowledgeGraph, rootDir: string): Promise<string> {
+  const stats = await getContributorStats(rootDir);
   const awards = generateAwards(stats);
   const contributors = Array.from(stats.values()).sort((a, b) => b.commits - a.commits);
 

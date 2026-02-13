@@ -5,6 +5,7 @@
 import path from 'node:path';
 import chalk from 'chalk';
 import type { Command } from 'commander';
+import { type SimpleGit, simpleGit } from 'simple-git';
 import { loadGraph } from '../../graph/persistence.js';
 import { outputJson, outputJsonError } from '../../json-output.js';
 import type { PersonalityMode } from '../../personality/types.js';
@@ -43,12 +44,11 @@ export function register(program: Command): void {
 
       if (!owner || !repo) {
         try {
-          const { execSync } = await import('node:child_process');
-          const remote = execSync('git remote get-url origin', {
-            cwd: rootDir,
-            encoding: 'utf-8',
-          }).trim();
-          const match = remote.match(/github\.com[:/]([^/]+)\/([^/.]+)/);
+          const git: SimpleGit = simpleGit(rootDir);
+          const remotes = await git.getRemotes(true);
+          const origin = remotes.find((r) => r.name === 'origin');
+          const remoteUrl = origin?.refs?.fetch || '';
+          const match = remoteUrl.match(/github\.com[:/]([^/]+)\/([^/.]+)/);
           if (match) {
             owner = owner || match[1];
             repo = repo || match[2];

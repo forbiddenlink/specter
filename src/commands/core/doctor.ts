@@ -2,11 +2,11 @@
  * Doctor command - environment diagnostics and health checks
  */
 
-import { execSync } from 'node:child_process';
 import path from 'node:path';
 import chalk from 'chalk';
 import type { Command } from 'commander';
 import gradient from 'gradient-string';
+import { simpleGit } from 'simple-git';
 import { graphExists, isGraphStale } from '../../graph/persistence.js';
 
 interface CheckResult {
@@ -14,17 +14,6 @@ interface CheckResult {
   status: 'pass' | 'warn' | 'fail';
   message: string;
   suggestion?: string;
-}
-
-/**
- * Run a shell command and return its trimmed stdout, or null on failure.
- */
-function runCommand(cmd: string): string | null {
-  try {
-    return execSync(cmd, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
-  } catch {
-    return null;
-  }
 }
 
 /**
@@ -51,25 +40,25 @@ function checkNodeVersion(): CheckResult {
 }
 
 /**
- * Check Git availability
+ * Check Git availability using simple-git
  */
-function checkGit(): CheckResult {
-  const output = runCommand('git --version');
-
-  if (output) {
+async function checkGit(): Promise<CheckResult> {
+  try {
+    const git = simpleGit();
+    const version = await git.version();
     return {
       name: 'Git',
       status: 'pass',
-      message: output,
+      message: `git version ${version.major}.${version.minor}.${version.patch}${version.agent ? ` (${version.agent})` : ''}`,
+    };
+  } catch {
+    return {
+      name: 'Git',
+      status: 'fail',
+      message: 'Git not found',
+      suggestion: 'Install Git: https://git-scm.com/downloads',
     };
   }
-
-  return {
-    name: 'Git',
-    status: 'fail',
-    message: 'Git not found',
-    suggestion: 'Install Git: https://git-scm.com/downloads',
-  };
 }
 
 /**
@@ -263,11 +252,11 @@ export function register(program: Command): void {
 
       // Synchronous checks
       results.push(checkNodeVersion());
-      results.push(checkGit());
       results.push(checkDependencies());
       results.push(checkTerminal());
 
       // Async checks
+      results.push(await checkGit());
       results.push(await checkGraphExists(rootDir));
       results.push(await checkGraphFreshness(rootDir));
 
