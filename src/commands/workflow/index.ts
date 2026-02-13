@@ -1,6 +1,6 @@
 /**
  * Workflow commands - precommit, morning, standup, predict, reviewers, watch, review,
- * dashboard, achievements
+ * dashboard, achievements, streaks
  */
 
 import type { Command } from 'commander';
@@ -12,6 +12,7 @@ import { register as registerPredict } from './predict.js';
 import { register as registerReview } from './review.js';
 import { register as registerReviewers } from './reviewers.js';
 import { register as registerStandup } from './standup.js';
+import { register as registerStreaks } from './streaks.js';
 import { register as registerWatch } from './watch.js';
 
 export function registerWorkflowCommands(program: Command): void {
@@ -24,4 +25,5 @@ export function registerWorkflowCommands(program: Command): void {
   registerReview(program);
   registerDashboard(program);
   registerAchievements(program);
+  registerStreaks(program);
 }
