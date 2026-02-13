@@ -154,7 +154,41 @@ export async function analyzeCost(
   const categories: DebtCategory[] = [];
   const fileCosts: Map<string, CostlyFile> = new Map();
 
-  // Analyze complexity hotspots
+  // Gather all cost analyses
+  const complexityCost = await analyzeComplexityHotspots(
+    rootDir,
+    graph,
+    hourlyRate,
+    categories,
+    fileCosts
+  );
+
+  const busFactorCost = await analyzeBusFactorRisks(graph, hourlyRate, categories, fileCosts);
+
+  const cycleCost = await analyzeCircularDependencies(graph, hourlyRate, categories, fileCosts);
+
+  await analyzeDeadCode(graph, hourlyRate, options, categories);
+
+  // Build final results
+  return buildFinalResults({
+    totalDebt: categories.reduce((sum, cat) => sum + cat.cost, 0),
+    categories,
+    fileCosts,
+    hourlyRate,
+    currency,
+  });
+}
+
+/**
+ * Analyze complexity-based costs and accumulate in categories/fileCosts
+ */
+async function analyzeComplexityHotspots(
+  rootDir: string,
+  graph: KnowledgeGraph,
+  hourlyRate: number,
+  categories: DebtCategory[],
+  fileCosts: Map<string, CostlyFile>
+): Promise<number> {
   let hotspots: HotspotsResult | null = null;
   try {
     hotspots = await analyzeHotspots(rootDir, graph, {});
@@ -195,7 +229,18 @@ export async function analyzeCost(
     });
   }
 
-  // Analyze bus factor
+  return complexityCost;
+}
+
+/**
+ * Analyze bus factor risks and accumulate in categories/fileCosts
+ */
+async function analyzeBusFactorRisks(
+  graph: KnowledgeGraph,
+  hourlyRate: number,
+  categories: DebtCategory[],
+  fileCosts: Map<string, CostlyFile>
+): Promise<number> {
   let busFactor: BusFactorResult | null = null;
   try {
     busFactor = await analyzeBusFactor(graph, {});
@@ -241,7 +286,18 @@ export async function analyzeCost(
     }
   }
 
-  // Analyze circular dependencies
+  return busFactorCost;
+}
+
+/**
+ * Analyze circular dependency costs and accumulate in categories/fileCosts
+ */
+async function analyzeCircularDependencies(
+  graph: KnowledgeGraph,
+  hourlyRate: number,
+  categories: DebtCategory[],
+  fileCosts: Map<string, CostlyFile>
+): Promise<number> {
   let cycles: CyclesResult | null = null;
   try {
     cycles = detectCycles(graph);
@@ -279,46 +335,63 @@ export async function analyzeCost(
     });
   }
 
-  // Calculate dead code cost
-  if (options.includeDeadCode !== false) {
-    const _unusedExports = Object.values(graph.nodes).filter(
-      (n) => n.type === 'function' || n.type === 'class'
-    ).length;
-    const importedSymbols = new Set(
-      graph.edges.filter((e) => e.type === 'imports').map((e) => e.target)
-    );
-    const actualUnused = Object.values(graph.nodes).filter(
-      (n) => (n.type === 'function' || n.type === 'class') && !importedSymbols.has(n.id)
-    ).length;
+  return cycleCost;
+}
 
-    const deadCodeCostValue = calculateDeadCodeCost(
-      actualUnused,
-      graph.metadata.totalLines,
-      hourlyRate
-    );
+/**
+ * Analyze dead code costs and add to categories
+ */
+async function analyzeDeadCode(
+  graph: KnowledgeGraph,
+  hourlyRate: number,
+  options: CostOptions,
+  categories: DebtCategory[]
+): Promise<void> {
+  if (options.includeDeadCode === false) return;
 
-    if (deadCodeCostValue > 0) {
-      categories.push({
-        name: 'Dead Code',
-        cost: deadCodeCostValue,
-        hours: Math.round(deadCodeCostValue / hourlyRate),
-        fileCount: actualUnused,
-        description: 'Wasted maintenance on unused code',
-        emoji: '\u{1F480}',
-      });
-    }
+  const _unusedExports = Object.values(graph.nodes).filter(
+    (n) => n.type === 'function' || n.type === 'class'
+  ).length;
+  const importedSymbols = new Set(
+    graph.edges.filter((e) => e.type === 'imports').map((e) => e.target)
+  );
+  const actualUnused = Object.values(graph.nodes).filter(
+    (n) => (n.type === 'function' || n.type === 'class') && !importedSymbols.has(n.id)
+  ).length;
+
+  const deadCodeCostValue = calculateDeadCodeCost(
+    actualUnused,
+    graph.metadata.totalLines,
+    hourlyRate
+  );
+
+  if (deadCodeCostValue > 0) {
+    categories.push({
+      name: 'Dead Code',
+      cost: deadCodeCostValue,
+      hours: Math.round(deadCodeCostValue / hourlyRate),
+      fileCount: actualUnused,
+      description: 'Wasted maintenance on unused code',
+      emoji: '\u{1F480}',
+    });
   }
+}
 
-  // Calculate totals
-  const totalDebt = categories.reduce((sum, cat) => sum + cat.cost, 0);
-
-  // Sort files by cost
-  const topFiles = Array.from(fileCosts.values())
+/**
+ * Build final cost analysis results from accumulated data
+ */
+function buildFinalResults(data: {
+  totalDebt: number;
+  categories: DebtCategory[];
+  fileCosts: Map<string, CostlyFile>;
+  hourlyRate: number;
+  currency: string;
+}): CostAnalysis {
+  const topFiles = Array.from(data.fileCosts.values())
     .sort((a, b) => b.totalCost - a.totalCost)
     .slice(0, 10);
 
-  // Identify quick wins (high ROI, low effort)
-  const quickWins: QuickWin[] = Array.from(fileCosts.values())
+  const quickWins: QuickWin[] = Array.from(data.fileCosts.values())
     .filter((f) => f.estimatedFixTime <= 8 && f.totalCost > 500)
     .map((f) => ({
       file: f.file,
@@ -330,18 +403,17 @@ export async function analyzeCost(
     .sort((a, b) => b.roi - a.roi)
     .slice(0, 5);
 
-  // Estimate savings from fixing top issues
   const topFileCost = topFiles.slice(0, 5).reduce((sum, f) => sum + f.totalCost, 0);
   const estimatedSavings = Math.round(topFileCost * 0.7);
 
   return {
-    totalDebt,
-    categories,
+    totalDebt: data.totalDebt,
+    categories: data.categories,
     topFiles,
     quickWins,
     estimatedSavings,
-    hourlyRate,
-    currency,
+    hourlyRate: data.hourlyRate,
+    currency: data.currency,
     analysisDate: new Date().toISOString().split('T')[0],
   };
 }
