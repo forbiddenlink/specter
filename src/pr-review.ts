@@ -191,11 +191,20 @@ function generateReviewBody(analyses: FileAnalysis[], personality: PersonalityMo
 
   // Add personality-based opening
   if (personality === 'roast') {
-    body += `${applyPersonality(`Buckle up buttercup, I've got opinions...`, personality)}\n\n`;
+    const opening = applyPersonality("Buckle up buttercup, I've got opinions...", personality);
+    body += `${opening}\n\n`;
   } else if (personality === 'noir') {
-    body += `${applyPersonality(`In this city of code, every PR tells a story...`, personality)}\n\n`;
+    const opening = applyPersonality(
+      'In this city of code, every PR tells a story...',
+      personality
+    );
+    body += `${opening}\n\n`;
   } else if (personality === 'dramatic') {
-    body += `${applyPersonality(`Behold! A pull request emerges from the depths!`, personality)}\n\n`;
+    const opening = applyPersonality(
+      'Behold! A pull request emerges from the depths!',
+      personality
+    );
+    body += `${opening}\n\n`;
   }
 
   body += `### 📊 Change Summary\n\n`;
