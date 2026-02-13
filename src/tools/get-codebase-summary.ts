@@ -7,7 +7,7 @@
 
 import { z } from 'zod';
 import { getComplexityEmoji } from '../analyzers/complexity.js';
-import type { CodebaseStats, KnowledgeGraph } from '../graph/types.js';
+import type { CodebaseStats, FileNode, KnowledgeGraph } from '../graph/types.js';
 import { formatSummary } from '../personality/formatter.js';
 import type { PersonalityMode } from '../personality/types.js';
 
@@ -101,7 +101,7 @@ export function execute(
       const dir = node.filePath.split('/').slice(0, -1).join('/') || '.';
       const existing = dirStats.get(dir) || { fileCount: 0, lineCount: 0 };
       existing.fileCount++;
-      existing.lineCount += (node as any).lineCount || 0;
+      existing.lineCount += (node as FileNode).lineCount || 0;
       dirStats.set(dir, existing);
     }
   }

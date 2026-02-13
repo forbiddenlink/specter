@@ -4,7 +4,7 @@
  * Generate meme-style text based on codebase metrics.
  */
 
-import type { KnowledgeGraph } from './graph/types.js';
+import type { FileNode, KnowledgeGraph } from './graph/types.js';
 
 interface MemeTemplate {
   top: string;
@@ -126,7 +126,7 @@ function getStats(graph: KnowledgeGraph): CodeStats {
   }
 
   const avgComplexity = nodes.length > 0 ? totalComplexity / nodes.length : 0;
-  const totalLines = fileNodes.reduce((sum, n) => sum + ((n as any).lineCount || 0), 0);
+  const totalLines = fileNodes.reduce((sum, n) => sum + ((n as FileNode).lineCount || 0), 0);
 
   // Estimate health (simplified)
   let health = 100;

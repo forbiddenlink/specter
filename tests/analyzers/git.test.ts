@@ -18,6 +18,7 @@ vi.mock('simple-git', () => ({
   simpleGit: vi.fn(() => mockGit),
 }));
 
+import { simpleGit } from 'simple-git';
 import {
   analyzeChangeCoupling,
   analyzeFileHistory,
@@ -28,7 +29,6 @@ import {
   identifyHotFiles,
   isGitRepository,
 } from '../../src/analyzers/git.js';
-import { simpleGit } from 'simple-git';
 
 describe('Git Analyzer', () => {
   beforeEach(() => {

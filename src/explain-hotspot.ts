@@ -1,13 +1,13 @@
 #!/usr/bin/env node
+import { spawnSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
+import { relative, resolve } from 'node:path';
 import chalk from 'chalk';
-import { spawnSync } from 'child_process';
 import type { Command } from 'commander';
-import { existsSync, readFileSync } from 'fs';
 import ora from 'ora';
-import { relative, resolve } from 'path';
 import { findComplexityHotspots, generateComplexityReport } from './analyzers/complexity.js';
 import { loadGraph } from './graph/persistence.js';
-import { analyzeHotspots, type HotspotsResult } from './hotspots.js';
+import { analyzeHotspots } from './hotspots.js';
 
 interface ExplainOptions {
   lines?: string;
@@ -38,8 +38,8 @@ async function analyzeHotspotReason(filePath: string, rootDir: string): Promise<
 
     // Check if it appears in hotspots analysis
     const hotspotsResult = await analyzeHotspots(rootDir, graph, { top: 20 });
-    if (hotspotsResult && hotspotsResult.hotspots) {
-      const hotspot = hotspotsResult.hotspots.find((h: any) => h.file === relativePath);
+    if (hotspotsResult?.hotspots) {
+      const hotspot = hotspotsResult.hotspots.find((h) => h.file === relativePath);
 
       if (hotspot) {
         reasons.push(`📈 Change frequency: ${hotspot.churn} changes`);
@@ -50,9 +50,9 @@ async function analyzeHotspotReason(filePath: string, rootDir: string): Promise<
     }
 
     // Check complexity
-    const complexityReport = generateComplexityReport(graph);
+    const _complexityReport = generateComplexityReport(graph);
     const complexFiles = findComplexityHotspots(graph, { limit: 20 });
-    const complexFile = complexFiles.find((c: any) => c.file === relativePath);
+    const complexFile = complexFiles.find((c) => c.filePath === relativePath);
 
     if (complexFile) {
       reasons.push(`🧮 Cyclomatic complexity: ${complexFile.complexity}`);
@@ -65,7 +65,7 @@ async function analyzeHotspotReason(filePath: string, rootDir: string): Promise<
     return reasons.length > 0
       ? `\n## Why this is a hotspot:\n${reasons.join('\n')}`
       : '\nNo hotspot data available. Run `specter scan` first.';
-  } catch (error) {
+  } catch (_error) {
     return '\nCould not analyze hotspot metrics.';
   }
 }
@@ -135,9 +135,9 @@ export async function explainHotspot(
 
       spinner.succeed('Analysis complete');
 
-      console.log('\n' + chalk.bold.cyan('🔍 Hotspot Analysis:\n'));
+      console.log(`\n${chalk.bold.cyan('🔍 Hotspot Analysis:\n')}`);
       console.log(hotspotAnalysis);
-      console.log('\n' + chalk.bold.cyan('🤖 AI Explanation:\n'));
+      console.log(`\n${chalk.bold.cyan('🤖 AI Explanation:\n')}`);
       console.log(spawnResult.stdout);
 
       if (options.suggestions) {
@@ -149,9 +149,9 @@ export async function explainHotspot(
             chalk.white(' for detailed refactoring steps.')
         );
       }
-    } catch (copilotError) {
+    } catch (_copilotError) {
       spinner.warn('Copilot unavailable, showing metrics only');
-      console.log('\n' + chalk.bold.cyan('📊 Hotspot Analysis:\n'));
+      console.log(`\n${chalk.bold.cyan('📊 Hotspot Analysis:\n')}`);
       console.log(hotspotAnalysis);
       console.log(
         chalk.dim(

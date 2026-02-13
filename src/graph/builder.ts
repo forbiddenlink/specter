@@ -36,12 +36,10 @@ export interface BuildOptions {
 /**
  * Promise with timeout wrapper
  */
-function withTimeout<T>(promise: Promise<T>, ms: number, errorMsg: string): Promise<T> {
+function _withTimeout<T>(promise: Promise<T>, ms: number, errorMsg: string): Promise<T> {
   return Promise.race([
     promise,
-    new Promise<T>((_, reject) =>
-      setTimeout(() => reject(new Error(errorMsg)), ms)
-    ),
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(errorMsg)), ms)),
   ]);
 }
 
@@ -51,14 +49,14 @@ function withTimeout<T>(promise: Promise<T>, ms: number, errorMsg: string): Prom
 function safeAnalyzeSourceFile(
   sourceFile: Parameters<typeof analyzeSourceFile>[0],
   rootDir: string,
-  timeoutMs: number = 10000
+  _timeoutMs: number = 10000
 ): ASTAnalysisResult | null {
   try {
     // Use synchronous analysis since ts-morph operations are sync
     // but wrap in try-catch for error resilience
     const result = analyzeSourceFile(sourceFile, rootDir);
     return result;
-  } catch (error) {
+  } catch (_error) {
     // Return null for files that fail to analyze
     return null;
   }

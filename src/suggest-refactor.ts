@@ -1,13 +1,13 @@
 #!/usr/bin/env node
+import { spawnSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
+import { relative, resolve } from 'node:path';
 import chalk from 'chalk';
-import { spawnSync } from 'child_process';
 import type { Command } from 'commander';
-import { existsSync, readFileSync } from 'fs';
 import ora from 'ora';
-import { relative, resolve } from 'path';
 import { findComplexityHotspots, generateComplexityReport } from './analyzers/complexity.js';
 import { loadGraph } from './graph/persistence.js';
-import { analyzeHotspots, type HotspotsResult } from './hotspots.js';
+import { analyzeHotspots } from './hotspots.js';
 
 interface RefactorOptions {
   focus?: string;
@@ -43,9 +43,9 @@ async function analyzeRefactoringNeeds(
 
     // Complexity analysis
     if (priority === 'complexity' || priority === 'all') {
-      const complexityReport = generateComplexityReport(graph);
+      const _complexityReport = generateComplexityReport(graph);
       const complexFiles = findComplexityHotspots(graph, { limit: 20 });
-      const file = complexFiles.find((c: any) => c.file === relativePath);
+      const file = complexFiles.find((c) => c.filePath === relativePath);
 
       if (file) {
         issues.push(`\n## Complexity Issues:`);
@@ -64,8 +64,8 @@ async function analyzeRefactoringNeeds(
     // Hotspot analysis
     if (priority === 'coupling' || priority === 'all') {
       const hotspotsResult = await analyzeHotspots(rootDir, graph, { top: 20 });
-      if (hotspotsResult && hotspotsResult.hotspots) {
-        const file = hotspotsResult.hotspots.find((h: any) => h.file === relativePath);
+      if (hotspotsResult?.hotspots) {
+        const file = hotspotsResult.hotspots.find((h) => h.file === relativePath);
 
         if (file && file.churn > 50) {
           issues.push(`\n## Change Frequency:`);
@@ -85,7 +85,7 @@ async function analyzeRefactoringNeeds(
     return issues.length > 0
       ? issues.join('\n')
       : '\nNo critical issues detected. Code quality looks good!';
-  } catch (error) {
+  } catch (_error) {
     return '\nCould not analyze code. Run `specter scan` first.';
   }
 }
@@ -133,7 +133,7 @@ export async function suggestRefactoring(
     // Limit content size
     const contentPreview =
       fileContent.length > 2000
-        ? fileContent.slice(0, 2000) + '\n... (truncated for analysis)'
+        ? `${fileContent.slice(0, 2000)}\n... (truncated for analysis)`
         : fileContent;
 
     // Build prompt based on format
@@ -182,13 +182,13 @@ Include:
 
       spinner.succeed('Refactoring suggestions ready');
 
-      console.log('\n' + chalk.bold.cyan('📊 Current Code Analysis:\n'));
+      console.log(`\n${chalk.bold.cyan('📊 Current Code Analysis:\n')}`);
       console.log(codeIssues);
 
-      console.log('\n' + chalk.bold.cyan('🤖 AI Refactoring Suggestions:\n'));
+      console.log(`\n${chalk.bold.cyan('🤖 AI Refactoring Suggestions:\n')}`);
       console.log(spawnResult.stdout);
 
-      console.log('\n' + chalk.bold.green('💡 Next Steps:'));
+      console.log(`\n${chalk.bold.green('💡 Next Steps:')}`);
       console.log(chalk.white('1. Review the suggestions carefully'));
       console.log(
         chalk.white('2. Create a feature branch: ') +
@@ -201,7 +201,7 @@ Include:
           chalk.cyan('specter fix --interactive') +
           chalk.white(' to apply fixes\n')
       );
-    } catch (copilotError) {
+    } catch (_copilotError) {
       spinner.fail('Failed to generate suggestions');
       console.log(chalk.yellow('\n⚠️  GitHub Copilot is unavailable.'));
       console.log(chalk.white('\nCode analysis results:'));

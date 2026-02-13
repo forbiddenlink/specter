@@ -11,6 +11,7 @@ import * as path from 'node:path';
 import { Project, type SourceFile } from 'ts-morph';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { analyzeSourceFile, createProject, getSourceFiles } from '../../src/analyzers/ast.js';
+import type { ClassNode, FunctionNode } from '../../src/graph/types.js';
 
 describe('AST Analyzer', () => {
   let tempDir: string;
@@ -87,15 +88,15 @@ function privateHelper(): void {
       const functions = result.symbolNodes.filter((n) => n.type === 'function');
       expect(functions).toHaveLength(3);
 
-      const greet = functions.find((f) => f.name === 'greet');
+      const greet = functions.find((f) => f.name === 'greet') as FunctionNode;
       expect(greet).toBeDefined();
-      expect(greet!.exported).toBe(true);
-      expect((greet as any).isAsync).toBe(false);
-      expect((greet as any).parameters).toEqual(['name']);
+      expect(greet.exported).toBe(true);
+      expect(greet.isAsync).toBe(false);
+      expect(greet.parameters).toEqual(['name']);
 
-      const fetchData = functions.find((f) => f.name === 'fetchData');
+      const fetchData = functions.find((f) => f.name === 'fetchData') as FunctionNode;
       expect(fetchData).toBeDefined();
-      expect((fetchData as any).isAsync).toBe(true);
+      expect(fetchData.isAsync).toBe(true);
 
       const privateHelper = functions.find((f) => f.name === 'privateHelper');
       expect(privateHelper).toBeDefined();
@@ -135,18 +136,18 @@ class Dog extends Animal {
       const classes = result.symbolNodes.filter((n) => n.type === 'class');
       expect(classes).toHaveLength(3);
 
-      const animal = classes.find((c) => c.name === 'Animal');
+      const animal = classes.find((c) => c.name === 'Animal') as ClassNode;
       expect(animal).toBeDefined();
-      expect(animal!.exported).toBe(true);
-      expect((animal as any).isAbstract).toBe(false);
+      expect(animal.exported).toBe(true);
+      expect(animal.isAbstract).toBe(false);
 
-      const shape = classes.find((c) => c.name === 'Shape');
+      const shape = classes.find((c) => c.name === 'Shape') as ClassNode;
       expect(shape).toBeDefined();
-      expect((shape as any).isAbstract).toBe(true);
+      expect(shape.isAbstract).toBe(true);
 
-      const dog = classes.find((c) => c.name === 'Dog');
+      const dog = classes.find((c) => c.name === 'Dog') as ClassNode;
       expect(dog).toBeDefined();
-      expect((dog as any).extends).toBe('Animal');
+      expect(dog.extends).toBe('Animal');
     });
 
     it('should extract class methods as function nodes', () => {
@@ -172,13 +173,13 @@ export class Calculator {
       );
       expect(methods).toHaveLength(2);
 
-      const add = methods.find((m) => m.name === 'Calculator.add');
+      const add = methods.find((m) => m.name === 'Calculator.add') as FunctionNode;
       expect(add).toBeDefined();
-      expect((add as any).parameters).toEqual(['a', 'b']);
+      expect(add.parameters).toEqual(['a', 'b']);
 
-      const multiply = methods.find((m) => m.name === 'Calculator.multiply');
+      const multiply = methods.find((m) => m.name === 'Calculator.multiply') as FunctionNode;
       expect(multiply).toBeDefined();
-      expect((multiply as any).isAsync).toBe(true);
+      expect(multiply.isAsync).toBe(true);
     });
 
     it('should extract interfaces', () => {
@@ -400,9 +401,9 @@ export function* countUp(max: number): Generator<number> {
 
       const result = analyzeSourceFile(sourceFile, tempDir);
 
-      const generator = result.symbolNodes.find((n) => n.name === 'countUp');
+      const generator = result.symbolNodes.find((n) => n.name === 'countUp') as FunctionNode;
       expect(generator).toBeDefined();
-      expect((generator as any).isGenerator).toBe(true);
+      expect(generator.isGenerator).toBe(true);
     });
 
     it('should handle class inheritance and implements', () => {
@@ -430,9 +431,9 @@ export class Document implements Printable, Serializable {
 
       const result = analyzeSourceFile(sourceFile, tempDir);
 
-      const doc = result.symbolNodes.find((n) => n.name === 'Document');
+      const doc = result.symbolNodes.find((n) => n.name === 'Document') as ClassNode;
       expect(doc).toBeDefined();
-      expect((doc as any).implements).toEqual(['Printable', 'Serializable']);
+      expect(doc.implements).toEqual(['Printable', 'Serializable']);
     });
   });
 

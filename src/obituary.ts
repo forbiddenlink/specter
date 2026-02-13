@@ -6,7 +6,7 @@
 
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
-import type { KnowledgeGraph } from './graph/types.js';
+import type { FileNode, KnowledgeGraph } from './graph/types.js';
 
 interface FileHistory {
   firstCommit: string;
@@ -71,8 +71,8 @@ function getFileHistory(filePath: string, rootDir: string): FileHistory | null {
       if (parts.length >= 2) {
         const add = parseInt(parts[0], 10);
         const del = parseInt(parts[1], 10);
-        if (!isNaN(add)) linesAdded += add;
-        if (!isNaN(del)) linesRemoved += del;
+        if (!Number.isNaN(add)) linesAdded += add;
+        if (!Number.isNaN(del)) linesRemoved += del;
       }
     }
 
@@ -132,15 +132,11 @@ function getMemorials(): string[] {
   ];
 }
 
-export function generateObituary(
-  filePath: string,
-  graph: KnowledgeGraph,
-  rootDir: string
-): string {
+export function generateObituary(filePath: string, graph: KnowledgeGraph, rootDir: string): string {
   const fileName = path.basename(filePath);
   const history = getFileHistory(filePath, rootDir);
   const nodes = Object.values(graph.nodes);
-  const fileNode = nodes.find(n => n.filePath === filePath || n.filePath?.endsWith(fileName));
+  const fileNode = nodes.find((n) => n.filePath === filePath || n.filePath?.endsWith(fileName));
 
   const deathCauses = getDeathCauses();
   const eulogies = getEulogies();
@@ -184,8 +180,10 @@ export function generateObituary(
   if (fileNode && 'complexity' in fileNode) {
     lines.push('  FINAL CONDITION');
     lines.push('  ────────────────────────────────────────────────────');
-    lines.push(`    Complexity: ${(fileNode as any).complexity || 'Unknown'}`);
-    lines.push(`    Lines: ${(fileNode as any).lineCount || 'Unknown'}`);
+    lines.push(`    Complexity: ${fileNode.complexity || 'Unknown'}`);
+    lines.push(
+      `    Lines: ${'lineCount' in fileNode ? (fileNode as FileNode).lineCount : 'Unknown'}`
+    );
     lines.push('');
   }
 
@@ -195,15 +193,15 @@ export function generateObituary(
   lines.push('');
 
   // Survivors (files that import this one)
-  const dependents = graph.edges.filter(e => e.target === fileNode?.id);
+  const dependents = graph.edges.filter((e) => e.target === fileNode?.id);
   if (dependents.length > 0) {
     lines.push('  SURVIVED BY');
     lines.push('  ────────────────────────────────────────────────────');
-    const survivorNames = dependents.slice(0, 5).map(d => {
+    const survivorNames = dependents.slice(0, 5).map((d) => {
       const node = graph.nodes[d.source];
       return node?.name || 'Unknown';
     });
-    survivorNames.forEach(name => {
+    survivorNames.forEach((name) => {
       lines.push(`    • ${name}`);
     });
     if (dependents.length > 5) {

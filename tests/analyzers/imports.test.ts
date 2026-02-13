@@ -4,15 +4,15 @@
  * Tests for import graph building, dependency mapping, and coupling calculations.
  */
 
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   buildDependencyMap,
   buildReverseDependencyMap,
   calculateCouplingScore,
   createImportEdges,
+  type ExportInfo,
   getFileRelationships,
   type ImportInfo,
-  type ExportInfo,
 } from '../../src/analyzers/imports.js';
 
 /**
