@@ -12,6 +12,14 @@ import { exportToPng, getRepoUrl, isPngExportAvailable } from '../../export-png.
 import { loadGraph } from '../../graph/persistence.js';
 import { outputJson, outputJsonError } from '../../json-output.js';
 import { createSpinner, showShareLinks } from '../types.js';
+import {
+  type RoastData,
+  roastBusFactor,
+  roastComplexityDistribution,
+  roastDeadCode,
+  roastHotspots,
+  roastNamingCrimes,
+} from './roast-helpers.js';
 
 export function register(program: Command): void {
   program
@@ -45,6 +53,16 @@ export function register(program: Command): void {
       const busFactor = await getBusFactor(graph, { limit: 10 });
 
       const stats = graph.metadata;
+
+      // Prepare data for roast helpers
+      const roastData: RoastData = {
+        hotspots: report.hotspots,
+        deadCode,
+        busFactor,
+        stats,
+        distribution: report.distribution,
+        graph,
+      };
 
       // JSON output for CI/CD
       if (options.json) {
@@ -95,111 +113,12 @@ export function register(program: Command): void {
       );
       lines.push('');
 
-      // Hotspots roast
-      if (report.hotspots.length > 0) {
-        lines.push(chalk.bold.red('  🌶️ Hottest Takes:'));
-        for (const hotspot of report.hotspots.slice(0, 5)) {
-          const fileName = hotspot.filePath.split('/').pop() || hotspot.filePath;
-          let roastLine = '';
-
-          if (fileName.includes('helper') || fileName.includes('util')) {
-            roastLine = `Ah yes, the junk drawer of code. ${hotspot.complexity > 1 ? `${Object.values(graph.nodes).filter((n) => n.filePath === hotspot.filePath && n.type === 'function').length} functions, 0 purpose.` : ''}`;
-          } else if (fileName === 'index.ts' || fileName === 'index.js') {
-            roastLine = `The "I'll organize this later" file. We both know you won't.`;
-          } else if (hotspot.complexity > 20) {
-            roastLine = `Complexity ${hotspot.complexity}. That's not code, that's job security.`;
-          } else if (hotspot.complexity > 15) {
-            roastLine = `Complexity ${hotspot.complexity}. Someone really didn't believe in small functions.`;
-          } else {
-            roastLine = `Complexity ${hotspot.complexity}. It's seen better days.`;
-          }
-
-          lines.push(chalk.yellow(`  • ${hotspot.filePath}:${hotspot.lineStart}`));
-          lines.push(chalk.dim(`    ${roastLine}`));
-        }
-        lines.push('');
-      }
-
-      // Dead code roast
-      if (deadCode.totalCount > 0) {
-        lines.push(chalk.bold.gray('  💀 Dead Code:'));
-        lines.push(
-          chalk.white(
-            `  You have ${deadCode.totalCount} unused exports. They're not dead, they're just waiting for someone to care.`
-          )
-        );
-        lines.push(chalk.dim("  They'll keep waiting."));
-        lines.push('');
-      }
-
-      // Bus factor roast
-      if (busFactor.analyzed && busFactor.topOwners.length > 0) {
-        const topOwner = busFactor.topOwners[0];
-        lines.push(chalk.bold.magenta('  👻 Bus Factor:'));
-        if (topOwner.percentage > 60) {
-          lines.push(
-            chalk.white(`  ${topOwner.name} owns ${topOwner.percentage}% of your codebase.`)
-          );
-          lines.push(chalk.dim('  Hope they like their job here. Forever.'));
-        } else if (busFactor.overallBusFactor < 2) {
-          lines.push(
-            chalk.white(
-              `  Overall bus factor: ${busFactor.overallBusFactor}. That's dangerously low.`
-            )
-          );
-          lines.push(chalk.dim('  One sick day and it all falls apart.'));
-        } else {
-          lines.push(
-            chalk.white(
-              `  Bus factor ${busFactor.overallBusFactor}. At least ${Math.ceil(busFactor.overallBusFactor)} people need to win the lottery for this to be a problem.`
-            )
-          );
-        }
-        lines.push('');
-      }
-
-      // Naming roasts
-      const suspiciousFiles = Object.values(graph.nodes)
-        .filter((n) => n.type === 'file')
-        .filter((n) => {
-          const name = n.filePath.split('/').pop() || '';
-          return (
-            name.includes('helper') ||
-            name.includes('util') ||
-            name.includes('misc') ||
-            name.includes('stuff')
-          );
-        });
-
-      if (suspiciousFiles.length > 0) {
-        lines.push(chalk.bold.yellow('  🤔 Naming Crimes:'));
-        for (const file of suspiciousFiles.slice(0, 3)) {
-          const name = file.filePath.split('/').pop();
-          lines.push(chalk.white(`  • ${file.filePath}`));
-          if (name?.includes('helper')) {
-            lines.push(
-              chalk.dim('    "Helpers" - the universal sign for "I gave up on naming things"')
-            );
-          } else if (name?.includes('util')) {
-            lines.push(chalk.dim('    "Utils" - where functions go to be forgotten'));
-          } else if (name?.includes('misc')) {
-            lines.push(chalk.dim('    "Misc" - at least you\'re honest about the chaos'));
-          } else {
-            lines.push(chalk.dim('    This name screams "I\'ll refactor later"'));
-          }
-        }
-        lines.push('');
-      }
-
-      // Complexity distribution roast
-      if (report.distribution.veryHigh > 0) {
-        lines.push(chalk.bold.red('  💣 Complexity Crimes:'));
-        lines.push(
-          chalk.white(`  ${report.distribution.veryHigh} functions have complexity over 20.`)
-        );
-        lines.push(chalk.dim("  These aren't functions, they're escape rooms."));
-        lines.push('');
-      }
+      // Generate roasts using helpers
+      lines.push(...roastHotspots(roastData));
+      lines.push(...roastDeadCode(roastData));
+      lines.push(...roastBusFactor(roastData));
+      lines.push(...roastNamingCrimes(roastData));
+      lines.push(...roastComplexityDistribution(roastData));
 
       // Final mic drop
       lines.push(chalk.bold.red('  🎤 *drops mic*'));
