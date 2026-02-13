@@ -12,6 +12,17 @@ import { loadGraph } from '../../graph/persistence.js';
 import { loadSnapshots } from '../../history/storage.js';
 import { outputJson, outputJsonError } from '../../json-output.js';
 import { coloredSparkline } from '../../ui/index.js';
+import {
+  formatHealthIndicator,
+  generateDiagnosis,
+  getBusFactorStatus,
+  getComplexityStatus,
+  getCoverageStatus,
+  getDeadExportsStatus,
+  getHealthStatus,
+  makeBar,
+  type VitalsMetrics,
+} from './vitals-helpers.js';
 
 export function register(program: Command): void {
   program
@@ -50,14 +61,6 @@ export function register(program: Command): void {
 
       // Calculate health score
       const healthScore = Math.max(0, 100 - report.averageComplexity * 5);
-      const healthColor =
-        healthScore >= 80 ? chalk.green : healthScore >= 60 ? chalk.yellow : chalk.red;
-      const pulseStatus =
-        healthScore >= 80 ? 'STABLE' : healthScore >= 60 ? 'ELEVATED' : 'CRITICAL';
-
-      // Calculate metrics for display
-      const avgComplexity = report.averageComplexity;
-      const busFactorValue = busFactor.overallBusFactor || 0;
 
       // Count dead/unused exports
       const exportedNodes = Object.values(graph.nodes).filter(
@@ -77,15 +80,29 @@ export function register(program: Command): void {
       // Load snapshots for heartbeat sparkline
       const snapshots = await loadSnapshots(rootDir);
 
+      // Get node health, bus factor, and compute metrics
+      const metrics: VitalsMetrics = {
+        healthScore,
+        avgComplexity: report.averageComplexity,
+        busFactorValue: busFactor.overallBusFactor || 0,
+        deadExports,
+        coverageEstimate,
+        healthTrend:
+          snapshots.length >= 2
+            ? snapshots[0].metrics.healthScore - snapshots[1].metrics.healthScore
+            : undefined,
+        fileCount: stats.fileCount,
+      };
+
       // JSON output for CI/CD
       if (options.json) {
         outputJson('vitals', {
-          healthScore: Math.round(healthScore),
-          pulseStatus,
-          avgComplexity,
-          busFactor: busFactorValue,
-          deadExports,
-          coverageEstimate: Math.round(coverageEstimate),
+          healthScore: Math.round(metrics.healthScore),
+          pulseStatus: getHealthStatus(metrics.healthScore).status,
+          avgComplexity: metrics.avgComplexity,
+          busFactor: metrics.busFactorValue,
+          deadExports: metrics.deadExports,
+          coverageEstimate: Math.round(metrics.coverageEstimate),
           stats: {
             fileCount: stats.fileCount,
             totalLines: stats.totalLines,
@@ -105,28 +122,28 @@ export function register(program: Command): void {
         .reverse()
         .map((s) => s.metrics.healthScore);
 
-      // Helper to create progress bar
-      const makeBar = (value: number, max: number, width: number = 10): string => {
-        const filled = Math.round((value / max) * width);
-        const empty = width - filled;
-        return '█'.repeat(filled) + '░'.repeat(empty);
-      };
-
       const W = 51;
       const B = chalk.bold.magenta;
+
+      // Get all status information
+      const healthStatus = getHealthStatus(metrics.healthScore);
+      const complexityStatus = getComplexityStatus(metrics.avgComplexity);
+      const busFactorStatus = getBusFactorStatus(metrics.busFactorValue);
+      const deadExportsStatus = getDeadExportsStatus(metrics.deadExports);
+      const coverageStatus = getCoverageStatus(metrics.coverageEstimate);
+      const healthIndicator = formatHealthIndicator(metrics.healthTrend);
+      const { diagnosis, prescription } = generateDiagnosis(metrics.healthScore);
 
       console.log();
       console.log(B(`╔${'═'.repeat(W)}╗`));
 
       // Header with pulse
-      const pulseColor =
-        healthScore >= 80 ? chalk.green : healthScore >= 60 ? chalk.yellow : chalk.red;
       console.log(
         B('║') +
           chalk.bold.white('  SPECTER VITAL SIGNS') +
           '              ' +
           '❤️  ' +
-          pulseColor(`PULSE: ${pulseStatus}`) +
+          healthStatus.color(`PULSE: ${healthStatus.status}`) +
           B('║')
       );
 
@@ -134,23 +151,12 @@ export function register(program: Command): void {
       console.log(B('║') + ' '.repeat(W) + B('║'));
 
       // Health
-      const healthIndicatorVal =
-        snapshots.length >= 2
-          ? snapshots[0].metrics.healthScore - snapshots[1].metrics.healthScore
-          : 0;
-      const healthIndicator =
-        healthIndicatorVal > 0
-          ? chalk.green(`📈 +${healthIndicatorVal}`)
-          : healthIndicatorVal < 0
-            ? chalk.red(`${healthIndicatorVal}`)
-            : chalk.dim('--');
-
       console.log(
         B('║') +
           `  HEALTH      [` +
-          healthColor(makeBar(healthScore, 100, 10)) +
+          healthStatus.color(makeBar(metrics.healthScore, 100, 10)) +
           `] ` +
-          String(Math.round(healthScore)).padStart(2) +
+          String(Math.round(metrics.healthScore)).padStart(2) +
           `/100   ` +
           healthIndicator +
           ' '.repeat(8) +
@@ -158,69 +164,53 @@ export function register(program: Command): void {
       );
 
       // Complexity
-      const complexityColor =
-        avgComplexity <= 5 ? chalk.green : avgComplexity <= 10 ? chalk.yellow : chalk.red;
-      const complexityStatus =
-        avgComplexity <= 5 ? 'healthy' : avgComplexity <= 10 ? '⚠️  warning' : 'critical';
       console.log(
         B('║') +
           `  COMPLEXITY  [` +
-          complexityColor(makeBar(avgComplexity, 30, 10)) +
+          complexityStatus.color(makeBar(metrics.avgComplexity, 30, 10)) +
           `] ` +
-          avgComplexity.toFixed(0).padStart(2) +
+          complexityStatus.status.padStart(2) +
           ` avg   ` +
-          complexityColor(complexityStatus) +
+          complexityStatus.color(complexityStatus.statusText) +
           ' '.repeat(4) +
           B('║')
       );
 
       // Bus factor
-      const busColor =
-        busFactorValue >= 3 ? chalk.green : busFactorValue >= 2 ? chalk.yellow : chalk.red;
-      const busStatus =
-        busFactorValue >= 3 ? 'healthy' : busFactorValue >= 2 ? '😰 at risk' : 'critical';
       console.log(
         B('║') +
           `  BUS FACTOR  [` +
-          busColor(makeBar(busFactorValue, 5, 10)) +
+          busFactorStatus.color(makeBar(metrics.busFactorValue, 5, 10)) +
           `] ` +
-          busFactorValue.toFixed(1).padStart(3) +
+          busFactorStatus.status.padStart(3) +
           `      ` +
-          busColor(busStatus) +
+          busFactorStatus.color(busFactorStatus.statusText) +
           ' '.repeat(4) +
           B('║')
       );
 
       // Dead code
-      const deadColor =
-        deadExports === 0 ? chalk.green : deadExports <= 5 ? chalk.yellow : chalk.red;
-      const deadStatus = deadExports === 0 ? 'clean' : deadExports <= 5 ? '👻 haunted' : 'infested';
-      const deadBarVal = deadExports === 0 ? 0 : Math.min(deadExports, 20);
       console.log(
         B('║') +
           `  DEAD CODE   [` +
-          deadColor(makeBar(deadBarVal, 20, 10)) +
+          deadExportsStatus.color(makeBar(deadExportsStatus.barValue, 20, 10)) +
           `] ` +
-          String(deadExports).padStart(3) +
+          deadExportsStatus.status.padStart(3) +
           ` exp  ` +
-          deadColor(deadStatus) +
+          deadExportsStatus.color(deadExportsStatus.statusText) +
           ' '.repeat(4) +
           B('║')
       );
 
       // Coverage estimate
-      const covColor =
-        coverageEstimate >= 80 ? chalk.green : coverageEstimate >= 50 ? chalk.yellow : chalk.red;
-      const covStatus =
-        coverageEstimate >= 80 ? '🛡️  solid' : coverageEstimate >= 50 ? '🛡️  decent' : 'sparse';
       console.log(
         B('║') +
           `  COVERAGE    [` +
-          covColor(makeBar(coverageEstimate, 100, 10)) +
+          coverageStatus.color(makeBar(metrics.coverageEstimate, 100, 10)) +
           `] ` +
-          Math.round(coverageEstimate).toString().padStart(2) +
+          coverageStatus.percent.padStart(2) +
           `%      ` +
-          covColor(covStatus) +
+          coverageStatus.color(coverageStatus.statusText) +
           ' '.repeat(4) +
           B('║')
       );
@@ -245,30 +235,6 @@ export function register(program: Command): void {
 
       console.log(B(`╠${'═'.repeat(W)}╣`));
 
-      // Diagnosis
-      let diagnosis = 'Stable with minor concerns';
-      let prescription = 'Consider refactoring top hotspots';
-
-      if (healthScore >= 90) {
-        diagnosis = 'Excellent health - keep it up!';
-        prescription = 'Maintain current practices';
-      } else if (healthScore >= 80) {
-        diagnosis = 'Good health with room to improve';
-        prescription = 'Address any complexity warnings';
-      } else if (healthScore >= 60) {
-        diagnosis = 'Moderate health - attention needed';
-        prescription = 'Prioritize refactoring hotspots';
-      } else {
-        diagnosis = 'Critical - immediate action needed';
-        prescription = 'Emergency complexity reduction';
-      }
-
-      const diagPadding = Math.max(0, W - 14 - diagnosis.length);
-      console.log(`${B('║')}  DIAGNOSIS: ${diagnosis}${' '.repeat(diagPadding)}${B('║')}`);
-
-      const rxPadding = Math.max(0, W - 6 - prescription.length);
-      console.log(B('║') + chalk.dim(`  Rx: ${prescription}`) + ' '.repeat(rxPadding) + B('║'));
-
       console.log(B(`╚${'═'.repeat(W)}╝`));
       console.log();
 
@@ -290,7 +256,7 @@ export function register(program: Command): void {
         ];
 
         // Add context-specific suggestion based on health
-        if (healthScore < 60) {
+        if (metrics.healthScore < 60) {
           suggestions.unshift({
             description: 'Find critical hotspots to refactor',
             command: 'specter hotspots',
