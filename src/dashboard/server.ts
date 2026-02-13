@@ -28,8 +28,23 @@ export async function startDashboard(
 
   const app = Fastify({ logger: false });
 
-  // Enable CORS for local development
-  await app.register(fastifyCors, { origin: true });
+  // Enable CORS - restrict to localhost for security
+  await app.register(fastifyCors, {
+    origin: (origin, cb) => {
+      // Allow requests with no origin (same-origin, curl, etc.)
+      if (!origin) return cb(null, true);
+      // Allow localhost origins only
+      const localhostPatterns = [
+        /^https?:\/\/localhost(:\d+)?$/,
+        /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
+        /^https?:\/\/\[::1\](:\d+)?$/,
+      ];
+      if (localhostPatterns.some((p) => p.test(origin))) {
+        return cb(null, true);
+      }
+      return cb(new Error('CORS not allowed'), false);
+    },
+  });
 
   // Serve static files
   await app.register(fastifyStatic, {

@@ -86,11 +86,18 @@ export function registerApiRoutes(app: FastifyInstance, rootDir: string): void {
   app.get('/api/file/*', async (request, reply) => {
     const rawPath = (request.params as { '*': string })['*'];
 
-    // Security: Reject path traversal attempts
+    // Security: Reject path traversal attempts (check before normalization)
     if (rawPath.includes('..') || rawPath.startsWith('/')) {
       return reply.code(400).send({ error: 'Invalid file path' });
     }
     const filePath = path.normalize(rawPath);
+
+    // Security: Verify resolved path stays within rootDir (check after normalization)
+    const resolvedPath = path.resolve(rootDir, filePath);
+    const resolvedRoot = path.resolve(rootDir);
+    if (!resolvedPath.startsWith(resolvedRoot + path.sep) && resolvedPath !== resolvedRoot) {
+      return reply.code(400).send({ error: 'Invalid file path' });
+    }
 
     const graph = await loadGraph(rootDir);
     if (!graph) return reply.code(404).send({ error: 'No graph found' });
