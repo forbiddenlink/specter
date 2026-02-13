@@ -9,7 +9,7 @@
 
 import cfonts from 'cfonts';
 import chalk from 'chalk';
-import { Command } from 'commander';
+import { Command, type ParseOptions } from 'commander';
 import gradient from 'gradient-string';
 
 // Import global CLI utilities
@@ -89,8 +89,8 @@ program
 
 // Capture global options after parsing
 const originalParse = program.parse.bind(program);
-program.parse = (...args: any[]) => {
-  const result = originalParse(...args);
+program.parse = (argv?: readonly string[], parseOptions?: ParseOptions): Command => {
+  const result = originalParse(argv, parseOptions);
   const opts = program.opts();
 
   // Update global options for use by all commands
@@ -107,8 +107,8 @@ program.parse = (...args: any[]) => {
 registerAllCommands(program);
 
 // Custom error handler for better suggestions on unknown commands
-program.on('command:*', function (this: any) {
-  const unknownCmd = this.args[0];
+program.on('command:*', (operands: string[]) => {
+  const unknownCmd = operands[0];
 
   // Get all available commands
   const commands = program.commands.map((cmd) => cmd.name()).filter(Boolean);

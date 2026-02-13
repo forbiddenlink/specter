@@ -155,7 +155,7 @@ export async function analyzeCost(
   const fileCosts: Map<string, CostlyFile> = new Map();
 
   // Gather all cost analyses
-  const complexityCost = await analyzeComplexityHotspots(
+  const _complexityCost = await analyzeComplexityHotspots(
     rootDir,
     graph,
     hourlyRate,
@@ -163,9 +163,9 @@ export async function analyzeCost(
     fileCosts
   );
 
-  const busFactorCost = await analyzeBusFactorRisks(graph, hourlyRate, categories, fileCosts);
+  const _busFactorCost = await analyzeBusFactorRisks(graph, hourlyRate, categories, fileCosts);
 
-  const cycleCost = await analyzeCircularDependencies(graph, hourlyRate, categories, fileCosts);
+  const _cycleCost = await analyzeCircularDependencies(graph, hourlyRate, categories, fileCosts);
 
   await analyzeDeadCode(graph, hourlyRate, options, categories);
 

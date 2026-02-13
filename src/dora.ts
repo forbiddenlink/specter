@@ -8,7 +8,7 @@
  * 4. Mean Time to Recovery - Time to recover from failures
  */
 
-import { type SimpleGit, simpleGit } from 'simple-git';
+import { type LogResult, type SimpleGit, simpleGit } from 'simple-git';
 import {
   aggregateMetrics,
   analyzeChangeFailures,
@@ -40,6 +40,14 @@ export interface DoraMetrics {
     mergeCount: number;
     weeksAnalyzed: number;
   };
+}
+
+/** Custom log entry format used in DORA metrics calculation */
+interface DoraLogEntry {
+  hash: string;
+  date: string;
+  message: string;
+  refs: string;
 }
 
 // DORA benchmarks based on research
@@ -242,7 +250,7 @@ export async function calculateDora(
     const tags = await git.tags();
     const leadTimes = await calculateLeadTimes(git, tags, since, startDate, endDate);
 
-    const log = await git.log({
+    const log: LogResult<DoraLogEntry> = await git.log({
       '--since': since,
       format: {
         hash: '%H',
@@ -252,8 +260,8 @@ export async function calculateDora(
       },
     });
 
-    const changeFailures = analyzeChangeFailures(log.all as any[]);
-    const recoveryTimes = calculateMTTR(log.all as any[]);
+    const changeFailures = analyzeChangeFailures([...log.all]);
+    const recoveryTimes = calculateMTTR([...log.all]);
 
     // Aggregate metrics
     const metrics = aggregateMetrics({

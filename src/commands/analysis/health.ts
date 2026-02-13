@@ -13,6 +13,7 @@ import { loadGraph } from '../../graph/persistence.js';
 import { outputJson, outputJsonError } from '../../json-output.js';
 import { formatHealthComment } from '../../personality/formatter.js';
 import type { PersonalityMode } from '../../personality/types.js';
+import { visibleLength } from '../../ui/ansi-utils.js';
 import { animateScore, timingBadge } from '../../ui/progress.js';
 import { createSpinner, showShareLinks } from '../types.js';
 
@@ -120,16 +121,6 @@ Examples:
 
       const g = gradient(['#9b59b6', '#6c5ce7', '#a29bfe']);
 
-      // Helper to calculate visible length (strips ANSI codes)
-      const stripAnsi = (str: string): string => {
-        // eslint-disable-next-line no-control-regex
-        return str.replace(/\x1b\[[0-9;]*m/g, '');
-      };
-
-      const visibleLength = (str: string): number => {
-        return stripAnsi(str).length;
-      };
-
       // Build output as array of lines
       const lines: string[] = [];
       lines.push('');
@@ -191,7 +182,7 @@ Examples:
           const cplx = `C:${complexity}`;
           const padding2 = Math.max(0, W - line2.length - cplx.length - 1);
           lines.push(
-            g('║') + chalk.dim(line2) + ' '.repeat(padding2) + chalk.yellow(cplx) + ' ' + g('║')
+            `${g('║') + chalk.dim(line2) + ' '.repeat(padding2) + chalk.yellow(cplx)} ${g('║')}`
           );
         }
       } else {

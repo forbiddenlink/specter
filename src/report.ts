@@ -282,7 +282,7 @@ function buildMarkdownReport(
   stats: ReturnType<typeof getGraphStats>,
   complexityReport: ReturnType<typeof generateComplexityReport>,
   generatedAt: Date,
-  reportData: ReportData,
+  _reportData: ReportData,
   graph: KnowledgeGraph
 ): { content: string; sections: string[] } {
   const sections: ReportSection[] = [];

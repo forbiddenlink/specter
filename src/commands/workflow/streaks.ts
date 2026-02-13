@@ -13,6 +13,7 @@ import {
   getStreakEmoji,
   getStreakInfo,
 } from '../../streaks.js';
+import { stripAnsi } from '../../ui/ansi-utils.js';
 
 export function register(program: Command): void {
   program
@@ -113,12 +114,4 @@ export function register(program: Command): void {
 
       console.log();
     });
-}
-
-/**
- * Strip ANSI escape codes from a string to get its visible length.
- */
-function stripAnsi(str: string): string {
-  // eslint-disable-next-line no-control-regex
-  return str.replace(/\x1b\[[0-9;]*m/g, '');
 }

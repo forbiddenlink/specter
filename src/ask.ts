@@ -48,18 +48,18 @@ const QUESTION_PATTERNS: Array<{ pattern: RegExp; type: QuestionType }> = [
   { pattern: /^(tell\s+me\s+about|explain|describe)\s+/i, type: 'what-does' },
 ];
 
+/** Template interface for personality-driven responses */
+interface PersonalityTemplate {
+  intro: (type: QuestionType, subject: string) => string;
+  notFound: (subject: string) => string;
+  found: (subject: string, count: number) => string;
+  closing: () => string;
+}
+
 /**
  * Personality response templates
  */
-const PERSONALITY_TEMPLATES: Record<
-  PersonalityMode,
-  {
-    intro: (type: QuestionType, subject: string) => string;
-    notFound: (subject: string) => string;
-    found: (subject: string, count: number) => string;
-    closing: () => string;
-  }
-> = {
+const PERSONALITY_TEMPLATES: Record<PersonalityMode, PersonalityTemplate> = {
   default: {
     intro: (type, subject) => {
       switch (type) {
@@ -614,7 +614,7 @@ function generateAnswer(
   nodes: GraphNode[],
   directories: string[],
   relevantFiles: RelevantFile[],
-  templates: Record<string, unknown>,
+  templates: PersonalityTemplate,
   graph: KnowledgeGraph,
   rootDir: string
 ): Promise<string> {
@@ -622,16 +622,16 @@ function generateAnswer(
     const parts: string[] = [];
 
     if (nodes.length === 0 && directories.length === 0) {
-      return (templates as any).notFound(subject);
+      return templates.notFound(subject);
     }
 
-    const intro = (templates as any).intro(questionType, subject);
+    const intro = templates.intro(questionType, subject);
     if (intro) parts.push(intro);
 
     switch (questionType) {
       case 'what-does':
       case 'general': {
-        parts.push((templates as any).found(subject, nodes.length + directories.length));
+        parts.push(templates.found(subject, nodes.length + directories.length));
         for (const node of nodes.slice(0, 3)) {
           parts.push(`\n${node.name}: ${describeNode(node, graph)}`);
         }
@@ -639,7 +639,7 @@ function generateAnswer(
       }
 
       case 'where-is': {
-        parts.push((templates as any).found(subject, relevantFiles.length));
+        parts.push(templates.found(subject, relevantFiles.length));
         if (directories.length > 0) {
           parts.push(
             `\nMain location${directories.length > 1 ? 's' : ''}: ${directories.slice(0, 2).join(', ')}`
@@ -656,7 +656,7 @@ function generateAnswer(
         const authors = await getGitAuthors(rootDir, filePaths);
 
         if (authors.size > 0) {
-          parts.push((templates as any).found(subject, authors.size));
+          parts.push(templates.found(subject, authors.size));
           for (const [path, info] of authors.entries()) {
             const fileName = path.split('/').pop();
             parts.push(`\n${fileName}: ${info.author} (${info.commits} commits)`);
@@ -668,7 +668,7 @@ function generateAnswer(
       }
 
       case 'why-exists': {
-        parts.push((templates as any).found(subject, nodes.length));
+        parts.push(templates.found(subject, nodes.length));
         for (const node of nodes.slice(0, 2)) {
           const description = describeNode(node, graph);
           parts.push(`\n${node.name}: ${description}`);
@@ -683,7 +683,7 @@ function generateAnswer(
       }
 
       case 'how-works': {
-        parts.push((templates as any).found(subject, nodes.length));
+        parts.push(templates.found(subject, nodes.length));
         const flows = describeFlow(nodes, graph);
         if (flows.length > 0) {
           parts.push('\nData/Control Flow:');
@@ -698,7 +698,7 @@ function generateAnswer(
       }
 
       case 'list': {
-        parts.push((templates as any).found(subject, relevantFiles.length));
+        parts.push(templates.found(subject, relevantFiles.length));
         for (const file of relevantFiles.slice(0, 8)) {
           parts.push(`\n- ${file.name} (${file.type}): ${file.path}`);
         }
@@ -706,7 +706,7 @@ function generateAnswer(
       }
     }
 
-    const closing = (templates as any).closing();
+    const closing = templates.closing();
     if (closing) parts.push(`\n\n${closing}`);
 
     return parts.join('');

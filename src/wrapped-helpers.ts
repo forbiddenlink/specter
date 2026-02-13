@@ -3,7 +3,7 @@
  * Each function handles a single concern in the wrapped data gathering process
  */
 
-import type { SimpleGit } from 'simple-git';
+import type { DefaultLogFields, SimpleGit } from 'simple-git';
 import type { KnowledgeGraph } from './graph/types.js';
 
 /**
@@ -30,7 +30,7 @@ export async function fetchPeriodCommits(
     '--before': beforeDate.toISOString().split('T')[0],
   });
 
-  return log.all.map((c: any) => ({
+  return log.all.map((c: DefaultLogFields) => ({
     hash: c.hash,
     date: c.date,
     author: c.author_name,

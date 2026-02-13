@@ -3,7 +3,6 @@
  */
 
 import path from 'node:path';
-import chalk from 'chalk';
 import type { Command } from 'commander';
 import { showNextSteps } from '../../cli-utils.js';
 import { loadGraph } from '../../graph/persistence.js';

@@ -498,7 +498,7 @@ function normalizeFilePath(
  * Validate file exists and find its node in the graph
  */
 async function validateFileAndFindNode(
-  rootDir: string,
+  _rootDir: string,
   relativePath: string,
   absolutePath: string,
   graph: KnowledgeGraph

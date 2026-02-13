@@ -24,7 +24,7 @@ export function getHealthStatus(healthScore: number): {
   const chalk = require('chalk');
   const color = healthScore >= 80 ? chalk.green : healthScore >= 60 ? chalk.yellow : chalk.red;
   const status = healthScore >= 80 ? 'STABLE' : healthScore >= 60 ? 'ELEVATED' : 'CRITICAL';
-  const indicator = 'PULSE: ' + status;
+  const indicator = `PULSE: ${status}`;
 
   return { color, status, indicator };
 }

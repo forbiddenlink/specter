@@ -6,9 +6,9 @@
  */
 
 import path from 'node:path';
+import readline from 'node:readline';
 import chalk from 'chalk';
 import type { Command } from 'commander';
-import readline from 'readline';
 import { suggestCommand } from '../../cli-utils.js';
 
 interface CommandRegistry {
@@ -112,7 +112,7 @@ async function startInteractiveMode(rootDir: string, showWelcome: boolean = true
 
 async function handleCommand(
   input: string,
-  rootDir: string,
+  _rootDir: string,
   rl: readline.Interface
 ): Promise<void> {
   const [cmd, ...args] = input.split(/\s+/);

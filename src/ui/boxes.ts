@@ -5,6 +5,7 @@
  * for structured output display.
  */
 
+import { visibleLength } from './ansi-utils.js';
 import { colors } from './colors.js';
 
 /**
@@ -98,21 +99,6 @@ const borderChars = {
     cross: '\u254B',
   },
 };
-
-/**
- * Strip ANSI escape codes to get actual string length
- */
-function stripAnsi(str: string): string {
-  // eslint-disable-next-line no-control-regex
-  return str.replace(/\x1b\[[0-9;]*m/g, '');
-}
-
-/**
- * Get the visible length of a string (excluding ANSI codes)
- */
-function visibleLength(str: string): number {
-  return stripAnsi(str).length;
-}
 
 /**
  * Pad a string to a specific visible width

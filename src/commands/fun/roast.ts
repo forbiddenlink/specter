@@ -7,7 +7,6 @@ import chalk from 'chalk';
 // @ts-expect-error no types
 import chalkAnimation from 'chalk-animation';
 import type { Command } from 'commander';
-import gradient from 'gradient-string';
 import { exportToPng, getRepoUrl, isPngExportAvailable } from '../../export-png.js';
 import { loadGraph } from '../../graph/persistence.js';
 import { outputJson, outputJsonError } from '../../json-output.js';

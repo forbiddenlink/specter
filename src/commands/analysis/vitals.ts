@@ -14,7 +14,6 @@ import { outputJson, outputJsonError } from '../../json-output.js';
 import { coloredSparkline } from '../../ui/index.js';
 import {
   formatHealthIndicator,
-  generateDiagnosis,
   getBusFactorStatus,
   getComplexityStatus,
   getCoverageStatus,
@@ -132,7 +131,6 @@ export function register(program: Command): void {
       const deadExportsStatus = getDeadExportsStatus(metrics.deadExports);
       const coverageStatus = getCoverageStatus(metrics.coverageEstimate);
       const healthIndicator = formatHealthIndicator(metrics.healthTrend);
-      const { diagnosis, prescription } = generateDiagnosis(metrics.healthScore);
 
       console.log();
       console.log(B(`╔${'═'.repeat(W)}╗`));

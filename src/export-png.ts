@@ -8,8 +8,7 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { type CanvasRenderingContext2D, createCanvas, loadImage } from 'canvas';
-import QRCode from 'qrcode';
+import { type CanvasRenderingContext2D, createCanvas } from 'canvas';
 import { type SimpleGit, simpleGit } from 'simple-git';
 import {
   calculateContentArea,

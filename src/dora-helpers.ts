@@ -3,7 +3,7 @@
  * Each function handles a distinct phase of DORA metric computation
  */
 
-import type { SimpleGit } from 'simple-git';
+import type { SimpleGit, TagResult } from 'simple-git';
 
 /**
  * Get deployment/tag information for the analysis period
@@ -43,8 +43,8 @@ export async function getDeployments(
  */
 export async function calculateLeadTimes(
   git: SimpleGit,
-  tags: any,
-  since: string,
+  tags: TagResult,
+  _since: string,
   startDate: Date,
   endDate: Date
 ): Promise<number[]> {
