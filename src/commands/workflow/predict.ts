@@ -67,7 +67,7 @@ export function register(program: Command): void {
           console.log(chalk.white(`  ${line}`));
         } else if (line.includes('Risk:') && line.includes('█')) {
           const riskMatch = line.match(/(\d+)%/);
-          const riskValue = riskMatch ? parseInt(riskMatch[1], 10) : 0;
+          const riskValue = riskMatch?.[1] ? parseInt(riskMatch[1], 10) : 0;
           const color = riskValue >= 60 ? chalk.red : riskValue >= 40 ? chalk.yellow : chalk.green;
           console.log(color(`  ${line}`));
         } else if (line.startsWith('  •')) {

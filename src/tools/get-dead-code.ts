@@ -39,11 +39,14 @@ export function execute(graph: KnowledgeGraph, input: Input): DeadCodeResult {
   // Build a set of all imported symbols
   const importedSymbols = new Set<string>();
   for (const edge of graph.edges) {
-    if (edge.type === 'imports' && edge.metadata?.symbols) {
-      for (const symbol of edge.metadata.symbols as string[]) {
+    const symbols = edge.metadata?.['symbols'] as string[] | undefined;
+    if (edge.type === 'imports' && symbols) {
+      for (const symbol of symbols) {
         // Handle aliased imports like "foo as bar"
-        const originalName = symbol.split(' as ')[0].trim();
-        importedSymbols.add(originalName);
+        const originalName = symbol.split(' as ')[0]?.trim();
+        if (originalName) {
+          importedSymbols.add(originalName);
+        }
       }
     }
   }

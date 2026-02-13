@@ -188,21 +188,27 @@ export async function analyzeHotspots(
   const sinceDate = new Date();
   const match = since.match(/(\d+)\s*(month|week|day|year)s?\s*ago/i);
   if (match) {
-    const amount = parseInt(match[1], 10);
-    const unit = match[2].toLowerCase();
-    switch (unit) {
-      case 'day':
-        sinceDate.setDate(sinceDate.getDate() - amount);
-        break;
-      case 'week':
-        sinceDate.setDate(sinceDate.getDate() - amount * 7);
-        break;
-      case 'month':
-        sinceDate.setMonth(sinceDate.getMonth() - amount);
-        break;
-      case 'year':
-        sinceDate.setFullYear(sinceDate.getFullYear() - amount);
-        break;
+    const amountStr = match[1];
+    const unitStr = match[2];
+    if (!amountStr || !unitStr) {
+      // Invalid match, use default sinceDate
+    } else {
+      const amount = parseInt(amountStr, 10);
+      const unit = unitStr.toLowerCase();
+      switch (unit) {
+        case 'day':
+          sinceDate.setDate(sinceDate.getDate() - amount);
+          break;
+        case 'week':
+          sinceDate.setDate(sinceDate.getDate() - amount * 7);
+          break;
+        case 'month':
+          sinceDate.setMonth(sinceDate.getMonth() - amount);
+          break;
+        case 'year':
+          sinceDate.setFullYear(sinceDate.getFullYear() - amount);
+          break;
+      }
     }
   }
 
@@ -327,7 +333,10 @@ function generateScatterPlot(hotspots: Hotspot[]): string[] {
               ? '\u25E6' // small circle
               : '\u00B7'; // dot
 
-      grid[y][x] = symbol;
+      const row = grid[y];
+      if (row) {
+        row[x] = symbol;
+      }
       plotted.set(key, { file: hotspot.file, x, y });
     }
   }
@@ -343,7 +352,9 @@ function generateScatterPlot(hotspots: Hotspot[]): string[] {
     else if (y === height - 1) label = '  0';
     else label = '   ';
 
-    const row = grid[y].join('');
+    const gridRow = grid[y];
+    if (!gridRow) continue;
+    const row = gridRow.join('');
     const midPoint = Math.floor(width / 2);
 
     // Add quadrant divider at middle

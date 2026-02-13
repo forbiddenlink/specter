@@ -98,7 +98,7 @@ function parseSince(since: string): Date {
   const date = new Date();
   const match = since.match(/(\d+)\s*(day|week|month|year)s?\s*ago/i);
 
-  if (match) {
+  if (match?.[1] && match[2]) {
     const amount = parseInt(match[1], 10);
     const unit = match[2].toLowerCase();
     switch (unit) {
@@ -230,9 +230,14 @@ export async function generateLeaderboard(
     for (const line of rawLog.split('\n')) {
       if (line.includes('|') && line.split('|').length >= 4) {
         const parts = line.split('|');
-        currentEmail = parts[1].toLowerCase();
-        currentName = parts[2];
-        currentDate = new Date(parts[3]);
+        const emailPart = parts[1];
+        const namePart = parts[2];
+        const datePart = parts[3];
+        if (!emailPart || !namePart || !datePart) continue;
+
+        currentEmail = emailPart.toLowerCase();
+        currentName = namePart;
+        currentDate = new Date(datePart);
 
         // Initialize contributor if new
         if (!contributorStats.has(currentEmail)) {
@@ -259,7 +264,7 @@ export async function generateLeaderboard(
       } else if (line.match(/^\d+\s+\d+\s+.+/) || line.match(/^-\s+-\s+.+/)) {
         // numstat line: additions deletions filename
         const match = line.match(/^(\d+|-)\s+(\d+|-)\s+(.+)/);
-        if (match && currentEmail) {
+        if (match && currentEmail && match[1] && match[2] && match[3]) {
           const added = match[1] === '-' ? 0 : parseInt(match[1], 10);
           const removed = match[2] === '-' ? 0 : parseInt(match[2], 10);
           const file = match[3];
@@ -351,9 +356,12 @@ export async function generateLeaderboard(
   const maxPoints = entries[0]?.points || 1;
 
   for (let i = 0; i < entries.length; i++) {
-    entries[i].rank = i + 1;
-    entries[i].title = getTitle(entries[i].points);
-    entries[i].progressBar = generateProgressBar(entries[i].points, maxPoints);
+    const entry = entries[i];
+    if (entry) {
+      entry.rank = i + 1;
+      entry.title = getTitle(entry.points);
+      entry.progressBar = generateProgressBar(entry.points, maxPoints);
+    }
   }
 
   // Determine trend

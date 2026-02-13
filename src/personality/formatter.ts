@@ -19,7 +19,11 @@ export interface MoodFormatterOptions {
 
 // Get a random phrase from an array
 function pick<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
+  const item = arr[Math.floor(Math.random() * arr.length)];
+  if (item === undefined) {
+    throw new Error('Cannot pick from empty array');
+  }
+  return item;
 }
 
 // Format a health score comment

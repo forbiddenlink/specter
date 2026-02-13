@@ -256,10 +256,10 @@ function drawCards(random: () => number, count: number, graph: KnowledgeGraph): 
       // Slight bias based on codebase state
       if (stats.complexity > 15 && random() < 0.3) {
         // High complexity? More likely to draw challenging cards
-        index = [13, 15, 16, 18][Math.floor(random() * 4)]; // Death, Devil, Tower, Moon
+        index = [13, 15, 16, 18][Math.floor(random() * 4)] ?? 13; // Death, Devil, Tower, Moon
       } else if (stats.hasTests && random() < 0.2) {
         // Has tests? More positive cards
-        index = [8, 17, 19][Math.floor(random() * 3)]; // Strength, Star, Sun
+        index = [8, 17, 19][Math.floor(random() * 3)] ?? 8; // Strength, Star, Sun
       } else {
         index = Math.floor(random() * majorArcana.length);
       }
@@ -267,6 +267,7 @@ function drawCards(random: () => number, count: number, graph: KnowledgeGraph): 
 
     usedIndices.add(index);
     const arcana = majorArcana[index];
+    if (!arcana) continue;
     const reversed = random() < 0.3; // 30% chance of reversal
 
     cards.push({
@@ -288,14 +289,19 @@ function drawCards(random: () => number, count: number, graph: KnowledgeGraph): 
 function generateInterpretation(cards: TarotCard[], spread: string): string {
   if (spread === 'single') {
     const card = cards[0];
+    if (!card) return 'No card drawn.';
     return `The ${card.code} speaks directly to your current situation. ${card.meaning}`;
   }
 
   if (spread === 'three-card') {
+    const past = cards[0];
+    const present = cards[1];
+    const future = cards[2];
+    if (!past || !present || !future) return 'Incomplete reading.';
     return (
-      `PAST (${cards[0].code}): ${cards[0].meaning}\n\n` +
-      `PRESENT (${cards[1].code}): ${cards[1].meaning}\n\n` +
-      `FUTURE (${cards[2].code}): ${cards[2].meaning}`
+      `PAST (${past.code}): ${past.meaning}\n\n` +
+      `PRESENT (${present.code}): ${present.meaning}\n\n` +
+      `FUTURE (${future.code}): ${future.meaning}`
     );
   }
 
@@ -438,11 +444,16 @@ export function formatReading(reading: TarotReading): string {
   lines.push('');
 
   if (reading.spread === 'single') {
-    lines.push(...formatCard(reading.cards[0]));
+    const firstCard = reading.cards[0];
+    if (firstCard) {
+      lines.push(...formatCard(firstCard));
+    }
   } else {
     const positions = ['Past', 'Present', 'Future'];
     for (let i = 0; i < reading.cards.length; i++) {
-      lines.push(...formatCard(reading.cards[i], positions[i]));
+      const card = reading.cards[i];
+      if (!card) continue;
+      lines.push(...formatCard(card, positions[i]));
       if (i < reading.cards.length - 1) {
         lines.push('');
       }

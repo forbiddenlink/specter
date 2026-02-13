@@ -81,9 +81,10 @@ function buildDiagramData(
       health = Math.max(0, 100 - complexity * 5);
     }
 
+    const fileName = parts[parts.length - 1] ?? relativePath;
     nodeMap.set(node.filePath, {
       id,
-      label: parts[parts.length - 1], // filename only
+      label: fileName, // filename only
       path: relativePath,
       group,
       complexity: options.showComplexity ? node.complexity : undefined,
@@ -215,7 +216,9 @@ function generateD2(nodes: DiagramNode[], edges: DiagramEdge[], options: Diagram
     // Build nested path
     let prefix = '';
     for (let i = 0; i < groupParts.length; i++) {
-      const part = sanitizeId(groupParts[i]);
+      const groupPart = groupParts[i];
+      if (!groupPart) continue;
+      const part = sanitizeId(groupPart);
       if (i === 0) {
         lines.push(`${part}: {`);
         prefix = part;
@@ -295,6 +298,7 @@ function generateAscii(
     // Draw each node in the group
     for (let i = 0; i < groupNodes.length; i++) {
       const node = groupNodes[i];
+      if (!node) continue;
       nodePositions.set(node.id, { group, index: groupIndex });
 
       const label = node.label;

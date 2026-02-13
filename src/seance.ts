@@ -96,16 +96,16 @@ export async function summonSpirits(
         const parts = line.split('|');
         if (parts.length >= 4) {
           currentCommit = {
-            hash: parts[0],
-            date: parts[1],
-            author: parts[2],
+            hash: parts[0] ?? '',
+            date: parts[1] ?? '',
+            author: parts[2] ?? '',
             message: parts.slice(3).join('|'),
           };
         }
       } else if (line.includes('delete mode') && currentCommit) {
         // Extract file path from "delete mode 100644 path/to/file"
         const match = line.match(/delete mode \d+ (.+)/);
-        if (match) {
+        if (match?.[1]) {
           const filePath = match[1].trim();
 
           // Check if this file matches our query
@@ -235,6 +235,7 @@ export function formatSeance(result: SeanceResult): string {
 
   for (let i = 0; i < result.spirits.length; i++) {
     const spirit = result.spirits[i];
+    if (!spirit) continue;
 
     lines.push(`┌${'─'.repeat(48)}┐`);
     lines.push(`│ 👻 ${spirit.path.padEnd(44)} │`);
@@ -340,15 +341,15 @@ export async function listRecentlyDeleted(
         const parts = line.split('|');
         if (parts.length >= 4) {
           currentCommit = {
-            hash: parts[0],
-            date: parts[1],
-            author: parts[2],
+            hash: parts[0] ?? '',
+            date: parts[1] ?? '',
+            author: parts[2] ?? '',
             message: parts.slice(3).join('|'),
           };
         }
       } else if (line.includes('delete mode') && currentCommit) {
         const match = line.match(/delete mode \d+ (.+)/);
-        if (match) {
+        if (match?.[1]) {
           const filePath = match[1].trim();
 
           // Only include source files

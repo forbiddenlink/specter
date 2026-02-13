@@ -418,9 +418,9 @@ function buildExecutiveSummary(
   data: Record<string, unknown>,
   stats: ReturnType<typeof getGraphStats>
 ): string {
-  const trajectory = data.trajectory as TrajectoryResult | undefined;
-  const busFactor = data.busFactor as BusFactorResult | undefined;
-  const drift = data.drift as DriftResult | undefined;
+  const trajectory = data['trajectory'] as TrajectoryResult | undefined;
+  const busFactor = data['busFactor'] as BusFactorResult | undefined;
+  const drift = data['drift'] as DriftResult | undefined;
 
   const trendEmoji =
     trajectory?.trend === 'improving'
@@ -870,7 +870,7 @@ function buildRecommendationsSection(data: Record<string, unknown>, healthScore:
   }
 
   // Drift recommendations
-  const drift = data.drift as DriftResult | undefined;
+  const drift = data['drift'] as DriftResult | undefined;
   if (drift && drift.score < 60) {
     recommendations.push({
       priority: 2,
@@ -879,7 +879,7 @@ function buildRecommendationsSection(data: Record<string, unknown>, healthScore:
   }
 
   // Bus factor recommendations
-  const busFactor = data.busFactor as BusFactorResult | undefined;
+  const busFactor = data['busFactor'] as BusFactorResult | undefined;
   if (busFactor) {
     if (busFactor.riskLevel === 'critical' || busFactor.riskLevel === 'dangerous') {
       recommendations.push({
@@ -888,19 +888,17 @@ function buildRecommendationsSection(data: Record<string, unknown>, healthScore:
       });
     }
     const criticalAreas = busFactor.risks.filter((r) => r.criticality === 'critical');
-    if (criticalAreas.length > 0) {
-      const topArea = criticalAreas[0];
-      if (topArea.soleOwner) {
-        recommendations.push({
-          priority: 2,
-          text: `:yellow_circle: **HIGH:** Schedule knowledge transfer with ${topArea.soleOwner} for \`${topArea.area}\``,
-        });
-      }
+    const topArea = criticalAreas[0];
+    if (topArea?.soleOwner) {
+      recommendations.push({
+        priority: 2,
+        text: `:yellow_circle: **HIGH:** Schedule knowledge transfer with ${topArea.soleOwner} for \`${topArea.area}\``,
+      });
     }
   }
 
   // Hotspot recommendations
-  const hotspots = data.hotspots as HotspotsResult | undefined;
+  const hotspots = data['hotspots'] as HotspotsResult | undefined;
   if (hotspots && hotspots.summary.criticalCount > 0) {
     recommendations.push({
       priority: 2,
@@ -909,7 +907,7 @@ function buildRecommendationsSection(data: Record<string, unknown>, healthScore:
   }
 
   // Velocity recommendations
-  const velocity = data.velocity as VelocityResult | undefined;
+  const velocity = data['velocity'] as VelocityResult | undefined;
   if (velocity && velocity.trend === 'critical') {
     recommendations.push({
       priority: 1,
@@ -923,7 +921,7 @@ function buildRecommendationsSection(data: Record<string, unknown>, healthScore:
   }
 
   // Trajectory recommendations
-  const trajectory = data.trajectory as TrajectoryResult | undefined;
+  const trajectory = data['trajectory'] as TrajectoryResult | undefined;
   if (trajectory) {
     if (trajectory.trend === 'improving') {
       recommendations.push({
@@ -940,7 +938,7 @@ function buildRecommendationsSection(data: Record<string, unknown>, healthScore:
   }
 
   // Cycles recommendations
-  const cycles = data.cycles as CyclesResult | undefined;
+  const cycles = data['cycles'] as CyclesResult | undefined;
   if (cycles?.cycles && cycles.cycles.length > 3) {
     recommendations.push({
       priority: 2,

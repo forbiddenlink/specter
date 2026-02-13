@@ -339,7 +339,12 @@ export function getDailyChallenge(_rootDir: string): DailyChallenge {
     hash = ((hash << 5) - hash + ch) | 0;
   }
   const index = Math.abs(hash) % CHALLENGE_POOL.length;
-  return CHALLENGE_POOL[index];
+  const challenge = CHALLENGE_POOL[index];
+  // CHALLENGE_POOL is non-empty and index is always valid, but TypeScript needs this guard
+  if (!challenge) {
+    throw new Error('Challenge pool is empty');
+  }
+  return challenge;
 }
 
 /**

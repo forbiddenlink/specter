@@ -381,9 +381,17 @@ export function register(program: Command): void {
 
       const genreInfo = GENRES[genre];
       const templates = VERSE_TEMPLATES[genre];
+      if (!templates) {
+        console.log(chalk.red('No templates found for this genre'));
+        return;
+      }
       // Pick a pseudo-random variant based on file count + total lines
       const variantIndex = (graphStats.fileCount + graphStats.totalLines) % templates.length;
       const template = templates[variantIndex];
+      if (!template) {
+        console.log(chalk.red('No template variant found'));
+        return;
+      }
 
       const templateVars: Record<string, string | number> = {
         projectName,

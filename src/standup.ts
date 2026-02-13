@@ -149,7 +149,7 @@ function parseRelativeTime(since: string): Date {
   const date = new Date();
   const match = since.match(/(\d+)\s*(day|hour|week)s?\s*ago/i);
 
-  if (match) {
+  if (match?.[1] && match[2]) {
     const amount = parseInt(match[1], 10);
     const unit = match[2].toLowerCase();
 

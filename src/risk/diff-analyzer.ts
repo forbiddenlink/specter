@@ -23,7 +23,10 @@ function parseNumstat(numstatOutput: string): DiffFile[] {
     const parts = line.split('\t');
     if (parts.length < 3) continue;
 
-    const [additions, deletions, ...filePathParts] = parts;
+    const additions = parts[0];
+    const deletions = parts[1];
+    const filePathParts = parts.slice(2);
+    if (!additions || !deletions) continue;
     const filePath = filePathParts.join('\t'); // Handle filenames with tabs
 
     // Binary files show "-" for additions/deletions
@@ -55,16 +58,19 @@ function parseNameStatus(nameStatusOutput: string): Map<string, DiffStatus> {
 
   for (const line of lines) {
     const parts = line.split('\t');
-    if (parts.length < 2) continue;
+    const firstPart = parts[0];
+    const secondPart = parts[1];
+    if (parts.length < 2 || !firstPart || !secondPart) continue;
 
-    const statusChar = parts[0].charAt(0).toUpperCase();
+    const statusChar = firstPart.charAt(0).toUpperCase();
     let filePath: string;
 
     // Handle renames which have format R100\told\tnew
-    if (statusChar === 'R' && parts.length >= 3) {
-      filePath = parts[2]; // Use the new name
+    const thirdPart = parts[2];
+    if (statusChar === 'R' && parts.length >= 3 && thirdPart) {
+      filePath = thirdPart; // Use the new name
     } else {
-      filePath = parts[1];
+      filePath = secondPart;
     }
 
     let status: DiffStatus;

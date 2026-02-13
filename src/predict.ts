@@ -54,9 +54,11 @@ async function getStagedFiles(git: SimpleGit): Promise<StagedFile[]> {
     for (const line of status.split('\n')) {
       if (!line.trim()) continue;
       const parts = line.split('\t');
-      if (parts.length >= 2) {
-        const statusCode = parts[0].charAt(0);
-        const filePath = parts[parts.length - 1]; // Handle renames
+      const firstPart = parts[0];
+      const lastPart = parts[parts.length - 1];
+      if (parts.length >= 2 && firstPart && lastPart) {
+        const statusCode = firstPart.charAt(0);
+        const filePath = lastPart; // Handle renames
         statusMap.set(filePath, statusCode);
       }
     }
@@ -64,10 +66,13 @@ async function getStagedFiles(git: SimpleGit): Promise<StagedFile[]> {
     for (const line of diff.split('\n')) {
       if (!line.trim()) continue;
       const parts = line.split('\t');
-      if (parts.length >= 3) {
-        const additions = parts[0] === '-' ? 0 : parseInt(parts[0], 10) || 0;
-        const deletions = parts[1] === '-' ? 0 : parseInt(parts[1], 10) || 0;
-        const filePath = parts[2];
+      const part0 = parts[0];
+      const part1 = parts[1];
+      const part2 = parts[2];
+      if (parts.length >= 3 && part0 !== undefined && part1 !== undefined && part2) {
+        const additions = part0 === '-' ? 0 : parseInt(part0, 10) || 0;
+        const deletions = part1 === '-' ? 0 : parseInt(part1, 10) || 0;
+        const filePath = part2;
 
         const statusCode = statusMap.get(filePath) || 'M';
         let fileStatus: StagedFile['status'] = 'modified';

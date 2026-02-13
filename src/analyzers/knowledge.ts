@@ -136,7 +136,10 @@ export async function analyzeKnowledgeDistribution(
 
     if (contributors.length === 0) continue;
 
-    const [primaryOwner, primaryStats] = contributors[0];
+    const firstContributor = contributors[0];
+    if (!firstContributor) continue;
+
+    const [primaryOwner, primaryStats] = firstContributor;
     const ownershipPercentage = Math.round((primaryStats.commits / ownership.totalCommits) * 100);
 
     // Bus factor = number of people who have made significant contributions
@@ -159,7 +162,7 @@ export async function analyzeKnowledgeDistribution(
       primaryOwner,
       ownershipPercentage,
       totalContributors: contributors.length,
-      lastTouchedBy: contributors[0][0],
+      lastTouchedBy: primaryOwner,
       daysSinceLastChange,
       riskLevel,
     });
@@ -239,8 +242,9 @@ function calculateOwnershipDistribution(
       (a, b) => b[1].commits - a[1].commits
     );
 
-    if (contributors.length > 0) {
-      const [primaryOwner] = contributors[0];
+    const firstContrib = contributors[0];
+    if (firstContrib) {
+      const [primaryOwner] = firstContrib;
       ownerCount.set(primaryOwner, (ownerCount.get(primaryOwner) || 0) + 1);
     }
   }
@@ -271,9 +275,10 @@ function generateInsights(
   }
 
   // Knowledge concentration
-  if (distribution.length > 0 && distribution[0].percentage > 50) {
+  const topContributor = distribution[0];
+  if (distribution.length > 0 && topContributor && topContributor.percentage > 50) {
     insights.push(
-      `${distribution[0].contributor} owns ${distribution[0].percentage}% of the codebase. ` +
+      `${topContributor.contributor} owns ${topContributor.percentage}% of the codebase. ` +
         `Consider knowledge sharing to reduce risk.`
     );
   }
@@ -322,7 +327,9 @@ export async function analyzeDirectoryKnowledge(
   const sorted = [...contributors.entries()].sort((a, b) => b[1] - a[1]);
   if (sorted.length === 0) return null;
 
-  const [primaryOwner, filesOwned] = sorted[0];
+  const topEntry = sorted[0];
+  if (!topEntry) return null;
+  const [primaryOwner, filesOwned] = topEntry;
 
   return {
     path: directory,

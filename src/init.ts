@@ -308,6 +308,7 @@ export async function initializeProjectInteractive(rootDir: string): Promise<Ini
     console.log('');
     for (let i = 0; i < INIT_PERSONALITIES.length; i++) {
       const p = INIT_PERSONALITIES[i];
+      if (!p) continue;
       const marker = p.mode === 'default' ? '> ' : '  ';
       console.log(`  ${marker}${i + 1}. ${p.mode} - ${p.description}`);
     }
@@ -315,9 +316,10 @@ export async function initializeProjectInteractive(rootDir: string): Promise<Ini
 
     const personalityAnswer = await prompt(rl, '  Enter number (1-7) or press Enter for default: ');
     const personalityIndex = parseInt(personalityAnswer, 10) - 1;
+    const selectedPersonality = INIT_PERSONALITIES[personalityIndex];
 
-    if (personalityIndex >= 0 && personalityIndex < INIT_PERSONALITIES.length) {
-      config.personality = INIT_PERSONALITIES[personalityIndex].mode;
+    if (personalityIndex >= 0 && selectedPersonality) {
+      config.personality = selectedPersonality.mode;
     }
 
     console.log(`  Selected: ${config.personality}`);

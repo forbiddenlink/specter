@@ -316,7 +316,7 @@ function suggestCycleBreak(cycle: string[], targetFile: string): string[] {
 
   // Find position in cycle
   const targetIdx = files.indexOf(targetBase);
-  const nextFile = files[(targetIdx + 1) % files.length];
+  const nextFile = files[(targetIdx + 1) % files.length] ?? files[0] ?? 'unknown';
   const _prevFile = files[(targetIdx - 1 + files.length) % files.length];
 
   details.push(`Cycle: ${files.join(' -> ')} -> [loop]`);
@@ -403,22 +403,22 @@ function groupSymbolsByPattern(symbols: string[]): Record<string, string[]> {
   for (const sym of symbols) {
     const lower = sym.toLowerCase();
     if (lower.includes('type') || lower.includes('interface') || sym.match(/^I[A-Z]/)) {
-      groups.types.push(sym);
+      groups['types']?.push(sym);
     } else if (
       lower.includes('helper') ||
       lower.includes('util') ||
       lower.includes('get') ||
       lower.includes('is')
     ) {
-      groups.helpers.push(sym);
+      groups['helpers']?.push(sym);
     } else if (lower.includes('handle') || lower.includes('on')) {
-      groups.handlers.push(sym);
+      groups['handlers']?.push(sym);
     } else if (lower.includes('valid') || lower.includes('check')) {
-      groups.validators.push(sym);
+      groups['validators']?.push(sym);
     } else if (lower.includes('format') || lower.includes('render') || lower.includes('display')) {
-      groups.formatters.push(sym);
+      groups['formatters']?.push(sym);
     } else {
-      groups.other.push(sym);
+      groups['other']?.push(sym);
     }
   }
 
@@ -624,6 +624,7 @@ async function analyzeBusFactorIssues(
 
   if (busFactorInfo.busFactor === 1 && busFactorInfo.contributors.length > 0) {
     const owner = busFactorInfo.contributors[0];
+    if (!owner) return suggestions;
     const suggestion: FixSuggestion = {
       severity: 'warning',
       title: `Low bus factor (${busFactorInfo.busFactor})`,
@@ -795,6 +796,7 @@ export function formatFix(result: FixResult): string {
       lines.push('');
       for (let i = 0; i < suggestion.codeBlocks.length; i++) {
         const block = suggestion.codeBlocks[i];
+        if (!block) continue;
         lines.push(
           `     ${i + 1}. Lines ${block.startLine}-${block.endLine}: Extract to ${block.suggestedName}()`
         );

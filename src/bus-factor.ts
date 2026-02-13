@@ -148,10 +148,10 @@ function groupFilesByArea(files: string[], graph: KnowledgeGraph): Map<string, A
     // Use top-level directory, or src/subdir for src/
     if (parts.length === 1) {
       area = 'root';
-    } else if (parts[0] === 'src' && parts.length > 2) {
+    } else if (parts[0] === 'src' && parts.length > 2 && parts[1]) {
       area = `src/${parts[1]}`;
     } else {
-      area = parts[0];
+      area = parts[0] ?? 'root';
     }
 
     if (!areas.has(area)) {
@@ -194,13 +194,13 @@ async function analyzeGitHistory(
     for (const line of rawLog.split('\n')) {
       if (line.includes('|')) {
         const parts = line.split('|');
-        if (parts.length >= 3) {
+        if (parts.length >= 3 && parts[1] && parts[2]) {
           currentAuthor = parts[1];
           currentDate = new Date(parts[2]);
         }
       } else if (line.match(/^\d+\s+\d+\s+.+/)) {
         const match = line.match(/^(\d+)\s+(\d+)\s+(.+)/);
-        if (match && currentAuthor) {
+        if (match && currentAuthor && match[1] && match[2] && match[3]) {
           const added = parseInt(match[1], 10) || 0;
           const removed = parseInt(match[2], 10) || 0;
           const file = match[3];
@@ -307,8 +307,11 @@ function findAreaForFile(
     if (areaStats.has('root')) {
       return 'root';
     }
-  } else if (areaStats.has(parts[0])) {
-    return parts[0];
+  } else {
+    const topLevel = parts[0];
+    if (topLevel && areaStats.has(topLevel)) {
+      return topLevel;
+    }
   }
 
   return null;

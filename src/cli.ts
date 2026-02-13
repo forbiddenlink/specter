@@ -31,7 +31,7 @@ import { registerAllCommands } from './commands/index.js';
 const program = new Command();
 
 // Global accessibility flag - can also be set via environment variable
-export const isAccessibleMode = process.env.SPECTER_ACCESSIBLE === 'true';
+export const isAccessibleMode = process.env['SPECTER_ACCESSIBLE'] === 'true';
 
 /**
  * ASCII banner for Specter CLI
@@ -95,9 +95,9 @@ program.parse = (argv?: readonly string[], parseOptions?: ParseOptions): Command
 
   // Update global options for use by all commands
   setGlobalOptions({
-    quiet: opts.quiet || false,
-    noEmoji: opts.noEmoji || false,
-    accessible: opts.accessible || isAccessibleMode,
+    quiet: opts['quiet'] || false,
+    noEmoji: opts['noEmoji'] || false,
+    accessible: opts['accessible'] || isAccessibleMode,
   });
 
   return result;
@@ -108,7 +108,7 @@ registerAllCommands(program);
 
 // Custom error handler for better suggestions on unknown commands
 program.on('command:*', (operands: string[]) => {
-  const unknownCmd = operands[0];
+  const unknownCmd = operands[0] ?? 'unknown';
 
   // Get all available commands
   const commands = program.commands.map((cmd) => cmd.name()).filter(Boolean);

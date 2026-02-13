@@ -75,8 +75,10 @@ function getFileNickname(filePath: string): string {
   const fileName = filePath.split('/').pop() || filePath;
 
   // Check for exact matches
-  if (fileNicknames[fileName]) {
-    return fileNicknames[fileName][Math.floor(Math.random() * fileNicknames[fileName].length)];
+  const nicknames = fileNicknames[fileName];
+  if (nicknames && nicknames.length > 0) {
+    const nickname = nicknames[Math.floor(Math.random() * nicknames.length)];
+    return nickname ?? 'A Familiar Friend';
   }
 
   // Pattern-based nicknames
@@ -199,7 +201,11 @@ export async function gatherWrappedData(
   const topLanguages = analyzeLanguages(graph);
 
   // Calculate streaks
-  const commitDays = new Set(commits.map((c) => new Date(c.date).toISOString().split('T')[0]));
+  const commitDays = new Set(
+    commits
+      .map((c) => new Date(c.date).toISOString().split('T')[0])
+      .filter((d): d is string => d !== undefined)
+  );
   const { longestStreak, currentStreak } = calculateStreaks(commitDays, targetYear);
 
   // Get busiest periods
@@ -221,8 +227,8 @@ export async function gatherWrappedData(
   return {
     codebaseName,
     year: targetYear,
-    periodStart,
-    periodEnd,
+    periodStart: periodStart ?? '',
+    periodEnd: periodEnd ?? '',
     isGitRepo: true,
     totalCommits: commits.length,
     totalLinesAdded,
@@ -307,8 +313,8 @@ function calculateStreaks(
   }
 
   // Check if current streak is still active (includes today or yesterday)
-  const today = new Date().toISOString().split('T')[0];
-  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+  const today = new Date().toISOString().split('T')[0] ?? '';
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0] ?? '';
   if (commitDays.has(today) || commitDays.has(yesterday)) {
     currentStreak = streak;
   }
@@ -417,6 +423,7 @@ export function formatWrapped(data: WrappedData): string {
     lines.push('─'.repeat(30));
     for (let i = 0; i < Math.min(3, data.topContributors.length); i++) {
       const c = data.topContributors[i];
+      if (!c) continue;
       const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉';
       lines.push(`${medal} ${c.name} (${c.commits} commits, ${c.percentage}%)`);
     }
@@ -429,6 +436,7 @@ export function formatWrapped(data: WrappedData): string {
     lines.push('─'.repeat(30));
     for (let i = 0; i < Math.min(5, data.topFiles.length); i++) {
       const f = data.topFiles[i];
+      if (!f) continue;
       lines.push(`${i + 1}. ${f.path}`);
       lines.push(`   "${f.nickname}" — ${f.commits} edits`);
     }

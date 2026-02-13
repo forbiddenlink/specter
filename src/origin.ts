@@ -113,9 +113,10 @@ export async function gatherOriginData(
 
     for (const line of lines.slice(0, 10)) {
       const match = line.match(/^\s*(\d+)\s+(.+)$/);
-      if (match) {
-        const commits = parseInt(match[1], 10);
-        const name = match[2];
+      const commitsStr = match?.[1];
+      const name = match?.[2];
+      if (commitsStr && name) {
+        const commits = parseInt(commitsStr, 10);
 
         // Get first commit date for this contributor
         let firstCommit = '';
@@ -341,12 +342,13 @@ export function generateOriginStory(data: OriginData): string {
     }
 
     if (others.length > 0) {
-      if (others.length === 1) {
+      const firstOther = others[0];
+      if (others.length === 1 && firstOther) {
         lines.push(
-          `One other developer joined the journey: ${others[0].name}, ` +
-            `contributing ${others[0].commits.toLocaleString()} commits.`
+          `One other developer joined the journey: ${firstOther.name}, ` +
+            `contributing ${firstOther.commits.toLocaleString()} commits.`
         );
-      } else {
+      } else if (others.length > 1) {
         const topOthers = others.slice(0, 3).map((c) => c.name);
         lines.push(
           `Over time, ${data.totalContributors} developers have contributed their craft. ` +

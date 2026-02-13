@@ -56,7 +56,7 @@ export async function generateMorning(
 
   // Random greeting based on day
   const greetingIndex = today.getDay() % greetings.length;
-  const greeting = greetings[greetingIndex];
+  const greeting = greetings[greetingIndex] ?? 'Good morning!';
 
   const git: SimpleGit = simpleGit(rootDir);
 
@@ -165,8 +165,9 @@ export async function generateMorning(
   // Generate alerts
   const alerts: string[] = [];
 
-  if (hotFiles.length > 0 && hotFiles[0].changes >= 5) {
-    alerts.push(`${hotFiles[0].path} has been very active - check for conflicts`);
+  const firstHotFile = hotFiles[0];
+  if (firstHotFile && firstHotFile.changes >= 5) {
+    alerts.push(`${firstHotFile.path} has been very active - check for conflicts`);
   }
 
   const highComplexity = nodes.filter((n) => (n.complexity || 0) > 20);
@@ -185,8 +186,8 @@ export async function generateMorning(
     todaysFocus.push('Review recent changes before starting new work');
   }
 
-  if (hotFiles.length > 0) {
-    todaysFocus.push(`Check ${hotFiles[0].path} for potential conflicts`);
+  if (firstHotFile) {
+    todaysFocus.push(`Check ${firstHotFile.path} for potential conflicts`);
   }
 
   if (highComplexity.length > 0) {

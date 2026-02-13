@@ -448,9 +448,10 @@ function generateSummary(
 
   // Add insight about the highest risk factor
   const sortedFactors = Object.entries(factors).sort(([, a], [, b]) => b.score - a.score);
+  const topFactor = sortedFactors[0];
 
-  if (sortedFactors.length > 0) {
-    const [_factorName, factor] = sortedFactors[0];
+  if (topFactor) {
+    const [_factorName, factor] = topFactor;
     if (factor.score >= 50) {
       parts.push(`Main concern: ${factor.name.toLowerCase()} - ${factor.details.toLowerCase()}`);
     }

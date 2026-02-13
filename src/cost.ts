@@ -414,7 +414,7 @@ function buildFinalResults(data: {
     estimatedSavings,
     hourlyRate: data.hourlyRate,
     currency: data.currency,
-    analysisDate: new Date().toISOString().split('T')[0],
+    analysisDate: new Date().toISOString().split('T')[0] ?? '',
   };
 }
 
@@ -540,6 +540,7 @@ export function formatCost(analysis: CostAnalysis): string {
 
     for (let i = 0; i < analysis.quickWins.length; i++) {
       const win = analysis.quickWins[i];
+      if (!win) continue;
       const shortPath = win.file.length > 40 ? `...${win.file.slice(-37)}` : win.file;
       lines.push(`  ${i + 1}. ${shortPath}`);
       lines.push(

@@ -762,7 +762,8 @@ function calculateAnswerConfidence(
   let confidence = 0;
   if (nodes.length > 0) {
     confidence = Math.min(95, 40 + nodes.length * 10);
-    if (nodes[0].name.toLowerCase() === subject) {
+    const firstNode = nodes[0];
+    if (firstNode && firstNode.name.toLowerCase() === subject) {
       confidence = Math.min(95, confidence + 20);
     }
   } else if (directories.length > 0) {

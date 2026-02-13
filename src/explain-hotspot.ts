@@ -109,9 +109,13 @@ export async function explainHotspot(
     let fileContent = readFileSync(fullPath, 'utf-8');
 
     if (options.lines) {
-      const [start, end] = options.lines.split('-').map(Number);
-      const lines = fileContent.split('\n');
-      fileContent = lines.slice(start - 1, end).join('\n');
+      const lineRange = options.lines.split('-').map(Number);
+      const start = lineRange[0];
+      const end = lineRange[1];
+      if (start !== undefined) {
+        const lines = fileContent.split('\n');
+        fileContent = lines.slice(start - 1, end).join('\n');
+      }
     }
 
     // Build prompt for Copilot

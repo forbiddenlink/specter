@@ -96,7 +96,7 @@ export async function execute(graph: KnowledgeGraph, input: Input): Promise<Arch
     const _lastCommit = commits[commits.length - 1];
 
     // Calculate age
-    const ageMs = Date.now() - new Date(firstCommit.date).getTime();
+    const ageMs = Date.now() - new Date(firstCommit?.date ?? Date.now()).getTime();
     const ageDays = Math.floor(ageMs / (1000 * 60 * 60 * 24));
     const age = formatAge(ageDays);
 
@@ -192,7 +192,7 @@ async function detectRewrites(
 
       // Parse lines changed
       const match = diffStat.match(/(\d+) insertions.*?(\d+) deletions/);
-      if (match) {
+      if (match?.[1] && match[2]) {
         const insertions = parseInt(match[1], 10);
         const deletions = parseInt(match[2], 10);
 
@@ -216,11 +216,15 @@ function buildEvolutionPhases(
 
   // Phase 1: Creation
   const first = commits[0];
+  if (!first) {
+    return phases;
+  }
+  const firstMessageLine = first.message.split('\n')[0] ?? '';
   phases.push({
     version: 1,
     period: new Date(first.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
     description: 'Initial creation',
-    keyChanges: [first.message.split('\n')[0].substring(0, 60)],
+    keyChanges: [firstMessageLine.substring(0, 60)],
     author: first.author_name,
   });
 
@@ -230,6 +234,7 @@ function buildEvolutionPhases(
 
   for (let i = 1; i < commits.length; i++) {
     const commit = commits[i];
+    if (!commit) continue;
     const commitDate = new Date(commit.date);
 
     const isRewrite = rewrites.includes(commit.hash);
@@ -237,11 +242,12 @@ function buildEvolutionPhases(
 
     // New phase if rewrite or 6+ month gap
     if (isRewrite || monthsGap > 6) {
+      const commitMessageLine = commit.message.split('\n')[0] ?? '';
       phases.push({
         version: currentVersion,
         period: commitDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
         description: isRewrite ? 'Major rewrite' : 'Revival after dormancy',
-        keyChanges: [commit.message.split('\n')[0].substring(0, 60)],
+        keyChanges: [commitMessageLine.substring(0, 60)],
         author: commit.author_name,
       });
       currentVersion++;
@@ -341,13 +347,13 @@ function extractLessons(commits: Array<{ hash: string; message: string }>): stri
 
     // Commits that explain problems
     if (/because|since|due to|caused by|problem was/.test(msg)) {
-      const snippet = commit.message.split('\n')[0].substring(0, 80);
+      const snippet = (commit.message.split('\n')[0] ?? '').substring(0, 80);
       lessons.push(snippet);
     }
 
     // Commits that document decisions
     if (/decided|chose|instead of|rather than|better to/.test(msg)) {
-      const snippet = commit.message.split('\n')[0].substring(0, 80);
+      const snippet = (commit.message.split('\n')[0] ?? '').substring(0, 80);
       lessons.push(snippet);
     }
   }

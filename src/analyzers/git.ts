@@ -98,7 +98,7 @@ export async function analyzeFileHistory(
 
     const recentCommits = log.all.slice(0, 10).map((c) => ({
       hash: c.hash.substring(0, 7),
-      message: c.message.split('\n')[0].substring(0, 80),
+      message: (c.message.split('\n')[0] ?? '').substring(0, 80),
       author: c.author_name,
       date: c.date,
     }));
@@ -302,7 +302,7 @@ export async function analyzeChangeCoupling(
             if (existing.commits.length < 5) {
               existing.commits.push({
                 hash: commit.hash.substring(0, 7),
-                message: commit.message.split('\n')[0].substring(0, 60),
+                message: (commit.message.split('\n')[0] ?? '').substring(0, 60),
                 date: commit.date,
               });
             }
@@ -312,7 +312,7 @@ export async function analyzeChangeCoupling(
               commits: [
                 {
                   hash: commit.hash.substring(0, 7),
-                  message: commit.message.split('\n')[0].substring(0, 60),
+                  message: (commit.message.split('\n')[0] ?? '').substring(0, 60),
                   date: commit.date,
                 },
               ],

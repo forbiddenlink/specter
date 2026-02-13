@@ -32,7 +32,7 @@ export function register(program: Command): void {
         return;
       }
 
-      const token = options.token || process.env.GITHUB_TOKEN;
+      const token = options.token || process.env['GITHUB_TOKEN'];
       if (!token) {
         console.log(chalk.red('GitHub token required. Set GITHUB_TOKEN env var or use --token.'));
         return;

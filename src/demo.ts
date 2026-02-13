@@ -182,6 +182,7 @@ async function demoHotspots(ctx: DemoContext): Promise<string> {
 
     for (let i = 0; i < top3.length; i++) {
       const hotspot = top3[i];
+      if (!hotspot) continue;
       const riskBar = chalk.red(
         '\u2588'.repeat(Math.min(10, Math.ceil(hotspot.hotspotScore / 10)))
       );
@@ -290,7 +291,7 @@ export async function runDemo(
   const personality = options.personality || 'default';
   const speed = options.speed || 'normal';
   const steps = options.steps || DEFAULT_STEPS;
-  const speedMultiplier = SPEED_MULTIPLIERS[speed];
+  const speedMultiplier = SPEED_MULTIPLIERS[speed] ?? 1;
 
   const ctx: DemoContext = { graph, personality, rootDir };
 

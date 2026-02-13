@@ -107,7 +107,9 @@ function normalizeCycle(cycle: string[]): string[] {
   // Find the index of the lexicographically smallest element
   let minIdx = 0;
   for (let i = 1; i < cycle.length; i++) {
-    if (cycle[i] < cycle[minIdx]) {
+    const current = cycle[i];
+    const minElement = cycle[minIdx];
+    if (current !== undefined && minElement !== undefined && current < minElement) {
       minIdx = i;
     }
   }
@@ -154,9 +156,12 @@ function generateSuggestions(cycles: Cycle[]): string[] {
   const sortedFiles = [...fileCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3);
 
   if (sortedFiles.length > 0) {
-    const [topFile, count] = sortedFiles[0];
-    const shortName = topFile.split('/').pop() ?? topFile;
-    suggestions.push(`Consider refactoring "${shortName}" - it appears in ${count} cycle(s)`);
+    const topEntry = sortedFiles[0];
+    if (topEntry) {
+      const [topFile, count] = topEntry;
+      const shortName = topFile.split('/').pop() ?? topFile;
+      suggestions.push(`Consider refactoring "${shortName}" - it appears in ${count} cycle(s)`);
+    }
   }
 
   // General suggestions based on cycle count and severity
@@ -236,7 +241,7 @@ export function detectCycles(graph: KnowledgeGraph): CyclesResult {
   }
 
   // Find worst cycle (longest high-severity, or longest overall)
-  const worstCycle = cycles.length > 0 ? cycles[0] : null;
+  const worstCycle: Cycle | null = cycles.length > 0 ? (cycles[0] ?? null) : null;
 
   // Generate suggestions
   const suggestions = generateSuggestions(cycles);
@@ -337,6 +342,7 @@ export function formatCycles(result: CyclesResult): string {
 
     for (let i = 0; i < words.length; i++) {
       const word = words[i];
+      if (!word) continue;
       const connector = i < words.length - 1 ? ' -> ' : '';
 
       if (

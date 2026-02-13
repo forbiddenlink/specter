@@ -21,7 +21,8 @@ interface CheckResult {
  */
 function checkNodeVersion(): CheckResult {
   const version = process.version; // e.g. "v20.10.0"
-  const major = Number.parseInt(version.slice(1).split('.')[0], 10);
+  const majorStr = version.slice(1).split('.')[0] ?? '0';
+  const major = Number.parseInt(majorStr, 10);
 
   if (major >= 18) {
     return {
@@ -154,7 +155,7 @@ function checkDependencies(): CheckResult {
 function checkTerminal(): CheckResult {
   const isTTY = !!process.stdout.isTTY;
   const colorLevel = chalk.level; // 0=none, 1=basic, 2=256, 3=truecolor
-  const supportsUnicode = process.platform !== 'win32' || !!process.env.WT_SESSION;
+  const supportsUnicode = process.platform !== 'win32' || !!process.env['WT_SESSION'];
 
   const details: string[] = [];
   let status: CheckResult['status'] = 'pass';

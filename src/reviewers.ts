@@ -134,14 +134,15 @@ export async function suggestReviewers(
         }
       } else {
         // Get name from a log entry
-        let name = email.split('@')[0];
+        let name = email.split('@')[0] ?? email;
         try {
           const log = await git.log({
             file: filePath,
             maxCount: 1,
           });
-          if (log.all.length > 0 && log.all[0].author_email === email) {
-            name = log.all[0].author_name;
+          const firstEntry = log.all[0];
+          if (firstEntry && firstEntry.author_email === email) {
+            name = firstEntry.author_name;
           }
         } catch {
           // Use email prefix as name
@@ -203,9 +204,10 @@ export async function suggestReviewers(
   const primaryReviewers = candidates.filter((c) => c.tier === 'primary');
   const backupReviewers = candidates.filter((c) => c.tier === 'backup');
 
-  if (primaryReviewers.length > 0) {
+  const firstPrimaryReviewer = primaryReviewers[0];
+  if (firstPrimaryReviewer) {
     recommendations.push(
-      `Start with ${primaryReviewers[0].name} - they know ${primaryReviewers[0].filesKnown}/${stagedFiles.length} files`
+      `Start with ${firstPrimaryReviewer.name} - they know ${firstPrimaryReviewer.filesKnown}/${stagedFiles.length} files`
     );
   }
 

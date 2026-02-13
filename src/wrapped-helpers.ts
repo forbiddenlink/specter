@@ -25,17 +25,22 @@ export async function fetchPeriodCommits(
   const beforeDate = new Date(range.end);
   beforeDate.setDate(beforeDate.getDate() + 1);
 
+  const afterStr = afterDate.toISOString().split('T')[0] ?? '';
+  const beforeStr = beforeDate.toISOString().split('T')[0] ?? '';
   const log = await git.log({
-    '--after': afterDate.toISOString().split('T')[0],
-    '--before': beforeDate.toISOString().split('T')[0],
-  });
+    '--after': afterStr,
+    '--before': beforeStr,
+  } as Parameters<typeof git.log>[0]);
 
-  return log.all.map((c: DefaultLogFields) => ({
-    hash: c.hash,
-    date: c.date,
-    author: c.author_name,
-    message: c.message,
-  }));
+  return log.all.map((c) => {
+    const commit = c as DefaultLogFields;
+    return {
+      hash: commit.hash,
+      date: commit.date,
+      author: commit.author_name,
+      message: commit.message,
+    };
+  });
 }
 
 /**
@@ -123,10 +128,8 @@ export function analyzeTimePatterns(commits: Array<{ date: string }>): {
     const hour = date.getHours();
 
     monthCounts.set(month, (monthCounts.get(month) || 0) + 1);
-    dayCounts.set(
-      date.toISOString().split('T')[0],
-      (dayCounts.get(date.toISOString().split('T')[0]) || 0) + 1
-    );
+    const dayStr = date.toISOString().split('T')[0] ?? '';
+    dayCounts.set(dayStr, (dayCounts.get(dayStr) || 0) + 1);
     hourCounts.set(hour, (hourCounts.get(hour) || 0) + 1);
 
     if (hour >= 0 && hour < 5) lateNightCommits++;
@@ -147,7 +150,8 @@ export function analyzeTimePatterns(commits: Array<{ date: string }>): {
  */
 export function getTopEntry<K>(counts: Map<K, number>): [K, number] | null {
   const entries = [...counts.entries()].sort((a, b) => b[1] - a[1]);
-  return entries.length > 0 ? entries[0] : null;
+  const first = entries[0];
+  return first ?? null;
 }
 
 /**
@@ -171,7 +175,7 @@ export async function analyzeLinesChanged(
 
     for (const line of stats.split('\n')) {
       const match = line.match(/^(\d+)\s+(\d+)/);
-      if (match) {
+      if (match?.[1] && match[2]) {
         totalLinesAdded += parseInt(match[1], 10) || 0;
         totalLinesRemoved += parseInt(match[2], 10) || 0;
       }

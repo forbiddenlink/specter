@@ -125,9 +125,11 @@ export function drawTerminalHeader(
   const dotRadius = 6;
   const dotColors = ['#ff5f56', '#ffbd2e', '#27ca40'];
   for (let i = 0; i < 3; i++) {
+    const dotColor = dotColors[i];
+    if (!dotColor) continue;
     ctx.beginPath();
     ctx.arc(area.x + 20 + i * 20, dotY, dotRadius, 0, Math.PI * 2);
-    ctx.fillStyle = dotColors[i];
+    ctx.fillStyle = dotColor;
     ctx.fill();
   }
 

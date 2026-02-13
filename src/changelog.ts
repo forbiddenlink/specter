@@ -62,27 +62,27 @@ function parseCommitMessage(message: string): {
   if (breakingMatch) {
     const [, type, scope, description] = breakingMatch;
     return {
-      type: mapCommitType(type),
+      type: mapCommitType(type ?? ''),
       scope,
       breaking: true,
-      description,
+      description: description ?? '',
     };
   }
 
   if (normalMatch) {
     const [, type, scope, description] = normalMatch;
     return {
-      type: mapCommitType(type),
+      type: mapCommitType(type ?? ''),
       scope,
       breaking: message.includes('BREAKING CHANGE'),
-      description,
+      description: description ?? '',
     };
   }
 
   return {
     type: 'other',
     breaking: false,
-    description: message.split('\n')[0],
+    description: message.split('\n')[0] ?? '',
   };
 }
 
@@ -148,13 +148,13 @@ export async function generateChangelog(
     if (!hash || !message) continue;
 
     const parsed = parseCommitMessage(message);
-    contributors.add(author);
+    contributors.add(author ?? '');
 
     entries.push({
       hash: hash.slice(0, 7),
       message: parsed.description || message,
-      author,
-      date: date.split(' ')[0], // Just the date part
+      author: author ?? '',
+      date: date?.split(' ')[0] ?? '', // Just the date part
       type: parsed.type,
       scope: parsed.scope,
       breaking: parsed.breaking,

@@ -154,7 +154,10 @@ function findCoreModules(graph: KnowledgeGraph): TourStop[] {
   }
 
   // Sort by import count
-  const coreFiles = [...importCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
+  const coreFiles = [...importCounts.entries()]
+    .filter((entry): entry is [string, number] => entry[0] !== undefined && entry[1] !== undefined)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4);
 
   for (const [filePath, count] of coreFiles) {
     const node = Object.values(graph.nodes).find((n) => n.filePath === filePath);
@@ -184,12 +187,15 @@ function analyzeDirectories(graph: KnowledgeGraph): TourSection[] {
     if (node.type !== 'file') continue;
 
     const parts = node.filePath.split('/');
-    const topDir = parts.length > 1 ? parts[0] : '.';
+    const firstPart = parts[0];
+    const topDir = parts.length > 1 && firstPart ? firstPart : '.';
 
-    if (!dirMap.has(topDir)) {
-      dirMap.set(topDir, []);
+    const existing = dirMap.get(topDir);
+    if (existing) {
+      existing.push(node);
+    } else {
+      dirMap.set(topDir, [node]);
     }
-    dirMap.get(topDir)!.push(node);
   }
 
   // Common directory purposes

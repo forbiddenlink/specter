@@ -165,7 +165,7 @@ export function compareComplexity(
     const beforeNode = before.nodes[nodeId];
     const afterNode = after.nodes[nodeId];
 
-    if (!beforeNode || !afterNode.complexity || !beforeNode.complexity) continue;
+    if (!afterNode || !beforeNode || !afterNode.complexity || !beforeNode.complexity) continue;
 
     const diff = afterNode.complexity - beforeNode.complexity;
 

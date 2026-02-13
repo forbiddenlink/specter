@@ -172,11 +172,14 @@ export async function runPrecommitCheck(
     if (!line.trim()) continue;
 
     const parts = line.split('\t');
-    if (parts.length < 3) continue;
+    const part0 = parts[0];
+    const part1 = parts[1];
+    const part2 = parts[2];
+    if (parts.length < 3 || !part0 || !part1 || !part2) continue;
 
-    const additions = parts[0] === '-' ? 0 : parseInt(parts[0], 10) || 0;
-    const deletions = parts[1] === '-' ? 0 : parseInt(parts[1], 10) || 0;
-    const filePath = parts[2];
+    const additions = part0 === '-' ? 0 : parseInt(part0, 10) || 0;
+    const deletions = part1 === '-' ? 0 : parseInt(part1, 10) || 0;
+    const filePath = part2;
 
     totalAdditions += additions;
     totalDeletions += deletions;

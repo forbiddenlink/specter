@@ -119,6 +119,7 @@ export async function buildKnowledgeGraph(options: BuildOptions): Promise<BuildR
     }
 
     const sourceFile = sourceFiles[i];
+    if (!sourceFile) continue;
     const filePath = path.relative(rootDir, sourceFile.getFilePath());
 
     try {

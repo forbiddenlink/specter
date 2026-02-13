@@ -229,7 +229,7 @@ export function findClosestMatch(
   const wComplexity = 0.3;
   const wFiles = 0.2;
 
-  let bestMatch = repos[0];
+  let bestMatch: FamousRepoProfile | undefined = repos[0];
   let bestDistance = Infinity;
 
   for (const repo of repos) {
@@ -249,6 +249,9 @@ export function findClosestMatch(
     }
   }
 
+  if (!bestMatch) {
+    throw new Error('No matching repo found');
+  }
   return bestMatch;
 }
 
@@ -366,6 +369,7 @@ export function formatFamousComparison(
 
   for (let i = 0; i < leaderboard.length; i++) {
     const entry = leaderboard[i];
+    if (!entry) continue;
     const rank = `  ${String(i + 1).padStart(2)}.`;
     const name = entry.name.padEnd(24);
     const score = `${entry.healthScore}/100`;

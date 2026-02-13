@@ -161,6 +161,7 @@ function generatePathSummary(path: string[]): string {
   parts.push('```');
   for (let i = 0; i < path.length; i++) {
     const node = path[i];
+    if (!node) continue;
     if (i === 0) {
       parts.push(node);
     } else {

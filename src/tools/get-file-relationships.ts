@@ -56,7 +56,7 @@ export function execute(graph: KnowledgeGraph, input: Input): FileRelationshipsR
 
   const imports = importEdges.map((e) => ({
     source: e.target,
-    symbols: (e.metadata?.symbols as string[]) || [],
+    symbols: (e.metadata?.['symbols'] as string[] | undefined) || [],
   }));
 
   // Find importedBy (edges where this file is the target)
@@ -64,7 +64,7 @@ export function execute(graph: KnowledgeGraph, input: Input): FileRelationshipsR
 
   const importedBy = importedByEdges.map((e) => ({
     filePath: e.source,
-    symbols: (e.metadata?.symbols as string[]) || [],
+    symbols: (e.metadata?.['symbols'] as string[] | undefined) || [],
   }));
 
   // Find exports (symbols contained in this file that are exported)
@@ -72,7 +72,7 @@ export function execute(graph: KnowledgeGraph, input: Input): FileRelationshipsR
 
   const exports = containsEdges
     .map((e) => graph.nodes[e.target])
-    .filter((n) => n?.exported)
+    .filter((n): n is NonNullable<typeof n> => n !== undefined && n.exported === true)
     .map((n) => ({
       name: n.name,
       type: n.type,
@@ -110,10 +110,11 @@ function generateSummary(
   parts.push(`**${filePath}**`);
 
   // Import summary
+  const firstImport = imports[0];
   if (imports.length === 0) {
     parts.push('I have no dependencies on other local files.');
-  } else if (imports.length === 1) {
-    parts.push(`I depend on 1 other file: ${imports[0].source}`);
+  } else if (imports.length === 1 && firstImport) {
+    parts.push(`I depend on 1 other file: ${firstImport.source}`);
   } else {
     parts.push(`I depend on ${imports.length} other files.`);
     const topImports = imports
@@ -124,10 +125,11 @@ function generateSummary(
   }
 
   // ImportedBy summary
+  const firstImportedBy = importedBy[0];
   if (importedBy.length === 0) {
     parts.push('Nobody imports me directly.');
-  } else if (importedBy.length === 1) {
-    parts.push(`1 file depends on me: ${importedBy[0].filePath}`);
+  } else if (importedBy.length === 1 && firstImportedBy) {
+    parts.push(`1 file depends on me: ${firstImportedBy.filePath}`);
   } else {
     parts.push(`${importedBy.length} files depend on me.`);
     if (importedBy.length > 5) {

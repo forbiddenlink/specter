@@ -64,6 +64,17 @@ export function calculateTrend(
   const oldest = sorted[0];
   const newest = sorted[sorted.length - 1];
 
+  // Safety check - should not happen after length checks above
+  if (!oldest || !newest) {
+    return {
+      period,
+      direction: 'stable',
+      changePercent: 0,
+      insights: ['Insufficient snapshot data.'],
+      snapshots: sorted,
+    };
+  }
+
   // Calculate change
   const healthChange = newest.metrics.healthScore - oldest.metrics.healthScore;
   const changePercent = percentChange(oldest.metrics.healthScore, newest.metrics.healthScore);
@@ -78,7 +89,7 @@ export function calculateTrend(
     direction = 'stable';
   }
 
-  // Generate insights
+  // Generate insights - oldest and newest are guaranteed to exist at this point
   const insights = generateInsights(oldest, newest);
 
   return {
@@ -144,7 +155,7 @@ function generateInsights(older: HealthSnapshot, newer: HealthSnapshot): string[
   const diff = diffSnapshots(older, newer);
 
   // Health score change
-  const healthChange = diff.metricChanges.healthScore;
+  const healthChange = diff.metricChanges['healthScore'];
   if (healthChange && healthChange.change !== 0) {
     const direction = healthChange.change > 0 ? 'improved' : 'declined';
     const absChange = Math.abs(healthChange.change);
@@ -154,7 +165,7 @@ function generateInsights(older: HealthSnapshot, newer: HealthSnapshot): string[
   }
 
   // Complexity change
-  const complexityChange = diff.metricChanges.avgComplexity;
+  const complexityChange = diff.metricChanges['avgComplexity'];
   if (complexityChange && Math.abs(complexityChange.change) >= 0.5) {
     const direction = complexityChange.change < 0 ? 'down' : 'up';
     const pct = Math.abs(percentChange(complexityChange.before, complexityChange.after));
@@ -164,7 +175,7 @@ function generateInsights(older: HealthSnapshot, newer: HealthSnapshot): string[
   }
 
   // File count change
-  const fileChange = diff.metricChanges.fileCount;
+  const fileChange = diff.metricChanges['fileCount'];
   if (fileChange && fileChange.change !== 0) {
     const verb = fileChange.change > 0 ? 'gained' : 'lost';
     const count = Math.abs(fileChange.change);
@@ -172,7 +183,7 @@ function generateInsights(older: HealthSnapshot, newer: HealthSnapshot): string[
   }
 
   // Lines change
-  const lineChange = diff.metricChanges.totalLines;
+  const lineChange = diff.metricChanges['totalLines'];
   if (lineChange && Math.abs(lineChange.change) >= 100) {
     const verb = lineChange.change > 0 ? 'grew by' : 'shrank by';
     const count = Math.abs(lineChange.change);
@@ -180,7 +191,7 @@ function generateInsights(older: HealthSnapshot, newer: HealthSnapshot): string[
   }
 
   // Hotspot change
-  const hotspotChange = diff.metricChanges.hotspotCount;
+  const hotspotChange = diff.metricChanges['hotspotCount'];
   if (hotspotChange && hotspotChange.change !== 0) {
     if (hotspotChange.change < 0) {
       insights.push(
@@ -194,7 +205,7 @@ function generateInsights(older: HealthSnapshot, newer: HealthSnapshot): string[
   }
 
   // Distribution changes
-  const veryHighChange = diff.distributionChanges.veryHigh;
+  const veryHighChange = diff.distributionChanges['veryHigh'];
   if (veryHighChange && veryHighChange.change !== 0) {
     if (veryHighChange.change < 0) {
       insights.push(
@@ -298,8 +309,11 @@ export function getTimeSpan(snapshots: HealthSnapshot[]): string {
     (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
   );
 
-  const oldest = new Date(sorted[0].timestamp);
-  const newest = new Date(sorted[sorted.length - 1].timestamp);
+  const oldestSnapshot = sorted[0];
+  const newestSnapshot = sorted[sorted.length - 1];
+  if (!oldestSnapshot || !newestSnapshot) return 'no history';
+  const oldest = new Date(oldestSnapshot.timestamp);
+  const newest = new Date(newestSnapshot.timestamp);
   const diffMs = newest.getTime() - oldest.getTime();
 
   const days = Math.floor(diffMs / (24 * 60 * 60 * 1000));

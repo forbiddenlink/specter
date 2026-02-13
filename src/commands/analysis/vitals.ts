@@ -87,7 +87,7 @@ export function register(program: Command): void {
         deadExports,
         coverageEstimate,
         healthTrend:
-          snapshots.length >= 2
+          snapshots.length >= 2 && snapshots[0] && snapshots[1]
             ? snapshots[0].metrics.healthScore - snapshots[1].metrics.healthScore
             : undefined,
         fileCount: stats.fileCount,

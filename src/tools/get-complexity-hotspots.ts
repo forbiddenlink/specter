@@ -88,8 +88,8 @@ function generateSummary(
     );
 
     // Worst offender
-    if (hotspots.length > 0) {
-      const worst = hotspots[0];
+    const worst = hotspots[0];
+    if (worst) {
       parts.push(`\nMy most complex ${worst.type} is **${worst.name}** in ${worst.filePath}:`);
       parts.push(`- Complexity: ${worst.emoji} ${worst.complexity}`);
       parts.push(`- Lines: ${worst.lineStart}-${worst.lineEnd}`);

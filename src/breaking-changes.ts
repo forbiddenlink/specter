@@ -72,6 +72,7 @@ export async function detectBreakingChanges(
 
     for (const line of diffOutput.split('\n').filter(Boolean)) {
       const [status, file] = line.split('\t');
+      if (!file) continue;
       if (status === 'M' || status?.startsWith('R')) {
         modifiedFiles.push(file);
       } else if (status === 'D') {
@@ -153,6 +154,10 @@ async function analyzeFileDiff(
     let match: RegExpExecArray | null = removedExportPattern.exec(diff);
     while (match !== null) {
       const [, kind, name] = match;
+      if (!kind || !name) {
+        match = removedExportPattern.exec(diff);
+        continue;
+      }
       // Check if it's actually removed (not just modified)
       const addedPattern = new RegExp(
         `^\\+\\s*export\\s+(const|function|class|interface|type|enum)\\s+${name}\\b`,
@@ -175,6 +180,10 @@ async function analyzeFileDiff(
     match = funcSignaturePattern.exec(diff);
     while (match !== null) {
       const [, , funcName, oldParams] = match;
+      if (!funcName) {
+        match = funcSignaturePattern.exec(diff);
+        continue;
+      }
       // Check if same function exists with different signature
       const newFuncPattern = new RegExp(
         `^\\+\\s*export\\s+(async\\s+)?function\\s+${funcName}\\s*\\(([^)]*)\\)`,
@@ -182,8 +191,8 @@ async function analyzeFileDiff(
       );
       const newMatch = newFuncPattern.exec(diff);
       if (newMatch) {
-        const newParams = newMatch[2];
-        if (normalizeParams(oldParams) !== normalizeParams(newParams)) {
+        const newParams = newMatch[2] ?? '';
+        if (normalizeParams(oldParams ?? '') !== normalizeParams(newParams)) {
           changes.push({
             type: 'signature-change',
             severity: 'high',
@@ -201,6 +210,10 @@ async function analyzeFileDiff(
     match = removedPropertyPattern.exec(diff);
     while (match !== null) {
       const [, propName] = match;
+      if (!propName) {
+        match = removedPropertyPattern.exec(diff);
+        continue;
+      }
       // Only flag if not re-added
       const addedPropPattern = new RegExp(`^\\+\\s+${propName}\\s*[?]?\\s*:`, 'm');
       if (!addedPropPattern.test(diff)) {
@@ -220,6 +233,10 @@ async function analyzeFileDiff(
     match = addedRequiredParam.exec(diff);
     while (match !== null) {
       const [, paramName] = match;
+      if (!paramName) {
+        match = addedRequiredParam.exec(diff);
+        continue;
+      }
       if (!paramName.includes('?') && !diff.includes(`${paramName}?:`)) {
         changes.push({
           type: 'signature-change',

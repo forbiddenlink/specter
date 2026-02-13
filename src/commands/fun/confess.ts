@@ -70,7 +70,10 @@ function resolveFilePath(
     (k) => k.endsWith(file) || k.endsWith(`/${file}`)
   );
   if (matchingKey) {
-    return { node: graph.nodes[matchingKey], path: matchingKey };
+    const matchedNode = graph.nodes[matchingKey];
+    if (matchedNode) {
+      return { node: matchedNode, path: matchingKey };
+    }
   }
 
   return null;
@@ -99,10 +102,14 @@ function calculateSins(
   // Find unused exports (dead code within this file)
   const importedSymbols = new Set<string>();
   for (const edge of graph.edges) {
-    if (edge.type === 'imports' && edge.metadata?.symbols) {
-      for (const symbol of edge.metadata.symbols as string[]) {
-        const originalName = symbol.split(' as ')[0].trim();
-        importedSymbols.add(originalName);
+    const symbols = edge.metadata?.['symbols'] as string[] | undefined;
+    if (edge.type === 'imports' && symbols) {
+      for (const symbol of symbols) {
+        const parts = symbol.split(' as ');
+        const originalName = parts[0]?.trim();
+        if (originalName) {
+          importedSymbols.add(originalName);
+        }
       }
     }
   }

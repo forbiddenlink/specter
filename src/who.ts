@@ -87,9 +87,11 @@ async function getAuthorLines(git: SimpleGit, filePath: string): Promise<Map<str
         currentAuthor = line.trim();
       } else if (line.match(/^\d+\s+\d+/)) {
         const match = line.match(/^(\d+)\s+(\d+)/);
-        if (match && currentAuthor) {
-          const added = parseInt(match[1], 10) || 0;
-          const removed = parseInt(match[2], 10) || 0;
+        const addedStr = match?.[1];
+        const removedStr = match?.[2];
+        if (match && currentAuthor && addedStr && removedStr) {
+          const added = parseInt(addedStr, 10) || 0;
+          const removed = parseInt(removedStr, 10) || 0;
           authorLines.set(currentAuthor, (authorLines.get(currentAuthor) || 0) + added + removed);
         }
       }
@@ -220,8 +222,9 @@ function generateSuggestions(experts: Expert[]): string[] {
   }
 
   const recentExperts = experts.filter((e) => e.recentActivity);
-  if (recentExperts.length > 0 && recentExperts[0] !== primary) {
-    suggestions.push(`${recentExperts[0].name} has been active recently.`);
+  const mostRecentExpert = recentExperts[0];
+  if (mostRecentExpert && mostRecentExpert !== primary) {
+    suggestions.push(`${mostRecentExpert.name} has been active recently.`);
   }
 
   if (experts.length === 1) {
@@ -339,6 +342,7 @@ export function formatWho(result: WhoResult): string {
 
   for (let i = 0; i < result.experts.length; i++) {
     const expert = result.experts[i];
+    if (!expert) continue;
     const rank = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '  ';
     const badge =
       expert.expertise === 'primary'

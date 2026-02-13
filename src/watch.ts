@@ -283,8 +283,8 @@ function getMessage(
     },
   };
 
-  const modeMessages = messages[mode] || messages.default;
-  return modeMessages[changeType] || `${fileName} changed`;
+  const modeMessages = messages[mode] ?? messages['default'];
+  return modeMessages?.[changeType] ?? `${fileName} changed`;
 }
 
 /**

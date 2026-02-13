@@ -113,7 +113,7 @@ export function diffSnapshots(
   }
 
   // Determine if improving based on health score change
-  const healthChange = metricChanges.healthScore?.change ?? 0;
+  const healthChange = metricChanges['healthScore']?.change ?? 0;
   const isImproving = healthChange > 0;
 
   return {

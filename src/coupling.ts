@@ -220,11 +220,15 @@ export async function analyzeCoupling(
 
   for (let i = 0; i < files.length; i++) {
     const file1 = files[i];
-    const data1 = fileChanges.get(file1)!;
+    if (!file1) continue;
+    const data1 = fileChanges.get(file1);
+    if (!data1) continue;
 
     for (let j = i + 1; j < files.length; j++) {
       const file2 = files[j];
-      const data2 = fileChanges.get(file2)!;
+      if (!file2) continue;
+      const data2 = fileChanges.get(file2);
+      if (!data2) continue;
 
       // Skip already processed
       const pairKey = [file1, file2].sort().join(':');
@@ -254,7 +258,7 @@ export async function analyzeCoupling(
         importSet.has(`${file1}:${file2}`) || importSet.has(`${file2}:${file1}`);
 
       // Check if paths are unrelated
-      const pathsUnrelated = arePathsUnrelated(file1, file2);
+      const pathsUnrelated = arePathsUnrelated(file1 as string, file2 as string);
 
       // Determine coupling type
       const type = determineCouplingType(couplingStrength, hasDirectDependency, pathsUnrelated);
@@ -262,11 +266,16 @@ export async function analyzeCoupling(
       // Filter if hiddenOnly
       if (hiddenOnly && type === 'expected') continue;
 
-      const suggestion = generateSuggestion(type, couplingStrength, file1, file2);
+      const suggestion = generateSuggestion(
+        type,
+        couplingStrength,
+        file1 as string,
+        file2 as string
+      );
 
       pairs.push({
-        file1,
-        file2,
+        file1: file1 as string,
+        file2: file2 as string,
         coChangeCount,
         totalChanges,
         couplingStrength,
@@ -341,9 +350,11 @@ function generateRecommendations(
 
   if (hotFiles.length > 0) {
     const topFile = hotFiles[0];
-    recommendations.push(
-      `"${topFile[0]}" appears in ${topFile[1]} hidden couplings - consider refactoring this file into a shared module`
-    );
+    if (topFile) {
+      recommendations.push(
+        `"${topFile[0]}" appears in ${topFile[1]} hidden couplings - consider refactoring this file into a shared module`
+      );
+    }
   }
 
   if (hiddenCount === 0 && suspiciousCount === 0) {

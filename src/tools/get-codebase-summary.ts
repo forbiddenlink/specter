@@ -69,7 +69,9 @@ export function execute(
     // Check for dead code (exported but never imported)
     if (node.exported && node.type !== 'file') {
       const hasImporter = graph.edges.some(
-        (e) => e.type === 'imports' && (e.metadata?.symbols as string[])?.includes(node.name)
+        (e) =>
+          e.type === 'imports' &&
+          (e.metadata?.['symbols'] as string[] | undefined)?.includes(node.name)
       );
       if (!hasImporter) deadCodeCount++;
     }
@@ -221,7 +223,9 @@ function analyzeBehavior(graph: KnowledgeGraph): BehavioralInsights {
   for (const node of fileNodes) {
     if (node.contributors && node.contributors.length > 0) {
       const primary = node.contributors[0];
-      contributorFileCounts.set(primary, (contributorFileCounts.get(primary) || 0) + 1);
+      if (primary) {
+        contributorFileCounts.set(primary, (contributorFileCounts.get(primary) || 0) + 1);
+      }
     }
   }
 
@@ -337,8 +341,8 @@ function generatePersonality(
   }
 
   // Core module
-  if (topDirectories.length > 0) {
-    const core = topDirectories[0];
+  const core = topDirectories[0];
+  if (core) {
     parts.push(`My heart lives in \`${core.path}/\` — that's where most of the action happens.`);
   }
 

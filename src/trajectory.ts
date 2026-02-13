@@ -53,7 +53,8 @@ function linearRegression(points: Array<{ x: number; y: number }>): {
   }
 
   if (n === 1) {
-    return { slope: 0, intercept: points[0].y, r2: 1 };
+    const firstPoint = points[0];
+    return { slope: 0, intercept: firstPoint?.y ?? 0, r2: 1 };
   }
 
   // Calculate means
@@ -209,27 +210,29 @@ function identifyRiskFactors(
     const current = snapshots[0];
     const oldest = snapshots[snapshots.length - 1];
 
-    if (current.metrics.hotspotCount > oldest.metrics.hotspotCount) {
+    if (current && oldest && current.metrics.hotspotCount > oldest.metrics.hotspotCount) {
       const increase = current.metrics.hotspotCount - oldest.metrics.hotspotCount;
       risks.push(`Complexity hotspots increased by ${increase}`);
     }
 
     // Check for code growth outpacing cleanup
-    const lineGrowth = current.metrics.totalLines - oldest.metrics.totalLines;
-    const complexityGrowth = current.metrics.avgComplexity - oldest.metrics.avgComplexity;
+    if (current && oldest) {
+      const lineGrowth = current.metrics.totalLines - oldest.metrics.totalLines;
+      const complexityGrowth = current.metrics.avgComplexity - oldest.metrics.avgComplexity;
 
-    if (lineGrowth > 0 && complexityGrowth > 0) {
-      risks.push('Code growth accompanied by complexity increase');
+      if (lineGrowth > 0 && complexityGrowth > 0) {
+        risks.push('Code growth accompanied by complexity increase');
+      }
     }
   }
 
   // Check for high complexity average
   if (snapshots.length > 0) {
     const current = snapshots[0];
-    if (current.metrics.avgComplexity > 10) {
+    if (current && current.metrics.avgComplexity > 10) {
       risks.push('Average complexity above sustainable threshold');
     }
-    if (current.metrics.hotspotCount > 5) {
+    if (current && current.metrics.hotspotCount > 5) {
       risks.push(`${current.metrics.hotspotCount} active complexity hotspots`);
     }
   }
@@ -291,7 +294,7 @@ function generateRecommendations(
   // Check metrics
   if (snapshots.length > 0) {
     const current = snapshots[0];
-    if (current.metrics.hotspotCount > 0) {
+    if (current && current.metrics.hotspotCount > 0) {
       recommendations.push(
         `Address ${current.metrics.hotspotCount} hotspot${current.metrics.hotspotCount !== 1 ? 's' : ''} with complexity > 15`
       );
@@ -340,7 +343,7 @@ export async function projectTrajectory(
   // otherwise calculate from the graph
   let currentHealth: number;
   if (snapshots.length > 0) {
-    currentHealth = snapshots[0].metrics.healthScore;
+    currentHealth = snapshots[0]?.metrics.healthScore ?? calculateHealthScore(graph);
   } else {
     currentHealth = calculateHealthScore(graph);
   }
@@ -388,8 +391,10 @@ export async function projectTrajectory(
   );
 
   // Calculate time span
-  const oldestDate = new Date(sorted[0].timestamp);
-  const newestDate = new Date(sorted[sorted.length - 1].timestamp);
+  const firstSorted = sorted[0];
+  const lastSorted = sorted[sorted.length - 1];
+  const oldestDate = new Date(firstSorted?.timestamp ?? Date.now());
+  const newestDate = new Date(lastSorted?.timestamp ?? Date.now());
   const timeSpanMs = newestDate.getTime() - oldestDate.getTime();
   const timeSpanDays = Math.max(1, Math.floor(timeSpanMs / (24 * 60 * 60 * 1000)));
 
@@ -421,7 +426,7 @@ export async function projectTrajectory(
 
   // Add current health if different from last snapshot
   const lastSnapshotHealth = healthHistory[healthHistory.length - 1];
-  if (Math.abs(currentHealth - lastSnapshotHealth) > 1) {
+  if (lastSnapshotHealth !== undefined && Math.abs(currentHealth - lastSnapshotHealth) > 1) {
     healthHistory.push(currentHealth);
   }
 

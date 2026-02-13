@@ -146,6 +146,26 @@ export async function analyzeVelocity(
   const currentSnapshot = snapshots[0];
   const previousSnapshot = snapshots[snapshots.length - 1];
 
+  // Safety check - should never happen since we checked length >= 2
+  if (!currentSnapshot || !previousSnapshot) {
+    return {
+      files: [],
+      overallVelocity: 0,
+      trend: 'stable',
+      fastestGrowing: [],
+      fastestImproving: [],
+      projectedDebtIn30Days: totalComplexity,
+      snapshotCount: snapshots.length,
+      timeSpanDays: 0,
+      currentMetrics: {
+        avgComplexity,
+        totalComplexity,
+        hotspotCount,
+        fileCount,
+      },
+    };
+  }
+
   // Calculate time span
   const currentDate = new Date(currentSnapshot.timestamp);
   const previousDate = new Date(previousSnapshot.timestamp);
@@ -377,7 +397,10 @@ export function formatVelocity(result: VelocityResult): string {
   }
 
   if (result.fastestGrowing.length > 0) {
-    lines.push(`  Focus on: ${result.fastestGrowing[0].path.split('/').pop()}`);
+    const topGrowing = result.fastestGrowing[0];
+    if (topGrowing) {
+      lines.push(`  Focus on: ${topGrowing.path.split('/').pop()}`);
+    }
   }
 
   lines.push('');

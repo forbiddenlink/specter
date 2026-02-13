@@ -303,7 +303,7 @@ export function table(rows: (string | number)[][], options: TableOptions = {}): 
   const formatRow = (row: string[], isHeader = false): string => {
     const cells = row.map((cell, i) => {
       const cellAlign = align[i] || 'left';
-      const padded = padToWidth(cell || '', colWidths[i], cellAlign);
+      const padded = padToWidth(cell || '', colWidths[i] ?? 0, cellAlign);
       return isHeader ? colors.header(padded) : padded;
     });
 

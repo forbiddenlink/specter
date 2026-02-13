@@ -116,6 +116,7 @@ async function handleCommand(
   rl: readline.Interface
 ): Promise<void> {
   const [cmd, ...args] = input.split(/\s+/);
+  if (!cmd) return;
 
   switch (cmd.toLowerCase()) {
     case 'exit':
@@ -234,10 +235,12 @@ function showAvailableCommands(): void {
   // Group by category
   const grouped: Record<string, CommandRegistry[]> = {};
   for (const cmd of COMMANDS_REGISTRY) {
-    if (!grouped[cmd.category]) {
-      grouped[cmd.category] = [];
+    const existing = grouped[cmd.category];
+    if (existing) {
+      existing.push(cmd);
+    } else {
+      grouped[cmd.category] = [cmd];
     }
-    grouped[cmd.category].push(cmd);
   }
 
   // Display by category

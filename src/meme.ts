@@ -178,10 +178,9 @@ export function generateMeme(graph: KnowledgeGraph): string {
   const matching = memeTemplates.filter((t) => t.condition(stats));
 
   // Pick a random one, or fallback
-  const template =
-    matching.length > 0
-      ? matching[Math.floor(Math.random() * matching.length)]
-      : memeTemplates[Math.floor(Math.random() * memeTemplates.length)];
+  const matchingTemplate = matching[Math.floor(Math.random() * matching.length)];
+  const fallbackTemplate = memeTemplates[Math.floor(Math.random() * memeTemplates.length)];
+  const template = matchingTemplate ?? fallbackTemplate ?? memeTemplates[0]!;
 
   const lines: string[] = [];
   lines.push('');

@@ -362,13 +362,15 @@ function generateSuggestions(
     const topResult = results[0];
 
     // Suggest exploring the file
-    if (topResult.type !== 'file') {
+    if (topResult && topResult.type !== 'file') {
       const fileName = topResult.file.split('/').pop();
-      suggestions.push(`Explore file: "${fileName}"`);
+      if (fileName) {
+        suggestions.push(`Explore file: "${fileName}"`);
+      }
     }
 
     // Suggest type-specific searches
-    if (!originalQuery.toLowerCase().includes(topResult.type)) {
+    if (topResult && !originalQuery.toLowerCase().includes(topResult.type)) {
       suggestions.push(`Search "${originalQuery} ${topResult.type}"`);
     }
   }

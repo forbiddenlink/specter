@@ -13,7 +13,7 @@ interface GlobalOptions {
 export let globalOptions: GlobalOptions = {
   quiet: false,
   noEmoji: false,
-  accessible: process.env.SPECTER_ACCESSIBLE === 'true',
+  accessible: process.env['SPECTER_ACCESSIBLE'] === 'true',
 };
 
 export function setGlobalOptions(opts: Partial<GlobalOptions>): void {
@@ -173,20 +173,33 @@ export function levenshteinDistance(str1: string, str2: string): number {
     .fill(null)
     .map(() => Array(n + 1).fill(0));
 
-  for (let i = 0; i <= m; i++) dp[i][0] = i;
-  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 0; i <= m; i++) {
+    const row = dp[i];
+    if (row) row[0] = i;
+  }
+  for (let j = 0; j <= n; j++) {
+    const row = dp[0];
+    if (row) row[j] = j;
+  }
 
   for (let i = 1; i <= m; i++) {
     for (let j = 1; j <= n; j++) {
+      const currentRow = dp[i];
+      const prevRow = dp[i - 1];
+      if (!currentRow || !prevRow) continue;
+
       if (str1[i - 1] === str2[j - 1]) {
-        dp[i][j] = dp[i - 1][j - 1];
+        currentRow[j] = prevRow[j - 1] ?? 0;
       } else {
-        dp[i][j] = 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+        const del = prevRow[j] ?? 0;
+        const ins = currentRow[j - 1] ?? 0;
+        const sub = prevRow[j - 1] ?? 0;
+        currentRow[j] = 1 + Math.min(del, ins, sub);
       }
     }
   }
 
-  return dp[m][n];
+  return dp[m]?.[n] ?? 0;
 }
 
 /**

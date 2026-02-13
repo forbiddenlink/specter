@@ -132,6 +132,7 @@ export function generateTFIDFVector(
 
   for (let i = 0; i < vocabulary.length; i++) {
     const term = vocabulary[i];
+    if (term === undefined) continue;
     const tfValue = tf.get(term) || 0;
     const idfValue = idf.get(term) || 0;
     vector[i] = tfValue * idfValue;
@@ -141,7 +142,10 @@ export function generateTFIDFVector(
   const magnitude = Math.sqrt(vector.reduce((sum, val) => sum + val * val, 0));
   if (magnitude > 0) {
     for (let i = 0; i < vector.length; i++) {
-      vector[i] /= magnitude;
+      const val = vector[i];
+      if (val !== undefined) {
+        vector[i] = val / magnitude;
+      }
     }
   }
 
@@ -161,9 +165,11 @@ export function cosineSimilarity(a: number[], b: number[]): number {
   let normB = 0;
 
   for (let i = 0; i < a.length; i++) {
-    dot += a[i] * b[i];
-    normA += a[i] * a[i];
-    normB += b[i] * b[i];
+    const aVal = a[i] ?? 0;
+    const bVal = b[i] ?? 0;
+    dot += aVal * bVal;
+    normA += aVal * aVal;
+    normB += bVal * bVal;
   }
 
   const magnitude = Math.sqrt(normA) * Math.sqrt(normB);
@@ -282,7 +288,10 @@ export async function buildEmbeddingIndex(graph: KnowledgeGraph): Promise<Embedd
 
   // Generate embeddings for each chunk
   for (let i = 0; i < chunks.length; i++) {
-    chunks[i].embedding = generateTFIDFVector(chunks[i].content, vocabulary, idf);
+    const chunk = chunks[i];
+    if (chunk) {
+      chunk.embedding = generateTFIDFVector(chunk.content, vocabulary, idf);
+    }
   }
 
   return {
@@ -341,8 +350,9 @@ function compressEmbedding(embedding: number[]): Array<[number, number]> | undef
 
   const sparse: Array<[number, number]> = [];
   for (let i = 0; i < embedding.length; i++) {
-    if (embedding[i] !== 0) {
-      sparse.push([i, embedding[i]]);
+    const val = embedding[i];
+    if (val !== undefined && val !== 0) {
+      sparse.push([i, val]);
     }
   }
 
@@ -450,7 +460,11 @@ export function searchEmbeddingIndex(
   // Convert IDF array back to map for vector generation
   const idfMap = new Map<string, number>();
   for (let i = 0; i < index.vocabulary.length; i++) {
-    idfMap.set(index.vocabulary[i], index.idf[i]);
+    const term = index.vocabulary[i];
+    const idfVal = index.idf[i];
+    if (term !== undefined && idfVal !== undefined) {
+      idfMap.set(term, idfVal);
+    }
   }
 
   // Generate query embedding

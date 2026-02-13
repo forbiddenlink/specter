@@ -54,11 +54,11 @@ async function getContributorStats(rootDir: string): Promise<Map<string, Contrib
       if (line.includes('|')) {
         const parts = line.split('|');
         if (parts.length >= 3) {
-          currentAuthor = parts[0];
-          const [day, hour] = (parts[1] || '1 12').split(' ').map(Number);
-          currentDay = day;
-          currentHour = hour;
-          currentMessage = parts[2] || '';
+          currentAuthor = parts[0] ?? '';
+          const [day, hour] = (parts[1] ?? '1 12').split(' ').map(Number);
+          currentDay = day ?? 1;
+          currentHour = hour ?? 12;
+          currentMessage = parts[2] ?? '';
 
           if (!stats.has(currentAuthor)) {
             stats.set(currentAuthor, {
@@ -214,13 +214,15 @@ function generateAwards(stats: Map<string, ContributorStats>): Award[] {
   }
 
   // Best ratio (removed > added)
-  const bestRatio = contributors
-    .filter((c) => c.linesAdded > 100)
-    .reduce((a, b) => {
-      const ratioA = a.linesRemoved / (a.linesAdded || 1);
-      const ratioB = b.linesRemoved / (b.linesAdded || 1);
-      return ratioA > ratioB ? a : b;
-    }, contributors[0]);
+  const filteredForRatio = contributors.filter((c) => c.linesAdded > 100);
+  const bestRatio =
+    filteredForRatio.length > 0
+      ? filteredForRatio.reduce((a, b) => {
+          const ratioA = a.linesRemoved / (a.linesAdded || 1);
+          const ratioB = b.linesRemoved / (b.linesAdded || 1);
+          return ratioA > ratioB ? a : b;
+        })
+      : undefined;
   if (bestRatio && bestRatio.linesRemoved > bestRatio.linesAdded) {
     awards.push({
       emoji: '✨',

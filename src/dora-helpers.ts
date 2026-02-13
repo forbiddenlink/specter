@@ -136,10 +136,12 @@ export function calculateMTTR(commits: Array<{ date: string; message: string }>)
   // Find revert-fix patterns
   for (let i = 0; i < sortedCommits.length; i++) {
     const commit = sortedCommits[i];
+    if (!commit) continue;
     if (commit.message.toLowerCase().includes('revert')) {
       // Look for fix commit within the next 50 commits
       for (let j = i + 1; j < Math.min(i + 50, sortedCommits.length); j++) {
         const nextCommit = sortedCommits[j];
+        if (!nextCommit) continue;
         const nextMsg = nextCommit.message.toLowerCase();
 
         if (

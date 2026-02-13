@@ -68,9 +68,11 @@ function getFileHistory(filePath: string, rootDir: string): FileHistory | null {
     let linesRemoved = 0;
     for (const line of numstatOutput.split('\n')) {
       const parts = line.split('\t');
-      if (parts.length >= 2) {
-        const add = parseInt(parts[0], 10);
-        const del = parseInt(parts[1], 10);
+      const addStr = parts[0];
+      const delStr = parts[1];
+      if (addStr !== undefined && delStr !== undefined) {
+        const add = parseInt(addStr, 10);
+        const del = parseInt(delStr, 10);
         if (!Number.isNaN(add)) linesAdded += add;
         if (!Number.isNaN(del)) linesRemoved += del;
       }

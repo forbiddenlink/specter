@@ -146,7 +146,12 @@ function seededRandom(seed: number): () => number {
  * Pick random item from array using seeded random
  */
 function pick<T>(arr: T[], random: () => number): T {
-  return arr[Math.floor(random() * arr.length)];
+  const index = Math.floor(random() * arr.length);
+  const item = arr[index];
+  if (item === undefined) {
+    throw new Error('Array is empty');
+  }
+  return item;
 }
 
 export interface HoroscopeReading {
@@ -178,14 +183,17 @@ export function generateHoroscope(graph: KnowledgeGraph): HoroscopeReading {
   // Determine zodiac based on codebase characteristics
   // Use creation date hints or fall back to name-based selection
   const zodiacIndex = simpleHash(codebaseName) % zodiacSigns.length;
-  const zodiac = zodiacSigns[zodiacIndex];
+  const zodiac = zodiacSigns[zodiacIndex] ?? zodiacSigns[0]!;
 
   // Find a "lucky file" - prefer actual files from the codebase
   const fileNodes = Object.values(graph.nodes).filter((n) => n.type === 'file');
   let luckyFile = 'src/index.ts';
   if (fileNodes.length > 0) {
     const luckyIndex = Math.floor(random() * fileNodes.length);
-    luckyFile = fileNodes[luckyIndex].filePath;
+    const luckyNode = fileNodes[luckyIndex];
+    if (luckyNode) {
+      luckyFile = luckyNode.filePath;
+    }
   }
 
   return {

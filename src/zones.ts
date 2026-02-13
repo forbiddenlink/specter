@@ -129,8 +129,9 @@ function getRecommendation(score: number, factors: string[]): string {
     const riskFactors = factors.filter(
       (f) => f.includes('complexity') || f.includes('depend') || f.includes('entry')
     );
-    if (riskFactors.length > 0) {
-      return `High risk (${riskFactors[0].toLowerCase()}). Pair with an expert.`;
+    const firstRiskFactor = riskFactors[0];
+    if (firstRiskFactor) {
+      return `High risk (${firstRiskFactor.toLowerCase()}). Pair with an expert.`;
     }
     return 'High risk area. Seek review from experienced team members.';
   }

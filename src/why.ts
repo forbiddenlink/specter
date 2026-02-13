@@ -209,7 +209,7 @@ async function extractComments(filePath: string): Promise<string[]> {
     // Look for TODO/FIXME/NOTE comments that explain intent
     for (const line of lines) {
       const todoMatch = line.match(/\/\/\s*(TODO|FIXME|NOTE|HACK|XXX):\s*(.+)/i);
-      if (todoMatch) {
+      if (todoMatch?.[1] && todoMatch[2]) {
         comments.push(`${todoMatch[1]}: ${todoMatch[2].trim()}`);
       }
     }
@@ -246,7 +246,7 @@ async function getGitHistory(git: SimpleGit, relativePath: string): Promise<WhyR
 
       if (firstCommit.trim()) {
         const parts = firstCommit.trim().split('|');
-        if (parts.length >= 3) {
+        if (parts.length >= 3 && parts[0] && parts[1]) {
           history.created = {
             date: parts[0],
             author: parts[1],
@@ -278,15 +278,17 @@ async function getGitHistory(git: SimpleGit, relativePath: string): Promise<WhyR
       for (const line of commitLines) {
         if (line.includes('|') && line.split('|').length >= 4) {
           const parts = line.split('|');
-          currentCommit = {
-            hash: parts[0],
-            date: parts[1],
-            author: parts[2],
-            message: parts.slice(3).join('|'),
-          };
+          if (parts[0] && parts[1] && parts[2]) {
+            currentCommit = {
+              hash: parts[0],
+              date: parts[1],
+              author: parts[2],
+              message: parts.slice(3).join('|'),
+            };
+          }
         } else if (line.match(/^\d+\s+\d+/) && currentCommit) {
           const match = line.match(/^(\d+)\s+(\d+)/);
-          if (match) {
+          if (match?.[1] && match[2]) {
             const added = parseInt(match[1], 10) || 0;
             const removed = parseInt(match[2], 10) || 0;
             const totalChanged = added + removed;
@@ -583,13 +585,14 @@ function generateSummary(result: WhyResult): string {
   const parts: string[] = [];
 
   // Start with patterns
-  if (result.patterns.length > 0) {
-    parts.push(result.patterns[0]);
+  const firstPattern = result.patterns[0];
+  if (firstPattern) {
+    parts.push(firstPattern);
   }
 
   // Add purpose from comments
-  if (result.comments.length > 0) {
-    const firstComment = result.comments[0];
+  const firstComment = result.comments[0];
+  if (firstComment) {
     if (firstComment.length > 100) {
       parts.push(`${firstComment.substring(0, 100)}...`);
     } else {

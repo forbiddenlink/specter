@@ -98,16 +98,20 @@ export async function generateKnowledgeMap(
     for (const line of rawLog.split('\n')) {
       if (line.includes('|')) {
         const parts = line.split('|');
-        if (parts.length >= 3) {
-          currentAuthor = parts[1];
-          currentDate = new Date(parts[2]);
+        const author = parts[1];
+        const dateStr = parts[2];
+        if (parts.length >= 3 && author && dateStr) {
+          currentAuthor = author;
+          currentDate = new Date(dateStr);
         }
       } else if (line.match(/^\d+\s+\d+\s+.+/)) {
         const match = line.match(/^(\d+)\s+(\d+)\s+(.+)/);
-        if (match && currentAuthor) {
-          const added = parseInt(match[1], 10) || 0;
-          const removed = parseInt(match[2], 10) || 0;
-          const file = match[3];
+        const addedStr = match?.[1];
+        const removedStr = match?.[2];
+        const file = match?.[3];
+        if (match && currentAuthor && addedStr && removedStr && file) {
+          const added = parseInt(addedStr, 10) || 0;
+          const removed = parseInt(removedStr, 10) || 0;
 
           // Find which area this file belongs to
           const area = getAreaForFile(file, areaFiles);
@@ -315,9 +319,9 @@ function groupFilesByArea(files: string[]): Map<string, string[]> {
     if (parts.length === 1) {
       area = 'root';
     } else {
-      area = parts[0];
+      area = parts[0] ?? 'root';
       // For src/, look one level deeper
-      if (area === 'src' && parts.length > 2) {
+      if (area === 'src' && parts.length > 2 && parts[1]) {
         area = `src/${parts[1]}`;
       }
     }
@@ -338,8 +342,10 @@ function getAreaForFile(file: string, areaFiles: Map<string, string[]>): string 
   const parts = file.split('/');
 
   // Check src/ subdirectories first
-  if (parts[0] === 'src' && parts.length > 2) {
-    const subArea = `src/${parts[1]}`;
+  const firstPart = parts[0];
+  const secondPart = parts[1];
+  if (firstPart === 'src' && parts.length > 2 && secondPart) {
+    const subArea = `src/${secondPart}`;
     if (areaFiles.has(subArea)) {
       return subArea;
     }
@@ -350,8 +356,8 @@ function getAreaForFile(file: string, areaFiles: Map<string, string[]>): string 
     if (areaFiles.has('root')) {
       return 'root';
     }
-  } else if (areaFiles.has(parts[0])) {
-    return parts[0];
+  } else if (firstPart && areaFiles.has(firstPart)) {
+    return firstPart;
   }
 
   return null;
@@ -375,8 +381,8 @@ function generateSuggestions(
 
   // Knowledge concentration suggestions
   const topContributor = contributors[0];
-  if (topContributor && contributors.length > 1) {
-    const secondContributor = contributors[1];
+  const secondContributor = contributors[1];
+  if (topContributor && contributors.length > 1 && secondContributor) {
     const ratio = topContributor.totalContributions / (secondContributor.totalContributions || 1);
     if (ratio > 3) {
       suggestions.push(

@@ -132,7 +132,13 @@ function parseAnsiText(text: string, theme: 'dark' | 'light'): ParsedLine[] {
       }
 
       // Parse the escape code
-      const codes = match[1].split(';').map(Number);
+      const matchGroup = match[1];
+      if (!matchGroup) {
+        lastIndex = ansiRegex.lastIndex;
+        match = ansiRegex.exec(rawLine);
+        continue;
+      }
+      const codes = matchGroup.split(';').map(Number);
       for (const code of codes) {
         if (code === 0) {
           // Reset
@@ -152,11 +158,11 @@ function parseAnsiText(text: string, theme: 'dark' | 'light'): ParsedLine[] {
         } else if (code === 23) {
           italic = false;
         } else if (colorMap[code.toString()]) {
-          currentColor = colorMap[code.toString()];
+          currentColor = colorMap[code.toString()] ?? defaultColor;
         } else if (code >= 30 && code <= 37) {
-          currentColor = colorMap[code.toString()] || defaultColor;
+          currentColor = colorMap[code.toString()] ?? defaultColor;
         } else if (code >= 90 && code <= 97) {
-          currentColor = colorMap[code.toString()] || defaultColor;
+          currentColor = colorMap[code.toString()] ?? defaultColor;
         }
       }
 
@@ -599,7 +605,8 @@ export function generateShareUrls(
     default: `\u{1F47B} Just discovered Specter - gives your codebase a voice!\n\n11 personality modes, DORA metrics, roasts, and more.\n\nCheck it out: github.com/specter-cli/specter`,
   };
 
-  const text = shareTexts[commandType] || shareTexts.default;
+  const defaultText = `\u{1F47B} Just discovered Specter - gives your codebase a voice!\n\n11 personality modes, DORA metrics, roasts, and more.\n\nCheck it out: github.com/specter-cli/specter`;
+  const text = shareTexts[commandType] ?? defaultText;
   const encodedText = encodeURIComponent(text);
 
   return {

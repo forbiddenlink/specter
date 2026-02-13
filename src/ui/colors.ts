@@ -15,7 +15,7 @@ type GradientFn = ReturnType<typeof gradient>;
  * Check if accessible mode is enabled
  */
 export const isAccessibleMode =
-  process.env.SPECTER_ACCESSIBLE === 'true' || process.argv.includes('--accessible');
+  process.env['SPECTER_ACCESSIBLE'] === 'true' || process.argv.includes('--accessible');
 
 /**
  * Prefix symbols for accessible mode

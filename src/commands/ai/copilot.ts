@@ -176,9 +176,7 @@ Use the output to guide your refactoring, testing, and documentation efforts.
       );
       console.log();
 
-      for (let i = 0; i < filtered.length; i++) {
-        const s = filtered[i];
-
+      for (const s of filtered) {
         // Priority badge
         const priorityColors = {
           critical: chalk.red.bold,

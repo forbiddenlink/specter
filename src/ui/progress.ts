@@ -140,7 +140,7 @@ export function complexityMeter(
  */
 export function sparkline(values: number[]): string {
   if (values.length === 0) return '';
-  if (values.length === 1) return SPARKLINE_CHARS[4]; // middle height
+  if (values.length === 1) return SPARKLINE_CHARS[4] ?? '\u2585'; // middle height
 
   const min = Math.min(...values);
   const max = Math.max(...values);
@@ -168,6 +168,7 @@ export function coloredSparkline(values: number[], higherIsBetter: boolean = tru
   const line = sparkline(values);
   const first = values[0];
   const last = values[values.length - 1];
+  if (first === undefined || last === undefined) return line;
   const trend = last - first;
 
   const isPositiveTrend = higherIsBetter ? trend > 0 : trend < 0;
@@ -238,7 +239,7 @@ export function stackedBar(
   segments.forEach((segment, index) => {
     const ratio = segment.value / total;
     const segmentWidth = Math.round(ratio * width);
-    const color = segment.color || defaultColors[index % defaultColors.length];
+    const color = segment.color ?? defaultColors[index % defaultColors.length] ?? chalk.white;
 
     result += color('\u2588'.repeat(segmentWidth));
     usedWidth += segmentWidth;

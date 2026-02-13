@@ -67,6 +67,7 @@ function buildDirTree(graph: KnowledgeGraph): DirStats {
       // Navigate/create path
       for (let i = 0; i < parts.length - 1; i++) {
         const part = parts[i];
+        if (!part) continue;
         if (!current.children.has(part)) {
           current.children.set(part, {
             path: parts.slice(0, i + 1).join('/'),
@@ -77,7 +78,8 @@ function buildDirTree(graph: KnowledgeGraph): DirStats {
             children: new Map(),
           });
         }
-        current = current.children.get(part)!;
+        const child = current.children.get(part);
+        if (child) current = child;
       }
 
       // Update stats
@@ -92,8 +94,10 @@ function buildDirTree(graph: KnowledgeGraph): DirStats {
       let current = root;
       for (let i = 0; i < parts.length - 1; i++) {
         const part = parts[i];
-        if (current.children.has(part)) {
-          current = current.children.get(part)!;
+        if (!part) continue;
+        const child = current.children.get(part);
+        if (child) {
+          current = child;
         }
       }
       current.symbols++;

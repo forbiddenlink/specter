@@ -56,6 +56,8 @@ export async function runInteractiveFix(
 
   for (let i = 0; i < ordered.length; i++) {
     const suggestion = ordered[i];
+    if (!suggestion) continue;
+
     const isLast = i === ordered.length - 1;
 
     console.log(

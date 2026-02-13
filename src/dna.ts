@@ -94,12 +94,16 @@ function generateStrand(hash: string, _width: number = 40): string[] {
 
     // Place base pairs
     if (pos1 >= 0 && pos1 < helixWidth - 1) {
-      lineArr[pos1] = pair[0][0];
-      lineArr[pos1 + 1] = pair[0][1];
+      const char1 = pair[0]?.[0];
+      const char2 = pair[0]?.[1];
+      if (char1) lineArr[pos1] = char1;
+      if (char2) lineArr[pos1 + 1] = char2;
     }
     if (pos2 >= 0 && pos2 < helixWidth - 1) {
-      lineArr[pos2] = pair[1][0];
-      lineArr[pos2 + 1] = pair[1][1];
+      const char3 = pair[1]?.[0];
+      const char4 = pair[1]?.[1];
+      if (char3) lineArr[pos2] = char3;
+      if (char4) lineArr[pos2 + 1] = char4;
     }
 
     // Add connecting bonds between pairs
@@ -136,7 +140,7 @@ function analyzeTraits(graph: KnowledgeGraph): DNAProfile['traits'] {
 
   // Size gene
   const sizeCategory = getSizeCategory(graph.metadata.fileCount);
-  const sizeGenes = geneExpressions[sizeCategory];
+  const sizeGenes = geneExpressions[sizeCategory] ?? ['●', '◐', '◑'];
   traits.push({
     name: 'Size',
     value: `${graph.metadata.fileCount} files (${sizeCategory})`,
