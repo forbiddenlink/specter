@@ -40,17 +40,17 @@ export function register(program: Command): void {
         console.log();
       }
 
-      const spinner = createSpinner('Initializing...').start();
+      const spinner = options.json ? null : createSpinner('Initializing...').start();
 
       try {
         // Check if graph already exists and is fresh
         if (!options.force && (await graphExists(rootDir))) {
           const isStale = await isGraphStale(rootDir);
           if (!isStale) {
-            spinner.info('I already know this codebase. Use --force to rescan.');
+            spinner?.info('I already know this codebase. Use --force to rescan.');
             return;
           }
-          spinner.text = 'My memory is stale, relearning...';
+          if (spinner) spinner.text = 'My memory is stale, relearning...';
         }
 
         const result = await buildKnowledgeGraph({
@@ -66,19 +66,23 @@ export function register(program: Command): void {
               const bar = chalk.green('█'.repeat(filled)) + chalk.dim('░'.repeat(empty));
               const percent = Math.round(progress * 100);
 
-              if (options.verbose && currentFile) {
-                spinner.text = `Learning... ${bar} ${percent}% - ${currentFile}`;
-              } else {
-                spinner.text = `Learning about myself... ${bar} ${percent}% (${completed}/${total})`;
+              if (spinner) {
+                if (options.verbose && currentFile) {
+                  spinner.text = `Learning... ${bar} ${percent}% - ${currentFile}`;
+                } else {
+                  spinner.text = `Learning about myself... ${bar} ${percent}% (${completed}/${total})`;
+                }
               }
-            } else if (phase === 'Building import graph') {
-              spinner.text = '🔗 Mapping my connections...';
-            } else if (phase === 'Analyzing git history') {
-              spinner.text = '📜 Reading my history...';
-            } else if (total > 1) {
-              spinner.text = `${phase}... ${completed}/${total}`;
-            } else {
-              spinner.text = `${phase}...`;
+            } else if (spinner) {
+              if (phase === 'Building import graph') {
+                spinner.text = '🔗 Mapping my connections...';
+              } else if (phase === 'Analyzing git history') {
+                spinner.text = '📜 Reading my history...';
+              } else if (total > 1) {
+                spinner.text = `${phase}... ${completed}/${total}`;
+              } else {
+                spinner.text = `${phase}...`;
+              }
             }
           },
         });
@@ -86,7 +90,7 @@ export function register(program: Command): void {
         // Save the graph
         await saveGraph(result.graph, rootDir);
 
-        spinner.succeed(chalk.bold('I am awake!'));
+        spinner?.succeed(chalk.bold('I am awake!'));
 
         // Print summary with personality
         const stats = getGraphStats(result.graph);
@@ -182,7 +186,7 @@ export function register(program: Command): void {
         console.log(chalk.dim('  Ask me: @specter Tell me about yourself'));
         console.log();
       } catch (error) {
-        spinner.fail('Failed to awaken');
+        spinner?.fail('Failed to awaken');
         console.error(chalk.red(error instanceof Error ? error.message : String(error)));
         process.exit(1);
       }
