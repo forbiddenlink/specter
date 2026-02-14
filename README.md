@@ -128,7 +128,6 @@ See [Copilot CLI Integration](docs/COPILOT_CLI_INTEGRATION.md) | [MCP Integratio
 | `why <file>` | Explain why code exists |
 | `explain-hotspot` | Deep dive on hotspots |
 | `suggest-refactor` | AI refactoring suggestions |
-| `find-patterns` | Detect architectural patterns |
 
 ### Team & Workflow
 
