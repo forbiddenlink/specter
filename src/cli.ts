@@ -15,16 +15,6 @@ import gradient from 'gradient-string';
 // Import global CLI utilities
 import { setGlobalOptions, suggestCommand } from './cli-utils.js';
 
-// Display share links after PNG export
-function _showShareLinks(commandType: string, repoUrl?: string | null): void {
-  const { generateShareUrls } = require('./export-png.js');
-  const shareUrls = generateShareUrls(commandType, repoUrl);
-  console.log();
-  console.log(chalk.bold.magenta('  📤 Share your results:'));
-  console.log(chalk.cyan(`     Twitter: `) + chalk.dim(shareUrls.twitter));
-  console.log(chalk.cyan(`     LinkedIn: `) + chalk.dim(shareUrls.linkedin));
-}
-
 // Import modular command registration
 import { registerAllCommands } from './commands/index.js';
 
