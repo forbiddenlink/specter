@@ -3,6 +3,8 @@
  * Extracts metric calculation and display logic
  */
 
+import chalk from 'chalk';
+
 export interface VitalsMetrics {
   healthScore: number;
   avgComplexity: number;
@@ -21,7 +23,6 @@ export function getHealthStatus(healthScore: number): {
   status: string;
   indicator: string;
 } {
-  const chalk = require('chalk');
   const color = healthScore >= 80 ? chalk.green : healthScore >= 60 ? chalk.yellow : chalk.red;
   const status = healthScore >= 80 ? 'STABLE' : healthScore >= 60 ? 'ELEVATED' : 'CRITICAL';
   const indicator = `PULSE: ${status}`;
@@ -37,7 +38,6 @@ export function getComplexityStatus(avgComplexity: number): {
   status: string;
   statusText: string;
 } {
-  const chalk = require('chalk');
   const color = avgComplexity <= 5 ? chalk.green : avgComplexity <= 10 ? chalk.yellow : chalk.red;
   const status = `${avgComplexity.toFixed(0)}`;
   const statusText =
@@ -54,7 +54,6 @@ export function getBusFactorStatus(busFactorValue: number): {
   status: string;
   statusText: string;
 } {
-  const chalk = require('chalk');
   const color = busFactorValue >= 3 ? chalk.green : busFactorValue >= 2 ? chalk.yellow : chalk.red;
   const status = busFactorValue.toFixed(1);
   const statusText =
@@ -72,7 +71,6 @@ export function getDeadExportsStatus(deadExports: number): {
   statusText: string;
   barValue: number;
 } {
-  const chalk = require('chalk');
   const color = deadExports === 0 ? chalk.green : deadExports <= 5 ? chalk.yellow : chalk.red;
   const status = String(deadExports);
   const statusText = deadExports === 0 ? 'clean' : deadExports <= 5 ? '👻 haunted' : 'infested';
@@ -89,7 +87,6 @@ export function getCoverageStatus(coverageEstimate: number): {
   percent: string;
   statusText: string;
 } {
-  const chalk = require('chalk');
   const color =
     coverageEstimate >= 80 ? chalk.green : coverageEstimate >= 50 ? chalk.yellow : chalk.red;
   const percent = Math.round(coverageEstimate).toString();
@@ -130,7 +127,6 @@ export function generateDiagnosis(healthScore: number): {
  * Format health indicator (trend)
  */
 export function formatHealthIndicator(trend?: number): string {
-  const chalk = require('chalk');
   if (trend === undefined || trend === 0) {
     return chalk.dim('--');
   }
