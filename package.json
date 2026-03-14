@@ -49,6 +49,7 @@
     "node": ">=20.0.0"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.78.0",
     "@fastify/cors": "^11.0.0",
     "@fastify/rate-limit": "^10.3.0",
     "@fastify/static": "^9.0.0",
@@ -59,6 +60,7 @@
     "cfonts": "^3.3.1",
     "chalk": "^5.3.0",
     "chalk-animation": "^2.0.3",
+    "chart.js": "^4.5.1",
     "commander": "^14.0.0",
     "fast-glob": "^3.3.3",
     "fastify": "^5.7.0",
