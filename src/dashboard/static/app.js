@@ -7,6 +7,33 @@
 // Global state
 let cy = null;
 let currentLayout = 'cose';
+const charts = {
+  distribution: null,
+  healthTimeline: null,
+  language: null,
+  hotspotsProgress: null,
+};
+
+// Dark theme colors for Chart.js
+const chartColors = {
+  low: '#22c55e', // green
+  medium: '#f59e0b', // yellow/amber
+  high: '#f97316', // orange
+  critical: '#ef4444', // red
+  accent: '#8b5cf6', // purple
+  secondary: '#ec4899', // pink
+  typescript: '#3178c6', // TypeScript blue
+  javascript: '#f7df1e', // JavaScript yellow
+  textPrimary: '#f0f0f0',
+  textSecondary: '#a0a0b0',
+  textMuted: '#606070',
+  gridColor: '#2a2a40',
+  bgCard: '#1e1e32',
+};
+
+// Chart.js default configuration for dark theme
+Chart.defaults.color = chartColors.textSecondary;
+Chart.defaults.borderColor = chartColors.gridColor;
 
 // Color by complexity
 function getComplexityColor(complexity) {
@@ -655,10 +682,396 @@ function setupToggleLayout() {
   });
 }
 
+// Load complexity distribution chart
+async function loadDistributionChart() {
+  try {
+    const response = await fetch('/api/distribution');
+    if (!response.ok) return;
+    const data = await response.json();
+
+    const ctx = document.getElementById('distribution-chart').getContext('2d');
+
+    // Destroy existing chart if present
+    if (charts.distribution) {
+      charts.distribution.destroy();
+    }
+
+    charts.distribution = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ['Low', 'Medium', 'High', 'Critical'],
+        datasets: [
+          {
+            label: 'Files',
+            data: [data.low || 0, data.medium || 0, data.high || 0, data.critical || 0],
+            backgroundColor: [
+              chartColors.low,
+              chartColors.medium,
+              chartColors.high,
+              chartColors.critical,
+            ],
+            borderColor: [
+              chartColors.low,
+              chartColors.medium,
+              chartColors.high,
+              chartColors.critical,
+            ],
+            borderWidth: 1,
+            borderRadius: 4,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false,
+          },
+          tooltip: {
+            backgroundColor: chartColors.bgCard,
+            titleColor: chartColors.textPrimary,
+            bodyColor: chartColors.textSecondary,
+            borderColor: chartColors.gridColor,
+            borderWidth: 1,
+          },
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              stepSize: 1,
+              color: chartColors.textMuted,
+            },
+            grid: {
+              color: chartColors.gridColor,
+            },
+          },
+          x: {
+            ticks: {
+              color: chartColors.textMuted,
+            },
+            grid: {
+              display: false,
+            },
+          },
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Failed to load distribution chart:', error);
+  }
+}
+
+// Load health timeline chart from history
+async function loadHealthTimelineChart() {
+  try {
+    const response = await fetch('/api/history');
+    if (!response.ok) return;
+    const data = await response.json();
+
+    if (!data.snapshots || data.snapshots.length < 2) {
+      return; // Not enough data for timeline
+    }
+
+    const ctx = document.getElementById('trends-chart').getContext('2d');
+
+    // Destroy existing sparkline if present (we're replacing it with Chart.js)
+    if (charts.healthTimeline) {
+      charts.healthTimeline.destroy();
+    }
+
+    const labels = data.snapshots.map((s, _i) => {
+      const date = new Date(s.timestamp);
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    });
+
+    const scores = data.snapshots.map((s) => s.metrics?.healthScore || s.healthScore || 0);
+
+    charts.healthTimeline = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Health Score',
+            data: scores,
+            borderColor: chartColors.accent,
+            backgroundColor: 'rgba(139, 92, 246, 0.1)',
+            fill: true,
+            tension: 0.3,
+            pointBackgroundColor: chartColors.accent,
+            pointBorderColor: chartColors.accent,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false,
+          },
+          tooltip: {
+            backgroundColor: chartColors.bgCard,
+            titleColor: chartColors.textPrimary,
+            bodyColor: chartColors.textSecondary,
+            borderColor: chartColors.gridColor,
+            borderWidth: 1,
+            callbacks: {
+              label: (context) => `Score: ${context.parsed.y}`,
+            },
+          },
+        },
+        scales: {
+          y: {
+            min: 0,
+            max: 100,
+            ticks: {
+              color: chartColors.textMuted,
+              stepSize: 25,
+            },
+            grid: {
+              color: chartColors.gridColor,
+            },
+          },
+          x: {
+            ticks: {
+              color: chartColors.textMuted,
+              maxRotation: 0,
+              autoSkip: true,
+              maxTicksLimit: 5,
+            },
+            grid: {
+              display: false,
+            },
+          },
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Failed to load health timeline chart:', error);
+  }
+}
+
+// Load language breakdown pie chart
+async function loadLanguageChart() {
+  try {
+    const response = await fetch('/api/graph');
+    if (!response.ok) return;
+    const data = await response.json();
+
+    // Count files by extension
+    const counts = { typescript: 0, javascript: 0, other: 0 };
+
+    data.nodes.forEach((node) => {
+      if (node.data?.type === 'file' && node.data?.filePath) {
+        const path = node.data.filePath.toLowerCase();
+        if (path.endsWith('.ts') || path.endsWith('.tsx')) {
+          counts.typescript++;
+        } else if (path.endsWith('.js') || path.endsWith('.jsx')) {
+          counts.javascript++;
+        } else {
+          counts.other++;
+        }
+      }
+    });
+
+    // Only show chart if we have data
+    if (counts.typescript === 0 && counts.javascript === 0 && counts.other === 0) {
+      return;
+    }
+
+    const ctx = document.getElementById('language-chart').getContext('2d');
+
+    if (charts.language) {
+      charts.language.destroy();
+    }
+
+    const chartData = [];
+    const chartLabels = [];
+    const chartBgColors = [];
+    const chartBorderColors = [];
+
+    if (counts.typescript > 0) {
+      chartData.push(counts.typescript);
+      chartLabels.push('TypeScript');
+      chartBgColors.push(chartColors.typescript);
+      chartBorderColors.push(chartColors.typescript);
+    }
+    if (counts.javascript > 0) {
+      chartData.push(counts.javascript);
+      chartLabels.push('JavaScript');
+      chartBgColors.push(chartColors.javascript);
+      chartBorderColors.push(chartColors.javascript);
+    }
+    if (counts.other > 0) {
+      chartData.push(counts.other);
+      chartLabels.push('Other');
+      chartBgColors.push(chartColors.textMuted);
+      chartBorderColors.push(chartColors.textMuted);
+    }
+
+    charts.language = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: chartLabels,
+        datasets: [
+          {
+            data: chartData,
+            backgroundColor: chartBgColors,
+            borderColor: chartBorderColors,
+            borderWidth: 2,
+            hoverOffset: 4,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              color: chartColors.textSecondary,
+              padding: 10,
+              usePointStyle: true,
+              pointStyle: 'circle',
+            },
+          },
+          tooltip: {
+            backgroundColor: chartColors.bgCard,
+            titleColor: chartColors.textPrimary,
+            bodyColor: chartColors.textSecondary,
+            borderColor: chartColors.gridColor,
+            borderWidth: 1,
+            callbacks: {
+              label: (context) => {
+                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                const percentage = Math.round((context.parsed / total) * 100);
+                return `${context.label}: ${context.parsed} (${percentage}%)`;
+              },
+            },
+          },
+        },
+        cutout: '60%',
+      },
+    });
+  } catch (error) {
+    console.error('Failed to load language chart:', error);
+  }
+}
+
+// Load hotspots progress chart from history
+async function loadHotspotsProgressChart() {
+  try {
+    const response = await fetch('/api/history');
+    if (!response.ok) return;
+    const data = await response.json();
+
+    if (!data.snapshots || data.snapshots.length < 2) {
+      return; // Not enough data for timeline
+    }
+
+    const ctx = document.getElementById('hotspots-progress-chart').getContext('2d');
+
+    if (charts.hotspotsProgress) {
+      charts.hotspotsProgress.destroy();
+    }
+
+    const labels = data.snapshots.map((s) => {
+      const date = new Date(s.timestamp);
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    });
+
+    const hotspotCounts = data.snapshots.map((s) => {
+      // Try different possible field names for hotspot count
+      return s.metrics?.hotspotCount || s.hotspotCount || s.metrics?.criticalCount || 0;
+    });
+
+    charts.hotspotsProgress = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Hotspots',
+            data: hotspotCounts,
+            borderColor: chartColors.critical,
+            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+            fill: true,
+            tension: 0.3,
+            pointBackgroundColor: chartColors.critical,
+            pointBorderColor: chartColors.critical,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false,
+          },
+          tooltip: {
+            backgroundColor: chartColors.bgCard,
+            titleColor: chartColors.textPrimary,
+            bodyColor: chartColors.textSecondary,
+            borderColor: chartColors.gridColor,
+            borderWidth: 1,
+            callbacks: {
+              label: (context) => `Hotspots: ${context.parsed.y}`,
+            },
+          },
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              color: chartColors.textMuted,
+              stepSize: 1,
+            },
+            grid: {
+              color: chartColors.gridColor,
+            },
+          },
+          x: {
+            ticks: {
+              color: chartColors.textMuted,
+              maxRotation: 0,
+              autoSkip: true,
+              maxTicksLimit: 5,
+            },
+            grid: {
+              display: false,
+            },
+          },
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Failed to load hotspots progress chart:', error);
+  }
+}
+
 // Initialize everything
 async function init() {
   try {
-    await Promise.all([initGraph(), loadSummary(), loadHealth(), loadHotspots(), loadTrends()]);
+    await Promise.all([
+      initGraph(),
+      loadSummary(),
+      loadHealth(),
+      loadHotspots(),
+      loadTrends(),
+      loadDistributionChart(),
+      loadHealthTimelineChart(),
+      loadLanguageChart(),
+      loadHotspotsProgressChart(),
+    ]);
 
     setupSearch();
     setupFilter();

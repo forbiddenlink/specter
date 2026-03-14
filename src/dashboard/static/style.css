@@ -121,8 +121,357 @@ body {
 /* Main Layout */
 .main {
   display: flex;
+  flex-direction: column;
   flex: 1;
   overflow: hidden;
+  overflow-y: auto;
+}
+
+/* ===========================================
+   Metrics Overview - Card Grid
+   =========================================== */
+.metrics-overview {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.metric-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+}
+
+.metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.metric-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: rgba(139, 92, 246, 0.15);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.metric-icon.success {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--success);
+}
+
+.metric-icon.warning {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--warning);
+}
+
+.metric-icon.danger {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--danger);
+}
+
+.metric-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.metric-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.metric-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ===========================================
+   Charts Grid - CSS Grid Layout
+   =========================================== */
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  background: var(--bg-primary);
+}
+
+.chart-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  min-height: 280px;
+}
+
+.chart-card:hover {
+  border-color: var(--border-light);
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.875rem 1rem;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border);
+}
+
+.chart-header h3 {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.chart-legend-inline {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.chart-legend-inline .legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.legend-dot.accent {
+  background: var(--accent);
+}
+
+.legend-dot.success {
+  background: var(--success);
+}
+
+.legend-dot.warning {
+  background: var(--warning);
+}
+
+.legend-dot.danger {
+  background: var(--danger);
+}
+
+.chart-body {
+  flex: 1;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  min-height: 180px;
+}
+
+.chart-body canvas {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.chart-body.ownership-body,
+.chart-body.activity-body {
+  align-items: flex-start;
+  overflow-y: auto;
+}
+
+.chart-footer {
+  padding: 0.5rem 1rem;
+  background: var(--bg-tertiary);
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+
+.chart-hint {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+}
+
+/* Risk Badge */
+.risk-badge {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--danger);
+  text-transform: uppercase;
+}
+
+.risk-badge.low {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--success);
+}
+
+.risk-badge.medium {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--warning);
+}
+
+/* Activity Badge */
+.activity-badge {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  background: rgba(139, 92, 246, 0.15);
+  color: var(--accent);
+}
+
+/* ===========================================
+   Ownership List (Bus Factor)
+   =========================================== */
+.ownership-list {
+  width: 100%;
+}
+
+.ownership-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.5rem;
+  background: var(--bg-tertiary);
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.ownership-item:hover {
+  background: var(--border);
+}
+
+.ownership-item:last-child {
+  margin-bottom: 0;
+}
+
+.owner-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  overflow: hidden;
+}
+
+.owner-name {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.owner-files {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+}
+
+.owner-percentage {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+/* ===========================================
+   Activity List (Recent Commits)
+   =========================================== */
+.activity-list {
+  width: 100%;
+}
+
+.activity-item {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.activity-item:last-child {
+  border-bottom: none;
+}
+
+.activity-date {
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  width: 50px;
+}
+
+.activity-content {
+  flex: 1;
+  overflow: hidden;
+}
+
+.activity-message {
+  font-size: 0.8125rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.activity-author {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+}
+
+.activity-impact {
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0.125rem 0.375rem;
+  border-radius: 4px;
+}
+
+.activity-impact.positive {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--success);
+}
+
+.activity-impact.negative {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--danger);
+}
+
+.activity-impact.neutral {
+  background: rgba(160, 160, 176, 0.15);
+  color: var(--text-secondary);
+}
+
+/* ===========================================
+   Graph Area with Sidebars
+   =========================================== */
+.graph-area {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 400px;
 }
 
 /* Sidebar */
@@ -202,6 +551,16 @@ body {
   font-size: 0.75rem;
   color: var(--text-secondary);
   text-align: center;
+}
+
+/* Chart Containers */
+.chart-container {
+  position: relative;
+  min-height: 150px;
+}
+
+.chart-container canvas {
+  max-width: 100%;
 }
 
 /* Hotspots List */
@@ -460,7 +819,17 @@ body {
   padding: 2rem;
 }
 
-/* Responsive */
+/* ===========================================
+   Responsive Design - Media Queries
+   =========================================== */
+
+/* Large desktops */
+@media (max-width: 1400px) {
+  .charts-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 @media (max-width: 1200px) {
   .sidebar {
     width: 240px;
@@ -468,15 +837,159 @@ body {
   .details-panel {
     width: 260px;
   }
+  .metrics-overview {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .metric-card {
+    padding: 0.875rem 1rem;
+  }
+  .metric-value {
+    font-size: 1.5rem;
+  }
+  .metric-icon {
+    width: 40px;
+    height: 40px;
+  }
+  .metric-icon svg {
+    width: 20px;
+    height: 20px;
+  }
 }
 
+/* Tablets */
 @media (max-width: 900px) {
   .main {
     flex-direction: column;
   }
+  .graph-area {
+    flex-direction: column;
+    min-height: auto;
+  }
   .sidebar,
   .details-panel {
     width: 100%;
-    max-height: 200px;
+    max-height: 250px;
+    border-right: none;
+    border-left: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .details-panel {
+    border-bottom: none;
+    border-top: 1px solid var(--border);
+  }
+  .graph-container {
+    min-height: 300px;
+  }
+  .charts-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+  }
+  .chart-card {
+    min-height: 220px;
+  }
+  .metrics-overview {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+  }
+}
+
+/* Mobile phones */
+@media (max-width: 600px) {
+  .header {
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+  }
+  .header-left {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  .metrics-overview {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+  }
+  .metric-card {
+    padding: 0.75rem;
+    gap: 0.75rem;
+  }
+  .metric-icon {
+    width: 36px;
+    height: 36px;
+  }
+  .metric-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+  .metric-value {
+    font-size: 1.25rem;
+  }
+  .metric-label {
+    font-size: 0.6875rem;
+  }
+  .charts-grid {
+    padding: 0.5rem 0.75rem;
+    gap: 0.5rem;
+  }
+  .chart-card {
+    min-height: 200px;
+  }
+  .chart-header {
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: flex-start;
+    padding: 0.75rem;
+  }
+  .chart-legend-inline {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .chart-body {
+    padding: 0.75rem;
+    min-height: 140px;
+  }
+  .graph-controls {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.5rem;
+  }
+  #search {
+    width: 100%;
+    order: -1;
+  }
+  .btn {
+    flex: 1;
+    text-align: center;
+  }
+  .sidebar,
+  .details-panel {
+    max-height: 180px;
+    padding: 0.5rem;
+  }
+  .panel h2 {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.6875rem;
+  }
+  .panel-content {
+    padding: 0.5rem 0.75rem;
+  }
+}
+
+/* Very small screens */
+@media (max-width: 360px) {
+  .metrics-overview {
+    padding: 0.5rem;
+  }
+  .metric-card {
+    padding: 0.5rem;
+  }
+  .metric-icon {
+    display: none;
+  }
+  .metric-value {
+    font-size: 1.125rem;
   }
 }
