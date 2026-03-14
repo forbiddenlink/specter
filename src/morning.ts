@@ -5,8 +5,15 @@
  * recent changes, and areas needing attention.
  */
 
-import { type SimpleGit, simpleGit } from 'simple-git';
+import { simpleGit } from 'simple-git';
 import type { KnowledgeGraph } from './graph/types.js';
+import {
+  analyzeHotFiles,
+  calculateHealthScore,
+  fetchRecentActivity,
+  generateAlerts,
+  generateFocusItems,
+} from './morning-helpers.js';
 
 export interface MorningBriefing {
   codebaseName: string;
@@ -58,154 +65,36 @@ export async function generateMorning(
   const greetingIndex = today.getDay() % greetings.length;
   const greeting = greetings[greetingIndex] ?? 'Good morning!';
 
-  const git: SimpleGit = simpleGit(rootDir);
+  const git = simpleGit(rootDir);
 
-  // Recent activity (last 24 hours)
-  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  let recentActivity = { commits: 0, filesChanged: 0, contributors: [] as string[] };
-
-  try {
-    const recentLog = await git.log({
-      '--after': yesterday.toISOString(),
-    });
-
-    const contributors = new Set<string>();
-    const filesChanged = new Set<string>();
-
-    for (const commit of recentLog.all) {
-      contributors.add(commit.author_name);
-
-      try {
-        const diff = await git.raw([
-          'diff-tree',
-          '--no-commit-id',
-          '--name-only',
-          '-r',
-          commit.hash,
-        ]);
-        for (const file of diff.trim().split('\n').filter(Boolean)) {
-          filesChanged.add(file);
-        }
-      } catch {
-        // Skip
-      }
-    }
-
-    recentActivity = {
-      commits: recentLog.total,
-      filesChanged: filesChanged.size,
-      contributors: [...contributors].slice(0, 3),
-    };
-  } catch {
-    // Not a git repo or other error
-  }
-
-  // Hot files (most changed recently)
-  const hotFiles: MorningBriefing['hotFiles'] = [];
-  try {
-    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const weekLog = await git.log({
-      '--after': weekAgo.toISOString(),
-    });
-
-    const fileChanges = new Map<string, number>();
-    for (const commit of weekLog.all.slice(0, 50)) {
-      try {
-        const diff = await git.raw([
-          'diff-tree',
-          '--no-commit-id',
-          '--name-only',
-          '-r',
-          commit.hash,
-        ]);
-        for (const file of diff.trim().split('\n').filter(Boolean)) {
-          if (file.match(/\.(ts|tsx|js|jsx)$/)) {
-            fileChanges.set(file, (fileChanges.get(file) || 0) + 1);
-          }
-        }
-      } catch {
-        // Skip
-      }
-    }
-
-    const sorted = [...fileChanges.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3);
-
-    for (const [path, changes] of sorted) {
-      let reason = 'Active development';
-      if (changes >= 5) reason = 'Heavy activity this week';
-      if (changes >= 10) reason = 'Hotspot - many recent changes';
-
-      hotFiles.push({ path, changes, reason });
-    }
-  } catch {
-    // Skip
-  }
+  // Fetch data using helper functions
+  const recentActivity = await fetchRecentActivity(git);
+  const hotFiles = await analyzeHotFiles(git);
 
   // Calculate health
   const nodes = Object.values(graph.nodes);
-  const complexities = nodes
-    .filter((n) => n.complexity !== undefined)
-    .map((n) => n.complexity as number);
-  const avgComplexity =
-    complexities.length > 0 ? complexities.reduce((a, b) => a + b, 0) / complexities.length : 0;
+  const healthResult = calculateHealthScore(nodes);
 
-  const healthScore = Math.max(0, Math.min(100, 100 - avgComplexity * 2));
-  const healthTrend: 'improving' | 'stable' | 'declining' =
-    recentActivity.commits > 5 ? 'stable' : 'stable';
-
-  let healthSummary: string;
-  if (healthScore >= 70) {
-    healthSummary = 'Looking good! Codebase is in healthy shape.';
-  } else if (healthScore >= 40) {
-    healthSummary = 'Moderate health. Some areas could use attention.';
-  } else {
-    healthSummary = 'Health needs attention. Consider addressing complexity.';
-  }
-
-  // Generate alerts
-  const alerts: string[] = [];
-
-  const firstHotFile = hotFiles[0];
-  if (firstHotFile && firstHotFile.changes >= 5) {
-    alerts.push(`${firstHotFile.path} has been very active - check for conflicts`);
-  }
-
-  const highComplexity = nodes.filter((n) => (n.complexity || 0) > 20);
-  if (highComplexity.length > 0) {
-    alerts.push(`${highComplexity.length} files have high complexity`);
-  }
-
-  if (recentActivity.commits === 0) {
-    alerts.push('No commits in the last 24 hours');
-  }
-
-  // Today's focus suggestions
-  const todaysFocus: string[] = [];
-
-  if (recentActivity.commits > 0) {
-    todaysFocus.push('Review recent changes before starting new work');
-  }
-
-  if (firstHotFile) {
-    todaysFocus.push(`Check ${firstHotFile.path} for potential conflicts`);
-  }
-
-  if (highComplexity.length > 0) {
-    todaysFocus.push('Consider refactoring high-complexity areas');
-  }
-
-  if (todaysFocus.length === 0) {
-    todaysFocus.push('Ready for new work - codebase is calm');
-  }
+  // Generate alerts and focus items
+  const alerts = generateAlerts(
+    hotFiles,
+    healthResult.highComplexityNodes.length,
+    recentActivity.commits
+  );
+  const todaysFocus = generateFocusItems(
+    hotFiles,
+    healthResult.highComplexityNodes.length,
+    recentActivity.commits
+  );
 
   return {
     codebaseName,
     date: dateStr,
     greeting,
     health: {
-      score: Math.round(healthScore),
-      trend: healthTrend,
-      summary: healthSummary,
+      score: healthResult.score,
+      trend: healthResult.trend,
+      summary: healthResult.summary,
     },
     recentActivity,
     hotFiles,

@@ -5,7 +5,7 @@
 
 import type { Canvas, CanvasRenderingContext2D } from 'canvas';
 import { loadImage } from 'canvas';
-import QRCode from 'qrcode';
+import * as QRCode from 'qrcode';
 
 export interface PngDrawContext {
   ctx: CanvasRenderingContext2D;

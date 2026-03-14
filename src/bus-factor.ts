@@ -6,6 +6,12 @@
  */
 
 import { type SimpleGit, simpleGit } from 'simple-git';
+import {
+  buildRiskItem,
+  calculateContributorPercentages,
+  determineBusFactor,
+  determineCriticality,
+} from './bus-factor-helpers.js';
 import type { KnowledgeGraph } from './graph/types.js';
 
 export interface BusFactorRisk {
@@ -329,31 +335,13 @@ function calculateAreaRisks(
   for (const [area, stats] of areaStats.entries()) {
     if (stats.contributors.size === 0) continue;
 
-    // Calculate contribution percentages
-    const totalContribution = [...stats.contributors.values()].reduce(
-      (sum, c) => sum + c.commits + (c.linesAdded + c.linesRemoved) / 10,
-      0
-    );
+    // Use helper functions for cleaner code
+    const contributors = calculateContributorPercentages(stats.contributors);
+    if (contributors.length === 0) continue;
 
-    const contributors = [...stats.contributors.entries()]
-      .map(([name, c]) => ({
-        name,
-        score: c.commits + (c.linesAdded + c.linesRemoved) / 10,
-        percentage: Math.round(
-          ((c.commits + (c.linesAdded + c.linesRemoved) / 10) / totalContribution) * 100
-        ),
-      }))
-      .sort((a, b) => b.percentage - a.percentage);
-
-    // Bus factor = number of significant contributors (>= 20% contribution)
-    const significantContributors = contributors.filter((c) => c.percentage >= 20);
-    const busFactor = Math.max(1, significantContributors.length);
-
-    // Get primary owner
+    const { busFactor, soleOwner } = determineBusFactor(contributors);
     const primaryOwner = contributors[0];
-    const soleOwner = busFactor === 1 ? primaryOwner?.name : undefined;
 
-    // Determine criticality
     const criticality = determineCriticality(
       busFactor,
       primaryOwner?.percentage || 0,
@@ -362,7 +350,6 @@ function calculateAreaRisks(
       graph
     );
 
-    // Generate suggestion
     const suggestion = generateSuggestion(
       busFactor,
       soleOwner,
@@ -370,18 +357,17 @@ function calculateAreaRisks(
       criticality
     );
 
-    risks.push({
-      area,
-      busFactor,
-      soleOwner,
-      contributors: contributors.slice(0, 5).map((c) => ({
-        name: c.name,
-        percentage: c.percentage,
-      })),
-      linesOfCode: stats.linesOfCode,
-      criticality,
-      suggestion,
-    });
+    risks.push(
+      buildRiskItem(
+        area,
+        busFactor,
+        soleOwner,
+        contributors,
+        stats.linesOfCode,
+        criticality,
+        suggestion
+      )
+    );
   }
 
   // Sort by criticality then bus factor
@@ -393,42 +379,6 @@ function calculateAreaRisks(
   });
 
   return risks;
-}
-
-/**
- * Determine criticality based on multiple factors
- */
-function determineCriticality(
-  busFactor: number,
-  primaryOwnershipPct: number,
-  stats: AreaStats,
-  area: string,
-  _graph: KnowledgeGraph
-): 'critical' | 'high' | 'medium' | 'low' {
-  // Check if this is core infrastructure
-  const isCoreArea = ['src/core', 'src/graph', 'src/analyzers', 'core', 'lib'].some((core) =>
-    area.startsWith(core)
-  );
-
-  // Large areas with single owner are more critical
-  const isLargeArea = stats.linesOfCode > 1000 || stats.files.length > 10;
-
-  // Critical: Bus factor 1 AND (80%+ ownership OR core area OR large area)
-  if (busFactor === 1 && (primaryOwnershipPct >= 80 || isCoreArea || isLargeArea)) {
-    return 'critical';
-  }
-
-  // High: Bus factor 1 OR (70%+ ownership AND (core OR large))
-  if (busFactor === 1 || (primaryOwnershipPct >= 70 && (isCoreArea || isLargeArea))) {
-    return 'high';
-  }
-
-  // Medium: Bus factor 2 OR 60%+ ownership
-  if (busFactor <= 2 || primaryOwnershipPct >= 60) {
-    return 'medium';
-  }
-
-  return 'low';
 }
 
 /**

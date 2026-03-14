@@ -19,6 +19,7 @@ import {
   drawWatermark,
   setupCanvas,
 } from './export-png-helpers.js';
+import { getContentConfig, type ParsedLine, parseAnsiCodes } from './export-png-parsing.js';
 
 export interface PngExportOptions {
   width?: number; // Default 1200 (Twitter-optimized)
@@ -37,187 +38,6 @@ export const SOCIAL_DIMENSIONS = {
   width: 1200,
   height: 630, // 1.9:1 aspect ratio - optimal for Twitter/LinkedIn
 };
-
-// ANSI color code to hex color mapping
-const ansiColors: Record<string, string> = {
-  // Standard colors (dark theme)
-  '30': '#4a4a4a', // black
-  '31': '#ff6b6b', // red
-  '32': '#6bcb77', // green
-  '33': '#ffd93d', // yellow
-  '34': '#6b8cff', // blue
-  '35': '#cc6bff', // magenta
-  '36': '#6bffff', // cyan
-  '37': '#e0e0e0', // white
-
-  // Bright colors
-  '90': '#666666', // bright black (gray)
-  '91': '#ff8a8a', // bright red
-  '92': '#8fe69b', // bright green
-  '93': '#ffe566', // bright yellow
-  '94': '#8fa8ff', // bright blue
-  '95': '#d98aff', // bright magenta
-  '96': '#8affff', // bright cyan
-  '97': '#ffffff', // bright white
-};
-
-// Light theme color overrides
-const lightThemeColors: Record<string, string> = {
-  '30': '#000000', // black
-  '31': '#cc0000', // red
-  '32': '#006600', // green
-  '33': '#cc8800', // yellow
-  '34': '#0000cc', // blue
-  '35': '#880088', // magenta
-  '36': '#008888', // cyan
-  '37': '#333333', // white (dark for contrast)
-  '90': '#555555', // bright black
-  '91': '#ff0000', // bright red
-  '92': '#00aa00', // bright green
-  '93': '#ffaa00', // bright yellow
-  '94': '#0066ff', // bright blue
-  '95': '#aa00aa', // bright magenta
-  '96': '#00aaaa', // bright cyan
-  '97': '#000000', // bright white (black for contrast)
-};
-
-interface TextSegment {
-  text: string;
-  color: string;
-  bold: boolean;
-  italic: boolean;
-  dim: boolean;
-}
-
-interface ParsedLine {
-  segments: TextSegment[];
-}
-
-/**
- * Parse ANSI escape codes from text
- */
-function parseAnsiText(text: string, theme: 'dark' | 'light'): ParsedLine[] {
-  const lines: ParsedLine[] = [];
-  const colorMap = theme === 'dark' ? ansiColors : lightThemeColors;
-  const defaultColor = theme === 'dark' ? '#e0e0e0' : '#333333';
-
-  // Split into lines first
-  const rawLines = text.split('\n');
-
-  for (const rawLine of rawLines) {
-    const segments: TextSegment[] = [];
-    let currentColor = defaultColor;
-    let bold = false;
-    let italic = false;
-    let dim = false;
-
-    // ANSI escape code regex
-    const ansiRegex = /\x1b\[([0-9;]+)m/g;
-    let lastIndex = 0;
-    let match: RegExpExecArray | null = ansiRegex.exec(rawLine);
-
-    while (match !== null) {
-      // Add text before this escape code
-      if (match.index > lastIndex) {
-        const textBefore = rawLine.substring(lastIndex, match.index);
-        if (textBefore) {
-          segments.push({
-            text: textBefore,
-            color: dim ? adjustColorForDim(currentColor) : currentColor,
-            bold,
-            italic,
-            dim,
-          });
-        }
-      }
-
-      // Parse the escape code
-      const matchGroup = match[1];
-      if (!matchGroup) {
-        lastIndex = ansiRegex.lastIndex;
-        match = ansiRegex.exec(rawLine);
-        continue;
-      }
-      const codes = matchGroup.split(';').map(Number);
-      for (const code of codes) {
-        if (code === 0) {
-          // Reset
-          currentColor = defaultColor;
-          bold = false;
-          italic = false;
-          dim = false;
-        } else if (code === 1) {
-          bold = true;
-        } else if (code === 2) {
-          dim = true;
-        } else if (code === 3) {
-          italic = true;
-        } else if (code === 22) {
-          bold = false;
-          dim = false;
-        } else if (code === 23) {
-          italic = false;
-        } else if (colorMap[code.toString()]) {
-          currentColor = colorMap[code.toString()] ?? defaultColor;
-        } else if (code >= 30 && code <= 37) {
-          currentColor = colorMap[code.toString()] ?? defaultColor;
-        } else if (code >= 90 && code <= 97) {
-          currentColor = colorMap[code.toString()] ?? defaultColor;
-        }
-      }
-
-      lastIndex = ansiRegex.lastIndex;
-      match = ansiRegex.exec(rawLine);
-    }
-
-    // Add remaining text
-    if (lastIndex < rawLine.length) {
-      const remaining = rawLine.substring(lastIndex);
-      if (remaining) {
-        segments.push({
-          text: remaining,
-          color: dim ? adjustColorForDim(currentColor) : currentColor,
-          bold,
-          italic,
-          dim,
-        });
-      }
-    }
-
-    // If no segments, add empty line
-    if (segments.length === 0) {
-      segments.push({ text: '', color: defaultColor, bold: false, italic: false, dim: false });
-    }
-
-    lines.push({ segments });
-  }
-
-  return lines;
-}
-
-/**
- * Adjust color for dim effect
- */
-function adjustColorForDim(hex: string): string {
-  // Parse hex color
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-
-  // Reduce brightness by 40%
-  const dimR = Math.floor(r * 0.6);
-  const dimG = Math.floor(g * 0.6);
-  const dimB = Math.floor(b * 0.6);
-
-  return `#${dimR.toString(16).padStart(2, '0')}${dimG.toString(16).padStart(2, '0')}${dimB.toString(16).padStart(2, '0')}`;
-}
-
-/**
- * Strip ANSI codes from text (for measuring)
- */
-function _stripAnsi(text: string): string {
-  return text.replace(/\x1b\[[0-9;]*m/g, '');
-}
 
 /**
  * Calculate required canvas height based on content
@@ -268,67 +88,6 @@ function drawRoundedRect(
 }
 
 /**
- * Generate header based on content type
- */
-function detectContentType(content: string): 'wrapped' | 'achievements' | 'dna' | 'generic' {
-  if (content.includes('WRAPPED') || content.includes('#SpecterWrapped')) {
-    return 'wrapped';
-  }
-  if (content.includes('ACHIEVEMENTS') || content.includes('UNLOCKED')) {
-    return 'achievements';
-  }
-  if (
-    content.includes('DNA PROFILE') ||
-    content.includes('DOUBLE HELIX') ||
-    content.includes('Sequence:')
-  ) {
-    return 'dna';
-  }
-  return 'generic';
-}
-
-/**
- * Get header info based on content type
- */
-function getHeaderInfo(contentType: 'wrapped' | 'achievements' | 'dna' | 'generic'): {
-  emoji: string;
-  title: string;
-  subtitle: string;
-  gradient: [string, string];
-} {
-  switch (contentType) {
-    case 'wrapped':
-      return {
-        emoji: '\u{1F3B5}', // musical note
-        title: 'Specter Wrapped',
-        subtitle: 'Your Year in Code',
-        gradient: ['#1a1a2e', '#16213e'],
-      };
-    case 'achievements':
-      return {
-        emoji: '\u{1F3C6}', // trophy
-        title: 'Specter Achievements',
-        subtitle: 'Your Coding Badges',
-        gradient: ['#1a1a2e', '#2d132c'],
-      };
-    case 'dna':
-      return {
-        emoji: '\u{1F9EC}', // dna
-        title: 'Codebase DNA',
-        subtitle: 'Your Unique Fingerprint',
-        gradient: ['#1a1a2e', '#0a3d62'],
-      };
-    default:
-      return {
-        emoji: '\u{1F47B}', // ghost
-        title: 'Specter',
-        subtitle: 'Code Intelligence',
-        gradient: ['#1a1a2e', '#1a1a2e'],
-      };
-  }
-}
-
-/**
  * Export terminal content to PNG
  */
 export async function exportToPng(
@@ -349,12 +108,16 @@ export async function exportToPng(
   // Use social media dimensions if requested
   const width = socialFormat ? SOCIAL_DIMENSIONS.width : options.width || 1200;
 
-  // Detect content type for styling
-  const contentType = detectContentType(content);
-  const headerInfo = getHeaderInfo(contentType);
+  // Get content configuration (type + styling info)
+  const contentConfig = getContentConfig(content);
+  const headerInfo = {
+    emoji: contentConfig.emoji,
+    title: contentConfig.title,
+    gradient: contentConfig.gradient,
+  };
 
   // Parse ANSI codes
-  const parsedLines = parseAnsiText(content, theme);
+  const parsedLines = parseAnsiCodes(content, theme);
 
   // Create temporary canvas for measurements
   const tempCanvas = createCanvas(width, 100);
@@ -371,7 +134,7 @@ export async function exportToPng(
   const ctx = setupCanvas(createCanvas, width, calculatedHeight, theme, headerInfo);
 
   // Draw decorative elements
-  drawDecorations(ctx, width, calculatedHeight, theme, contentType);
+  drawDecorations(ctx, width, calculatedHeight, theme, contentConfig.type);
 
   // Calculate content area
   const contentArea = calculateContentArea(width, calculatedHeight, padding, watermark);
