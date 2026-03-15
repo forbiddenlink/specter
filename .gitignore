@@ -41,3 +41,15 @@ specter.config.json
 
 #Ignore vscode AI rules
 .github/instructions/codacy.instructions.md
+.claude
+.playwright-mcp
+.playwright-mcp/
+.history
+playwright-report
+playwright-report/
+__pycache__
+__pycache__/
+.codacy
+.codacy/
+test_run/
+supabase/.temp/

@@ -35,6 +35,8 @@ specter scan && specter health
 npx @purplegumdropz/specter-roast
 ```
 
+**[Watch 30-second demo →](https://youtu.be/ZumEIb6uA-0)**
+
 ---
 
 ## Real-World Examples
