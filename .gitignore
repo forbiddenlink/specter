@@ -55,6 +55,7 @@ test_run/
 supabase/.temp/
 
 # Environment
+.env*
 .env
 .env.local
 .env.*.local
