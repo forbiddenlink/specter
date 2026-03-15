@@ -60,11 +60,12 @@ supabase/.temp/
 .env.*.local
 .env*.local
 
-# Build output
 .next/
-dist/
 build/
 out/
 
 # Vercel
 .vercel
+
+
+# Next.js
