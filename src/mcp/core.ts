@@ -7,6 +7,7 @@
 
 import { loadGraph } from '../graph/persistence.js';
 import type { KnowledgeGraph } from '../graph/types.js';
+import { logger } from '../lib/logger.js';
 
 // Global graph cache
 let cachedGraph: KnowledgeGraph | null = null;
@@ -29,10 +30,7 @@ const errorMetrics: ErrorMetrics = {
  * Log error to stderr for debugging
  */
 export function logError(toolName: string, error: Error): void {
-  console.error(`[MCP Error] ${toolName}: ${error.message}`, {
-    timestamp: new Date().toISOString(),
-    stack: error.stack,
-  });
+  logger.error({ err: error, tool: toolName }, `MCP tool error: ${toolName}`);
 
   // Track metrics
   errorMetrics.totalErrors++;

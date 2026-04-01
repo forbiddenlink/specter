@@ -15,6 +15,10 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { registerPrompts, registerResources, registerTools } from './mcp/index.js';
+import { initTelemetry } from './lib/telemetry.js';
+
+// Initialize telemetry before server starts
+initTelemetry();
 
 /**
  * Create the MCP server with all tools, prompts, and resources

@@ -9,6 +9,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createSnapshot } from '../history/snapshot.js';
 import { saveSnapshot } from '../history/storage.js';
+import { logger } from '../lib/logger.js';
 import { KnowledgeGraphSchema } from './schema.js';
 import type { GraphMetadata, KnowledgeGraph } from './types.js';
 
@@ -69,7 +70,7 @@ export async function loadGraph(rootDir: string): Promise<KnowledgeGraph | null>
     const parsed = JSON.parse(content);
     const result = KnowledgeGraphSchema.safeParse(parsed);
     if (!result.success) {
-      console.error('Invalid graph data:', result.error.message);
+      logger.warn({ err: result.error }, 'Invalid graph data');
       return null;
     }
     return result.data as KnowledgeGraph;

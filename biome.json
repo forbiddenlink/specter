@@ -1,44 +1,28 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.3.15/schema.json",
-  "vcs": {
-    "enabled": true,
-    "clientKind": "git",
-    "useIgnoreFile": true
+  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "organizeImports": {
+    "enabled": true
   },
-  "files": {
-    "includes": [
-      "**",
-      "!**/dist/",
-      "!**/node_modules/",
-      "!**/.specter/",
-      "!**/docs/",
-      "!**/coverage/"
-    ]
-  },
-  "assist": { "actions": { "source": { "organizeImports": "on" } } },
   "linter": {
     "enabled": true,
     "rules": {
       "recommended": true,
+      "complexity": {
+        "noUselessFragments": "warn",
+        "noUselessTypeConstraint": "error"
+      },
       "correctness": {
+        "noUnusedVariables": "warn",
         "noUnusedImports": "warn",
-        "noUnusedVariables": "warn"
+        "useExhaustiveDependencies": "warn"
       },
       "style": {
-        "noNonNullAssertion": "off"
-      },
-      "complexity": {
-        "useLiteralKeys": "off"
+        "noNonNullAssertion": "off",
+        "useImportType": "warn"
       },
       "suspicious": {
-        "noControlCharactersInRegex": "off",
-        "noExplicitAny": "warn",
-        "useIterableCallbackReturn": "off"
-      },
-      "security": {
-        "noGlobalEval": "error",
-        "noDangerouslySetInnerHtml": "error",
-        "noDangerouslySetInnerHtmlWithChildren": "error"
+        "noExplicitAny": "off",
+        "noArrayIndexKey": "warn"
       }
     }
   },
@@ -51,8 +35,20 @@
   "javascript": {
     "formatter": {
       "quoteStyle": "single",
-      "semicolons": "always",
+      "semicolons": "asNeeded",
       "trailingCommas": "es5"
     }
+  },
+  "files": {
+    "ignore": [
+      "node_modules",
+      ".next",
+      "dist",
+      "build",
+      ".vercel",
+      "coverage",
+      "*.min.js",
+      "public"
+    ]
   }
 }

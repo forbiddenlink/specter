@@ -18,6 +18,11 @@ import { setGlobalOptions, suggestCommand } from './cli-utils.js';
 // Import modular command registration
 import { registerAllCommands } from './commands/index.js';
 
+// Initialize telemetry
+import { initTelemetry } from './lib/telemetry.js';
+
+initTelemetry();
+
 const program = new Command();
 
 // Global accessibility flag - can also be set via environment variable
