@@ -2,14 +2,14 @@
  * Bus Factor command - Surface bus factor risks prominently
  */
 
-import path from 'node:path';
-import chalk from 'chalk';
-import type { Command } from 'commander';
-import { analyzeBusFactor, formatBusFactor } from '../../bus-factor.js';
-import { showNextSteps } from '../../cli-utils.js';
-import { loadGraph } from '../../graph/persistence.js';
-import { outputJson, outputJsonError } from '../../json-output.js';
-import { createSpinner } from '../types.js';
+import path from 'node:path'
+import chalk from 'chalk'
+import type { Command } from 'commander'
+import { ensureGraph } from '../../auto-scan.js'
+import { analyzeBusFactor, formatBusFactor } from '../../bus-factor.js'
+import { showNextSteps } from '../../cli-utils.js'
+import { outputJson } from '../../json-output.js'
+import { createSpinner } from '../types.js'
 
 export function register(program: Command): void {
   program
@@ -33,25 +33,18 @@ Use this to identify knowledge silos and plan knowledge sharing sessions.
 `
     )
     .action(async (options) => {
-      const rootDir = path.resolve(options.dir);
+      const rootDir = path.resolve(options.dir)
 
-      const spinner = options.json ? null : createSpinner('Analyzing bus factor risks...');
-      spinner?.start();
+      const spinner = options.json ? null : createSpinner('Analyzing bus factor risks...')
+      spinner?.start()
 
-      const graph = await loadGraph(rootDir);
-
-      if (!graph) {
-        if (options.json) {
-          outputJsonError('bus-factor', 'No graph found. Run `specter scan` first.');
-        }
-        spinner?.fail('No graph found. Run `specter scan` first.');
-        return;
-      }
+      const graph = await ensureGraph(rootDir, { json: options.json })
+      if (!graph) return
 
       const result = await analyzeBusFactor(graph, {
         criticalOnly: options.criticalOnly,
-      });
-      spinner?.stop();
+      })
+      spinner?.stop()
 
       // JSON output for CI/CD
       if (options.json) {
@@ -61,63 +54,63 @@ Use this to identify knowledge silos and plan knowledge sharing sessions.
           risks: result.risks,
           summary: result.summary,
           recommendations: result.recommendations,
-        });
-        return;
+        })
+        return
       }
 
-      const output = formatBusFactor(result);
+      const output = formatBusFactor(result)
 
-      console.log();
+      console.log()
       for (const line of output.split('\n')) {
         if (line.includes('+--') || line.includes('|')) {
-          console.log(chalk.bold.cyan(`  ${line}`));
+          console.log(chalk.bold.cyan(`  ${line}`))
         } else if (line.startsWith('Overall Bus Factor')) {
           if (line.includes('CRITICAL') || line.includes('[!!]')) {
-            console.log(chalk.bold.red(`  ${line}`));
+            console.log(chalk.bold.red(`  ${line}`))
           } else if (line.includes('DANGEROUS') || line.includes('[!]')) {
-            console.log(chalk.bold.hex('#FFA500')(`  ${line}`));
+            console.log(chalk.bold.hex('#FFA500')(`  ${line}`))
           } else if (line.includes('CONCERNING') || line.includes('[~]')) {
-            console.log(chalk.bold.yellow(`  ${line}`));
+            console.log(chalk.bold.yellow(`  ${line}`))
           } else {
-            console.log(chalk.bold.green(`  ${line}`));
+            console.log(chalk.bold.green(`  ${line}`))
           }
         } else if (
           line.startsWith('CRITICAL RISKS') ||
           line.startsWith('[!]') ||
           line.startsWith('[!!]')
         ) {
-          console.log(chalk.bold.red(`  ${line}`));
+          console.log(chalk.bold.red(`  ${line}`))
         } else if (line.startsWith('MODERATE RISKS') || line.startsWith('[~]')) {
-          console.log(chalk.yellow(`  ${line}`));
+          console.log(chalk.yellow(`  ${line}`))
         } else if (line.startsWith('HEALTHY AREAS') || line.startsWith('[+]')) {
-          console.log(chalk.green(`  ${line}`));
+          console.log(chalk.green(`  ${line}`))
         } else if (line.startsWith('SUMMARY') || line.startsWith('RECOMMENDATIONS')) {
-          console.log(chalk.bold.white(`  ${line}`));
+          console.log(chalk.bold.white(`  ${line}`))
         } else if (line.startsWith('-'.repeat(10))) {
-          console.log(chalk.dim(`  ${line}`));
+          console.log(chalk.dim(`  ${line}`))
         } else if (line.includes('Solo owner:')) {
-          console.log(chalk.red(`  ${line}`));
+          console.log(chalk.red(`  ${line}`))
         } else if (line.includes('lines at risk')) {
-          console.log(chalk.yellow(`  ${line}`));
+          console.log(chalk.yellow(`  ${line}`))
         } else if (line.startsWith('   ->')) {
-          console.log(chalk.italic.cyan(`  ${line}`));
+          console.log(chalk.italic.cyan(`  ${line}`))
         } else if (line.startsWith('[*]')) {
-          console.log(chalk.hex('#FFA500')(`  ${line}`));
+          console.log(chalk.hex('#FFA500')(`  ${line}`))
         } else if (line.startsWith('  *')) {
-          console.log(chalk.white(`  ${line}`));
+          console.log(chalk.white(`  ${line}`))
         } else if (line.includes('... and')) {
-          console.log(chalk.dim(`  ${line}`));
+          console.log(chalk.dim(`  ${line}`))
         } else if (
           line.includes('Files with single owner') ||
           line.includes('Lines at risk') ||
           line.includes('Percentage of codebase')
         ) {
-          console.log(chalk.white(`  ${line}`));
+          console.log(chalk.white(`  ${line}`))
         } else {
-          console.log(chalk.white(`  ${line}`));
+          console.log(chalk.white(`  ${line}`))
         }
       }
-      console.log();
+      console.log()
 
       // Show next steps suggestions
       if (!options.json) {
@@ -134,8 +127,8 @@ Use this to identify knowledge silos and plan knowledge sharing sessions.
             description: 'Get reviewer recommendations',
             command: 'specter reviewers',
           },
-        ];
-        showNextSteps(suggestions);
+        ]
+        showNextSteps(suggestions)
       }
-    });
+    })
 }

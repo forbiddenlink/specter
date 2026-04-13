@@ -2,16 +2,16 @@
  * Vitals command - real-time vital signs dashboard
  */
 
-import path from 'node:path';
-import chalk from 'chalk';
-import type { Command } from 'commander';
-import { generateComplexityReport } from '../../analyzers/complexity.js';
-import { showNextSteps } from '../../cli-utils.js';
-import { getGraphStats } from '../../graph/builder.js';
-import { loadGraph } from '../../graph/persistence.js';
-import { loadSnapshots } from '../../history/storage.js';
-import { outputJson, outputJsonError } from '../../json-output.js';
-import { coloredSparkline } from '../../ui/index.js';
+import path from 'node:path'
+import chalk from 'chalk'
+import type { Command } from 'commander'
+import { generateComplexityReport } from '../../analyzers/complexity.js'
+import { ensureGraph } from '../../auto-scan.js'
+import { showNextSteps } from '../../cli-utils.js'
+import { getGraphStats } from '../../graph/builder.js'
+import { loadSnapshots } from '../../history/storage.js'
+import { outputJson } from '../../json-output.js'
+import { coloredSparkline } from '../../ui/index.js'
 import {
   formatHealthIndicator,
   getBusFactorStatus,
@@ -21,7 +21,7 @@ import {
   getHealthStatus,
   makeBar,
   type VitalsMetrics,
-} from './vitals-helpers.js';
+} from './vitals-helpers.js'
 
 export function register(program: Command): void {
   program
@@ -32,52 +32,45 @@ export function register(program: Command): void {
     .option('--live', 'Live updating mode')
     .option('--json', 'Output as JSON for CI/CD integration')
     .action(async (options) => {
-      const rootDir = path.resolve(options.dir);
+      const rootDir = path.resolve(options.dir)
 
-      const graph = await loadGraph(rootDir);
+      const graph = await ensureGraph(rootDir, { json: options.json })
+      if (!graph) return
 
-      if (!graph) {
-        if (options.json) {
-          outputJsonError('vitals', 'No graph found. Run `specter scan` first.');
-        }
-        console.log(chalk.yellow('No graph found. Run `specter scan` first.'));
-        return;
-      }
-
-      const report = generateComplexityReport(graph);
-      const stats = getGraphStats(graph);
+      const report = generateComplexityReport(graph)
+      const stats = getGraphStats(graph)
 
       // Get file paths for bus factor analysis
       const filePaths = Object.values(graph.nodes)
         .filter((n) => n.type === 'file')
-        .map((n) => n.filePath);
+        .map((n) => n.filePath)
 
       // Analyze bus factor
-      const { analyzeKnowledgeDistribution } = await import('../../analyzers/knowledge.js');
+      const { analyzeKnowledgeDistribution } = await import('../../analyzers/knowledge.js')
       const busFactor = await analyzeKnowledgeDistribution(rootDir, filePaths, {
         maxCommits: 200,
-      });
+      })
 
       // Calculate health score
-      const healthScore = Math.max(0, 100 - report.averageComplexity * 5);
+      const healthScore = Math.max(0, 100 - report.averageComplexity * 5)
 
       // Count dead/unused exports
       const exportedNodes = Object.values(graph.nodes).filter(
         (n) => n.exported && n.type !== 'file'
-      );
-      const importEdges = graph.edges.filter((e) => e.type === 'imports');
-      const importedIds = new Set(importEdges.map((e) => e.target));
-      const deadExports = exportedNodes.filter((n) => !importedIds.has(n.id)).length;
+      )
+      const importEdges = graph.edges.filter((e) => e.type === 'imports')
+      const importedIds = new Set(importEdges.map((e) => e.target))
+      const deadExports = exportedNodes.filter((n) => !importedIds.has(n.id)).length
 
       // Calculate coverage estimate (files with complexity data / total files)
       const filesWithComplexity = Object.values(graph.nodes).filter(
         (n) => n.type === 'file' && n.complexity !== undefined
-      ).length;
+      ).length
       const coverageEstimate =
-        stats.fileCount > 0 ? (filesWithComplexity / stats.fileCount) * 100 : 0;
+        stats.fileCount > 0 ? (filesWithComplexity / stats.fileCount) * 100 : 0
 
       // Load snapshots for heartbeat sparkline
-      const snapshots = await loadSnapshots(rootDir);
+      const snapshots = await loadSnapshots(rootDir)
 
       // Get node health, bus factor, and compute metrics
       const metrics: VitalsMetrics = {
@@ -91,7 +84,7 @@ export function register(program: Command): void {
             ? snapshots[0].metrics.healthScore - snapshots[1].metrics.healthScore
             : undefined,
         fileCount: stats.fileCount,
-      };
+      }
 
       // JSON output for CI/CD
       if (options.json) {
@@ -112,28 +105,28 @@ export function register(program: Command): void {
             timestamp: s.timestamp,
             healthScore: s.metrics.healthScore,
           })),
-        });
-        return;
+        })
+        return
       }
 
       const heartbeatData = snapshots
         .slice(0, 30)
         .reverse()
-        .map((s) => s.metrics.healthScore);
+        .map((s) => s.metrics.healthScore)
 
-      const W = 51;
-      const B = chalk.bold.magenta;
+      const W = 51
+      const B = chalk.bold.magenta
 
       // Get all status information
-      const healthStatus = getHealthStatus(metrics.healthScore);
-      const complexityStatus = getComplexityStatus(metrics.avgComplexity);
-      const busFactorStatus = getBusFactorStatus(metrics.busFactorValue);
-      const deadExportsStatus = getDeadExportsStatus(metrics.deadExports);
-      const coverageStatus = getCoverageStatus(metrics.coverageEstimate);
-      const healthIndicator = formatHealthIndicator(metrics.healthTrend);
+      const healthStatus = getHealthStatus(metrics.healthScore)
+      const complexityStatus = getComplexityStatus(metrics.avgComplexity)
+      const busFactorStatus = getBusFactorStatus(metrics.busFactorValue)
+      const deadExportsStatus = getDeadExportsStatus(metrics.deadExports)
+      const coverageStatus = getCoverageStatus(metrics.coverageEstimate)
+      const healthIndicator = formatHealthIndicator(metrics.healthTrend)
 
-      console.log();
-      console.log(B(`╔${'═'.repeat(W)}╗`));
+      console.log()
+      console.log(B(`╔${'═'.repeat(W)}╗`))
 
       // Header with pulse
       console.log(
@@ -143,10 +136,10 @@ export function register(program: Command): void {
           '❤️  ' +
           healthStatus.color(`PULSE: ${healthStatus.status}`) +
           B('║')
-      );
+      )
 
-      console.log(B(`╠${'═'.repeat(W)}╣`));
-      console.log(B('║') + ' '.repeat(W) + B('║'));
+      console.log(B(`╠${'═'.repeat(W)}╣`))
+      console.log(B('║') + ' '.repeat(W) + B('║'))
 
       // Health
       console.log(
@@ -159,7 +152,7 @@ export function register(program: Command): void {
           healthIndicator +
           ' '.repeat(8) +
           B('║')
-      );
+      )
 
       // Complexity
       console.log(
@@ -172,7 +165,7 @@ export function register(program: Command): void {
           complexityStatus.color(complexityStatus.statusText) +
           ' '.repeat(4) +
           B('║')
-      );
+      )
 
       // Bus factor
       console.log(
@@ -185,7 +178,7 @@ export function register(program: Command): void {
           busFactorStatus.color(busFactorStatus.statusText) +
           ' '.repeat(4) +
           B('║')
-      );
+      )
 
       // Dead code
       console.log(
@@ -198,7 +191,7 @@ export function register(program: Command): void {
           deadExportsStatus.color(deadExportsStatus.statusText) +
           ' '.repeat(4) +
           B('║')
-      );
+      )
 
       // Coverage estimate
       console.log(
@@ -211,30 +204,30 @@ export function register(program: Command): void {
           coverageStatus.color(coverageStatus.statusText) +
           ' '.repeat(4) +
           B('║')
-      );
+      )
 
-      console.log(B('║') + ' '.repeat(W) + B('║'));
-      console.log(B(`╠${'═'.repeat(W)}╣`));
+      console.log(B('║') + ' '.repeat(W) + B('║'))
+      console.log(B(`╠${'═'.repeat(W)}╣`))
 
       // Heartbeat sparkline
-      console.log(`${B('║')}  💓 HEARTBEAT (last 30 scans)${' '.repeat(23)}${B('║')}`);
+      console.log(`${B('║')}  💓 HEARTBEAT (last 30 scans)${' '.repeat(23)}${B('║')}`)
 
       if (heartbeatData.length >= 2) {
-        const sparkline = coloredSparkline(heartbeatData, true);
-        const sparklineVisibleLen = sparkline.replace(/\x1b\[[0-9;]*m/g, '').length;
+        const sparkline = coloredSparkline(heartbeatData, true)
+        const sparklineVisibleLen = sparkline.replace(/\x1b\[[0-9;]*m/g, '').length
         console.log(
           `${B('║')}  ${sparkline}${' '.repeat(Math.max(0, W - sparklineVisibleLen - 2))}${B('║')}`
-        );
+        )
       } else {
         console.log(
           B('║') + chalk.dim('  (need more scans for heartbeat data)') + ' '.repeat(11) + B('║')
-        );
+        )
       }
 
-      console.log(B(`╠${'═'.repeat(W)}╣`));
+      console.log(B(`╠${'═'.repeat(W)}╣`))
 
-      console.log(B(`╚${'═'.repeat(W)}╝`));
-      console.log();
+      console.log(B(`╚${'═'.repeat(W)}╝`))
+      console.log()
 
       // Show next steps suggestions
       if (!options.json) {
@@ -251,17 +244,17 @@ export function register(program: Command): void {
             description: "See yesterday's summary",
             command: 'specter morning',
           },
-        ];
+        ]
 
         // Add context-specific suggestion based on health
         if (metrics.healthScore < 60) {
           suggestions.unshift({
             description: 'Find critical hotspots to refactor',
             command: 'specter hotspots',
-          });
+          })
         }
 
-        showNextSteps(suggestions);
+        showNextSteps(suggestions)
       }
-    });
+    })
 }

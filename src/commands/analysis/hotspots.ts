@@ -2,14 +2,14 @@
  * Hotspots command - Complexity x Churn analysis
  */
 
-import path from 'node:path';
-import type { Command } from 'commander';
-import { showNextSteps } from '../../cli-utils.js';
-import { loadGraph } from '../../graph/persistence.js';
-import { analyzeHotspots, formatHotspots } from '../../hotspots.js';
-import { outputJson, outputJsonError } from '../../json-output.js';
-import { colorizeOutput, printFormatted } from '../../tools/output-formatter.js';
-import { createSpinner } from '../types.js';
+import path from 'node:path'
+import type { Command } from 'commander'
+import { ensureGraph } from '../../auto-scan.js'
+import { showNextSteps } from '../../cli-utils.js'
+import { analyzeHotspots, formatHotspots } from '../../hotspots.js'
+import { outputJson } from '../../json-output.js'
+import { colorizeOutput, printFormatted } from '../../tools/output-formatter.js'
+import { createSpinner } from '../types.js'
 
 export function register(program: Command): void {
   program
@@ -30,28 +30,21 @@ Examples:
   $ specter hot -l 5 --json`
     )
     .action(async (options) => {
-      const rootDir = path.resolve(options.dir);
+      const rootDir = path.resolve(options.dir)
 
       const spinner = options.json
         ? null
-        : createSpinner('Analyzing complexity x churn hotspots...');
-      spinner?.start();
+        : createSpinner('Analyzing complexity x churn hotspots...')
+      spinner?.start()
 
-      const graph = await loadGraph(rootDir);
-
-      if (!graph) {
-        if (options.json) {
-          outputJsonError('hotspots', 'No graph found. Run `specter scan` first.');
-        }
-        spinner?.fail('No graph found. Run `specter scan` first.');
-        return;
-      }
+      const graph = await ensureGraph(rootDir, { json: options.json })
+      if (!graph) return
 
       const result = await analyzeHotspots(rootDir, graph, {
         since: options.since,
         top: parseInt(options.limit, 10),
-      });
-      spinner?.stop();
+      })
+      spinner?.stop()
 
       // JSON output for CI/CD
       if (options.json) {
@@ -60,18 +53,18 @@ Examples:
           summary: result.summary,
           quadrants: result.quadrants,
           timeRange: result.timeRange,
-        });
-        return;
+        })
+        return
       }
 
-      const output = formatHotspots(result);
-      const lines = colorizeOutput(output.split('\n'));
-      printFormatted(lines);
+      const output = formatHotspots(result)
+      const lines = colorizeOutput(output.split('\n'))
+      printFormatted(lines)
 
       // Show next steps suggestions
       if (!options.json) {
         const topHotspot =
-          result.quadrants.highComplexityHighChurn[0] || result.quadrants.highComplexityLowChurn[0];
+          result.quadrants.highComplexityHighChurn[0] || result.quadrants.highComplexityLowChurn[0]
         const suggestions = [
           {
             description: 'Get AI-powered refactoring suggestions',
@@ -85,16 +78,16 @@ Examples:
             description: 'Analyze dependencies between hotspots',
             command: 'specter coupling',
           },
-        ];
+        ]
 
         if (topHotspot) {
           suggestions.unshift({
             description: `Ask AI about ${topHotspot.file}`,
             command: `specter ask "Why is ${topHotspot.file} so complex?"`,
-          });
+          })
         }
 
-        showNextSteps(suggestions);
+        showNextSteps(suggestions)
       }
-    });
+    })
 }

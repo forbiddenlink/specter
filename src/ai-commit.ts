@@ -1,39 +1,39 @@
 #!/usr/bin/env node
-import { spawnSync } from 'node:child_process';
-import { resolve } from 'node:path';
-import chalk from 'chalk';
-import type { Command } from 'commander';
-import ora from 'ora';
-import { simpleGit } from 'simple-git';
+import { spawnSync } from 'node:child_process'
+import { resolve } from 'node:path'
+import chalk from 'chalk'
+import type { Command } from 'commander'
+import ora from 'ora'
+import { simpleGit } from 'simple-git'
 
 interface CommitOptions {
-  apply?: boolean;
-  verbose?: boolean;
-  type?: string;
+  apply?: boolean
+  verbose?: boolean
+  type?: string
 }
 
 /**
  * Check if GitHub Copilot CLI is installed
  */
 function checkCopilotCLI(): boolean {
-  const result = spawnSync('copilot', ['--version'], { stdio: 'ignore' });
-  return result.status === 0;
+  const result = spawnSync('copilot', ['--version'], { stdio: 'ignore' })
+  return result.status === 0
 }
 
 /**
  * Get staged changes
  */
 async function getStagedChanges(rootDir: string): Promise<string> {
-  const git = simpleGit(rootDir);
+  const git = simpleGit(rootDir)
 
   try {
-    const diff = await git.diff(['--cached', '--stat']);
+    const diff = await git.diff(['--cached', '--stat'])
     if (!diff) {
-      return '';
+      return ''
     }
-    return diff;
+    return diff
   } catch {
-    return '';
+    return ''
   }
 }
 
@@ -41,19 +41,19 @@ async function getStagedChanges(rootDir: string): Promise<string> {
  * Get detailed diff of staged changes
  */
 async function getStagedDiff(rootDir: string): Promise<string> {
-  const git = simpleGit(rootDir);
+  const git = simpleGit(rootDir)
 
   try {
     // Limit diff size to avoid huge prompts
-    const diff = await git.diff(['--cached', '--unified=3']);
+    const diff = await git.diff(['--cached', '--unified=3'])
     if (!diff) {
-      return '';
+      return ''
     }
 
     // Truncate if too long (keep first 3000 chars)
-    return diff.length > 3000 ? `${diff.slice(0, 3000)}\n... (diff truncated)` : diff;
+    return diff.length > 3000 ? `${diff.slice(0, 3000)}\n... (diff truncated)` : diff
   } catch {
-    return '';
+    return ''
   }
 }
 
@@ -64,37 +64,37 @@ export async function generateCommitMessage(
   rootDir: string,
   options: CommitOptions
 ): Promise<void> {
-  const spinner = ora('Analyzing changes...').start();
+  const spinner = ora('Analyzing changes...').start()
 
   try {
     // Check for staged changes
-    spinner.text = 'Checking for staged changes...';
-    const stagedSummary = await getStagedChanges(rootDir);
+    spinner.text = 'Checking for staged changes...'
+    const stagedSummary = await getStagedChanges(rootDir)
 
     if (!stagedSummary) {
-      spinner.fail('No staged changes');
-      console.log(chalk.yellow('\n⚠️  No changes staged for commit.'));
+      spinner.fail('No staged changes')
+      console.log(chalk.yellow('\n⚠️  No changes staged for commit.'))
       console.log(
         chalk.white('Use ') + chalk.cyan('git add') + chalk.white(' to stage changes first.\n')
-      );
-      process.exit(1);
+      )
+      process.exit(1)
     }
 
     // Check if Copilot CLI is available
     if (!checkCopilotCLI()) {
-      spinner.fail('GitHub Copilot CLI not found');
-      console.log(chalk.yellow('\n⚠️  GitHub Copilot CLI is required for AI commit messages.'));
-      console.log(chalk.white('Install it with:'));
-      console.log(chalk.cyan('  npm install -g @github/copilot\n'));
-      process.exit(1);
+      spinner.fail('GitHub Copilot CLI not found')
+      console.log(chalk.yellow('\n⚠️  GitHub Copilot CLI is required for AI commit messages.'))
+      console.log(chalk.white('Install it with:'))
+      console.log(chalk.cyan('  npm install -g @github/copilot\n'))
+      process.exit(1)
     }
 
     // Get detailed diff
-    spinner.text = 'Reading diff...';
-    const diff = await getStagedDiff(rootDir);
+    spinner.text = 'Reading diff...'
+    const diff = await getStagedDiff(rootDir)
 
     // Build prompt for Copilot
-    const commitType = options.type || 'auto';
+    const commitType = options.type || 'auto'
     const prompt = `Generate a conventional commit message for these changes.
 
 ${commitType !== 'auto' ? `Commit type should be: ${commitType}\n` : ''}
@@ -110,9 +110,9 @@ ${stagedSummary}
 Diff:
 ${diff}
 
-Generate a clear, concise commit message.`;
+Generate a clear, concise commit message.`
 
-    spinner.text = 'Generating commit message...';
+    spinner.text = 'Generating commit message...'
 
     try {
       // Use spawnSync with argument array to avoid shell injection
@@ -121,45 +121,55 @@ Generate a clear, concise commit message.`;
         stdio: ['pipe', 'pipe', 'pipe'],
         cwd: rootDir,
         timeout: 30000, // 30 second timeout
-      });
+      })
 
-      if (spawnResult.error) throw spawnResult.error;
-      if (spawnResult.status !== 0) throw new Error(spawnResult.stderr || 'Copilot failed');
+      if (spawnResult.error) throw spawnResult.error
+      if (spawnResult.status !== 0) throw new Error(spawnResult.stderr || 'Copilot failed')
 
-      spinner.succeed('Commit message generated');
+      spinner.succeed('Commit message generated')
 
-      console.log(`\n${chalk.bold.cyan('📝 Suggested Commit Message:\n')}`);
-      console.log(chalk.green(spawnResult.stdout.trim()));
+      console.log(`\n${chalk.bold.cyan('📝 Suggested Commit Message:\n')}`)
+      console.log(chalk.green(spawnResult.stdout.trim()))
 
       if (options.verbose) {
-        console.log(chalk.dim('\n📊 Changes:'));
-        console.log(chalk.dim(stagedSummary));
+        console.log(chalk.dim('\n📊 Changes:'))
+        console.log(chalk.dim(stagedSummary))
       }
 
       if (options.apply) {
-        console.log(
-          chalk.yellow('\n⚡ Auto-apply not yet implemented. Copy message above and use:')
-        );
-        console.log(chalk.cyan('  git commit -m "message"\n'));
+        const commitMessage = spawnResult.stdout.trim()
+        const git = simpleGit(rootDir)
+        try {
+          const commitResult = await git.commit(commitMessage)
+          const shortHash = commitResult.commit ? commitResult.commit.slice(0, 7) : '?'
+          const firstLine = commitMessage.split('\n')[0] || commitMessage
+          console.log(chalk.green(`\n✓ Committed: ${shortHash} ${firstLine}`))
+        } catch (commitError) {
+          console.log(chalk.red('\n✗ Commit failed:'))
+          console.log(
+            chalk.red(commitError instanceof Error ? commitError.message : String(commitError))
+          )
+          process.exit(1)
+        }
       } else {
         console.log(
           chalk.dim(
             '\n💡 Tip: Copy the message above or add --apply flag to commit automatically.\n'
           )
-        );
+        )
       }
     } catch (_copilotError) {
-      spinner.fail('Failed to generate message');
-      console.log(chalk.yellow('\n⚠️  GitHub Copilot is unavailable.'));
-      console.log(chalk.white('Staged changes:'));
-      console.log(stagedSummary);
+      spinner.fail('Failed to generate message')
+      console.log(chalk.yellow('\n⚠️  GitHub Copilot is unavailable.'))
+      console.log(chalk.white('Staged changes:'))
+      console.log(stagedSummary)
     }
   } catch (error) {
-    spinner.fail('Failed to analyze changes');
+    spinner.fail('Failed to analyze changes')
     if (error instanceof Error) {
-      console.error(chalk.red(`Error: ${error.message}`));
+      console.error(chalk.red(`Error: ${error.message}`))
     }
-    process.exit(1);
+    process.exit(1)
   }
 }
 
@@ -174,9 +184,9 @@ export function registerAICommitCommand(program: Command): void {
     .option('-v, --verbose', 'Show detailed diff information')
     .option('-t, --type <type>', 'Specify commit type (feat, fix, docs, etc.)')
     .action(async (options: CommitOptions) => {
-      const rootDir = resolve(process.cwd());
-      await generateCommitMessage(rootDir, options);
-    });
+      const rootDir = resolve(process.cwd())
+      await generateCommitMessage(rootDir, options)
+    })
 }
 
 /**

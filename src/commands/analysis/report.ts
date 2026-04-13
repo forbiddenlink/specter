@@ -2,12 +2,12 @@
  * Report command - generate comprehensive markdown report
  */
 
-import path from 'node:path';
-import chalk from 'chalk';
-import type { Command } from 'commander';
-import { loadGraph } from '../../graph/persistence.js';
-import { formatReportSummary, generateReport } from '../../report.js';
-import { createSpinner } from '../types.js';
+import path from 'node:path'
+import chalk from 'chalk'
+import type { Command } from 'commander'
+import { ensureGraph } from '../../auto-scan.js'
+import { formatReportSummary, generateReport } from '../../report.js'
+import { createSpinner } from '../types.js'
 
 export function register(program: Command): void {
   program
@@ -24,17 +24,16 @@ export function register(program: Command): void {
     .option('--no-bus-factor', 'Skip bus factor section')
     .option('--no-trajectory', 'Skip trajectory section')
     .action(async (options) => {
-      const rootDir = path.resolve(options.dir);
-      const fs = await import('node:fs/promises');
+      const rootDir = path.resolve(options.dir)
+      const fs = await import('node:fs/promises')
 
-      const spinner = createSpinner('Generating comprehensive report...');
-      spinner.start();
+      const spinner = createSpinner('Generating comprehensive report...')
+      spinner.start()
 
-      const graph = await loadGraph(rootDir);
-
+      const graph = await ensureGraph(rootDir, { json: options.json })
       if (!graph) {
-        spinner.fail('No graph found. Run `specter scan` first.');
-        return;
+        spinner.stop()
+        return
       }
 
       try {
@@ -47,40 +46,40 @@ export function register(program: Command): void {
           includeTrajectory: options.trajectory !== false,
           format: options.json ? ('json' as const) : ('markdown' as const),
           quick: options.quick || false,
-        };
+        }
 
-        const result = await generateReport(rootDir, graph, reportOptions);
-        spinner.stop();
+        const result = await generateReport(rootDir, graph, reportOptions)
+        spinner.stop()
 
         // Output or save the report
         if (options.output) {
-          await fs.writeFile(options.output, result.content, 'utf-8');
-          result.outputPath = options.output;
+          await fs.writeFile(options.output, result.content, 'utf-8')
+          result.outputPath = options.output
 
           // Show summary
-          const summary = formatReportSummary(result);
+          const summary = formatReportSummary(result)
           for (const line of summary.split('\n')) {
             if (line.includes('+') || line.includes('|')) {
-              console.log(chalk.bold.green(line));
+              console.log(chalk.bold.green(line))
             } else if (line.includes('KEY METRICS:')) {
-              console.log(chalk.bold.cyan(line));
+              console.log(chalk.bold.cyan(line))
             } else if (line.includes('Saved to:')) {
-              console.log(chalk.bold.yellow(line));
+              console.log(chalk.bold.yellow(line))
             } else {
-              console.log(chalk.white(line));
+              console.log(chalk.white(line))
             }
           }
         } else {
           // Output to stdout
           if (options.json) {
-            console.log(result.content);
+            console.log(result.content)
           } else {
-            console.log(result.content);
+            console.log(result.content)
           }
         }
       } catch (error) {
-        spinner.fail('Failed to generate report');
-        console.error(chalk.red(error instanceof Error ? error.message : String(error)));
+        spinner.fail('Failed to generate report')
+        console.error(chalk.red(error instanceof Error ? error.message : String(error)))
       }
-    });
+    })
 }

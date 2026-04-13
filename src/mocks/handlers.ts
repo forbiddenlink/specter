@@ -1,4 +1,4 @@
-import { http, HttpResponse } from 'msw'
+import { HttpResponse, http } from 'msw'
 
 // Example handlers - customize per project
 export const handlers = [
@@ -16,17 +16,17 @@ export const handlers = [
   }),
 
   http.get('/api/items/:id', ({ params }) => {
-    return HttpResponse.json({ id: params.id, name: `Item ${params.id}` })
+    return HttpResponse.json({ id: params['id'], name: `Item ${params['id']}` })
   }),
 
   http.post('/api/items', async ({ request }) => {
-    const body = await request.json() as Record<string, unknown>
+    const body = (await request.json()) as Record<string, unknown>
     return HttpResponse.json({ id: crypto.randomUUID(), ...body }, { status: 201 })
   }),
 
   http.patch('/api/items/:id', async ({ params, request }) => {
-    const body = await request.json() as Record<string, unknown>
-    return HttpResponse.json({ id: params.id, ...body })
+    const body = (await request.json()) as Record<string, unknown>
+    return HttpResponse.json({ id: params['id'], ...body })
   }),
 
   http.delete('/api/items/:id', () => {
@@ -35,7 +35,7 @@ export const handlers = [
 
   // Auth patterns
   http.post('/api/auth/login', async ({ request }) => {
-    const { email, password } = await request.json() as { email: string; password: string }
+    const { email, password } = (await request.json()) as { email: string; password: string }
     if (email && password) {
       return HttpResponse.json({
         user: { id: '1', email },
