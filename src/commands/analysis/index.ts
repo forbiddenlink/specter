@@ -1,9 +1,11 @@
 /**
  * Analysis commands - health, hotspots, coupling, cycles, drift, velocity, cost, dora, bus-factor,
- * trends, risk, vitals, report, trajectory, who, why
+ * trends, risk, vitals, report, trajectory, who, why, before, after
  */
 
 import type { Command } from 'commander'
+import { register as registerAfter } from './after.js'
+import { register as registerBefore } from './before.js'
 import { register as registerBusFactor } from './bus-factor.js'
 import { register as registerCost } from './cost.js'
 import { register as registerCoupling } from './coupling.js'
@@ -23,6 +25,8 @@ import { register as registerWho } from './who.js'
 import { register as registerWhy } from './why.js'
 
 export function registerAnalysisCommands(program: Command): void {
+  registerBefore(program)
+  registerAfter(program)
   registerHealth(program)
   registerHotspots(program)
   registerCoupling(program)
