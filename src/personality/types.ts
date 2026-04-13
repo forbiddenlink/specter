@@ -16,28 +16,35 @@ export type PersonalityMode =
   | 'dramatic'
   | 'ghost'
   | 'executive'
-  | 'default';
+  | 'zen'
+  | 'pirate'
+  | 'motivational'
+  | 'sage'
+  | 'hacker'
+  | 'poet'
+  | 'valley'
+  | 'default'
 
 export interface PersonalityConfig {
-  name: PersonalityMode;
-  description: string;
+  name: PersonalityMode
+  description: string
   traits: {
-    warmth: number; // 0-1: cold to warm
-    detail: number; // 0-1: brief to verbose
-    positivity: number; // 0-1: critical to encouraging
-    formality: number; // 0-1: casual to formal
-  };
+    warmth: number // 0-1: cold to warm
+    detail: number // 0-1: brief to verbose
+    positivity: number // 0-1: critical to encouraging
+    formality: number // 0-1: casual to formal
+  }
   phrases: {
-    greeting: string;
-    positive: string[];
-    negative: string[];
-    neutral: string[];
-    closing: string[];
-  };
+    greeting: string
+    positive: string[]
+    negative: string[]
+    neutral: string[]
+    closing: string[]
+  }
 }
 
 export interface FormatterOptions {
-  personality: PersonalityMode;
-  includeEmoji?: boolean;
-  maxLength?: number;
+  personality: PersonalityMode
+  includeEmoji?: boolean
+  maxLength?: number
 }

@@ -5,25 +5,25 @@
  * in natural language and get personality-driven answers.
  */
 
-import { type SimpleGit, simpleGit } from 'simple-git';
-import type { GraphNode, KnowledgeGraph, NodeType } from './graph/types.js';
-import type { PersonalityMode } from './personality/types.js';
+import { type SimpleGit, simpleGit } from 'simple-git'
+import type { GraphNode, KnowledgeGraph, NodeType } from './graph/types.js'
+import type { PersonalityMode } from './personality/types.js'
 
 export interface AskResult {
-  question: string;
-  questionType: QuestionType;
-  answer: string;
-  relevantFiles: RelevantFile[];
-  confidence: number;
-  personality: PersonalityMode;
+  question: string
+  questionType: QuestionType
+  answer: string
+  relevantFiles: RelevantFile[]
+  confidence: number
+  personality: PersonalityMode
 }
 
 export interface RelevantFile {
-  path: string;
-  name: string;
-  type: NodeType | 'directory';
-  relevance: string;
-  line?: number;
+  path: string
+  name: string
+  type: NodeType | 'directory'
+  relevance: string
+  line?: number
 }
 
 type QuestionType =
@@ -33,7 +33,7 @@ type QuestionType =
   | 'why-exists' // "Why does X exist?"
   | 'how-works' // "How does X work?"
   | 'list' // "List all X" / "Show me X"
-  | 'general'; // Fallback
+  | 'general' // Fallback
 
 /**
  * Question pattern matchers
@@ -46,14 +46,14 @@ const QUESTION_PATTERNS: Array<{ pattern: RegExp; type: QuestionType }> = [
   { pattern: /^how\s+(does|do|is|are|can)\s+/i, type: 'how-works' },
   { pattern: /^(list|show|find|get)\s+(all\s+|me\s+)?/i, type: 'list' },
   { pattern: /^(tell\s+me\s+about|explain|describe)\s+/i, type: 'what-does' },
-];
+]
 
 /** Template interface for personality-driven responses */
 interface PersonalityTemplate {
-  intro: (type: QuestionType, subject: string) => string;
-  notFound: (subject: string) => string;
-  found: (subject: string, count: number) => string;
-  closing: () => string;
+  intro: (type: QuestionType, subject: string) => string
+  notFound: (subject: string) => string
+  found: (subject: string, count: number) => string
+  closing: () => string
 }
 
 /**
@@ -64,19 +64,19 @@ const PERSONALITY_TEMPLATES: Record<PersonalityMode, PersonalityTemplate> = {
     intro: (type, subject) => {
       switch (type) {
         case 'what-does':
-          return `Let me tell you about ${subject}...`;
+          return `Let me tell you about ${subject}...`
         case 'where-is':
-          return `Looking for ${subject}...`;
+          return `Looking for ${subject}...`
         case 'who-wrote':
-          return `Let me check the git history for ${subject}...`;
+          return `Let me check the git history for ${subject}...`
         case 'why-exists':
-          return `Here's what I know about why ${subject} exists...`;
+          return `Here's what I know about why ${subject} exists...`
         case 'how-works':
-          return `Let me explain how ${subject} works...`;
+          return `Let me explain how ${subject} works...`
         case 'list':
-          return `Here's what I found for ${subject}...`;
+          return `Here's what I found for ${subject}...`
         default:
-          return `Here's what I know about ${subject}...`;
+          return `Here's what I know about ${subject}...`
       }
     },
     notFound: (subject) => `I couldn't find anything matching "${subject}" in the codebase.`,
@@ -89,19 +89,19 @@ const PERSONALITY_TEMPLATES: Record<PersonalityMode, PersonalityTemplate> = {
     intro: (type, subject) => {
       switch (type) {
         case 'what-does':
-          return `*lights cigarette* ${subject}? That's where the action is, kid...`;
+          return `*lights cigarette* ${subject}? That's where the action is, kid...`
         case 'where-is':
-          return `You're looking for ${subject}? *flips through files* I know this town...`;
+          return `You're looking for ${subject}? *flips through files* I know this town...`
         case 'who-wrote':
-          return `*checks the records* Someone left their fingerprints on ${subject}...`;
+          return `*checks the records* Someone left their fingerprints on ${subject}...`
         case 'why-exists':
-          return `Why does ${subject} exist? *stares out rain-streaked window* Every file has a story...`;
+          return `Why does ${subject} exist? *stares out rain-streaked window* Every file has a story...`
         case 'how-works':
-          return `How does ${subject} work? *exhales slowly* Let me take you through the dark alleys...`;
+          return `How does ${subject} work? *exhales slowly* Let me take you through the dark alleys...`
         case 'list':
-          return `*spreads files across desk* Here's what I dug up on ${subject}...`;
+          return `*spreads files across desk* Here's what I dug up on ${subject}...`
         default:
-          return `*adjusts fedora* ${subject}, eh? I've seen things...`;
+          return `*adjusts fedora* ${subject}, eh? I've seen things...`
       }
     },
     notFound: (subject) =>
@@ -115,19 +115,19 @@ const PERSONALITY_TEMPLATES: Record<PersonalityMode, PersonalityTemplate> = {
     intro: (type, subject) => {
       switch (type) {
         case 'what-does':
-          return `Oh, you don't know what ${subject} does? Interesting that you work here...`;
+          return `Oh, you don't know what ${subject} does? Interesting that you work here...`
         case 'where-is':
-          return `Looking for ${subject}? Have you tried... reading the file names?`;
+          return `Looking for ${subject}? Have you tried... reading the file names?`
         case 'who-wrote':
-          return `Who wrote ${subject}? Let's find out who to blame...`;
+          return `Who wrote ${subject}? Let's find out who to blame...`
         case 'why-exists':
-          return `Why does ${subject} exist? Great question. Sometimes I wonder too...`;
+          return `Why does ${subject} exist? Great question. Sometimes I wonder too...`
         case 'how-works':
-          return `How does ${subject} work? *deep breath* Let me dumb this down...`;
+          return `How does ${subject} work? *deep breath* Let me dumb this down...`
         case 'list':
-          return `You want me to list ${subject}? Fine, let me do your job for you...`;
+          return `You want me to list ${subject}? Fine, let me do your job for you...`
         default:
-          return `${subject}? Really? Okay, let me hold your hand through this...`;
+          return `${subject}? Really? Okay, let me hold your hand through this...`
       }
     },
     notFound: (subject) =>
@@ -141,19 +141,19 @@ const PERSONALITY_TEMPLATES: Record<PersonalityMode, PersonalityTemplate> = {
     intro: (type, subject) => {
       switch (type) {
         case 'what-does':
-          return `Great question! Let me explain ${subject} and why it matters...`;
+          return `Great question! Let me explain ${subject} and why it matters...`
         case 'where-is':
-          return `Let me help you find ${subject}. Understanding file organization is key...`;
+          return `Let me help you find ${subject}. Understanding file organization is key...`
         case 'who-wrote':
-          return `Good to know the history! Let's see who contributed to ${subject}...`;
+          return `Good to know the history! Let's see who contributed to ${subject}...`
         case 'why-exists':
-          return `Understanding *why* code exists is crucial. Here's the story of ${subject}...`;
+          return `Understanding *why* code exists is crucial. Here's the story of ${subject}...`
         case 'how-works':
-          return `Let's walk through how ${subject} works step by step...`;
+          return `Let's walk through how ${subject} works step by step...`
         case 'list':
-          return `Let me show you what we have for ${subject}. This will be educational...`;
+          return `Let me show you what we have for ${subject}. This will be educational...`
         default:
-          return `Let me share what I know about ${subject}...`;
+          return `Let me share what I know about ${subject}...`
       }
     },
     notFound: (subject) =>
@@ -167,19 +167,19 @@ const PERSONALITY_TEMPLATES: Record<PersonalityMode, PersonalityTemplate> = {
     intro: (type, subject) => {
       switch (type) {
         case 'what-does':
-          return `Ooh, ${subject}! That's a great part of the codebase! Let me tell you...`;
+          return `Ooh, ${subject}! That's a great part of the codebase! Let me tell you...`
         case 'where-is':
-          return `Let's find ${subject} together! This is going to be fun!`;
+          return `Let's find ${subject} together! This is going to be fun!`
         case 'who-wrote':
-          return `Let's celebrate the awesome people who worked on ${subject}!`;
+          return `Let's celebrate the awesome people who worked on ${subject}!`
         case 'why-exists':
-          return `${subject} is here for a great reason! Let me share...`;
+          return `${subject} is here for a great reason! Let me share...`
         case 'how-works':
-          return `${subject} is so cool! Here's how the magic happens...`;
+          return `${subject} is so cool! Here's how the magic happens...`
         case 'list':
-          return `You want to see ${subject}? I love showing off the codebase!`;
+          return `You want to see ${subject}? I love showing off the codebase!`
         default:
-          return `${subject}! Yes! Let me tell you all about it!`;
+          return `${subject}! Yes! Let me tell you all about it!`
       }
     },
     notFound: (subject) =>
@@ -193,19 +193,19 @@ const PERSONALITY_TEMPLATES: Record<PersonalityMode, PersonalityTemplate> = {
     intro: (type, subject) => {
       switch (type) {
         case 'what-does':
-          return `${subject}. Let me give you the unvarnished truth...`;
+          return `${subject}. Let me give you the unvarnished truth...`
         case 'where-is':
-          return `${subject} is located in the following areas. Pay attention...`;
+          return `${subject} is located in the following areas. Pay attention...`
         case 'who-wrote':
-          return `The responsible parties for ${subject}:`;
+          return `The responsible parties for ${subject}:`
         case 'why-exists':
-          return `${subject} exists for these reasons, questionable as they may be...`;
+          return `${subject} exists for these reasons, questionable as they may be...`
         case 'how-works':
-          return `Here's how ${subject} works. Note the inefficiencies...`;
+          return `Here's how ${subject} works. Note the inefficiencies...`
         case 'list':
-          return `Here's the list for ${subject}. Make of it what you will...`;
+          return `Here's the list for ${subject}. Make of it what you will...`
         default:
-          return `Regarding ${subject}:`;
+          return `Regarding ${subject}:`
       }
     },
     notFound: (subject) => `"${subject}" was not found. Perhaps the naming conventions need work.`,
@@ -218,19 +218,19 @@ const PERSONALITY_TEMPLATES: Record<PersonalityMode, PersonalityTemplate> = {
     intro: (type, subject) => {
       switch (type) {
         case 'what-does':
-          return `The tale of ${subject} begins thus...`;
+          return `The tale of ${subject} begins thus...`
         case 'where-is':
-          return `Through the ages, ${subject} has resided in these locations...`;
+          return `Through the ages, ${subject} has resided in these locations...`
         case 'who-wrote':
-          return `The chroniclers who shaped ${subject}:`;
+          return `The chroniclers who shaped ${subject}:`
         case 'why-exists':
-          return `The origins of ${subject} trace back to...`;
+          return `The origins of ${subject} trace back to...`
         case 'how-works':
-          return `The mechanics of ${subject}, evolved over many commits...`;
+          return `The mechanics of ${subject}, evolved over many commits...`
         case 'list':
-          return `From the archives, here are the records of ${subject}...`;
+          return `From the archives, here are the records of ${subject}...`
         default:
-          return `Let me consult the historical records on ${subject}...`;
+          return `Let me consult the historical records on ${subject}...`
       }
     },
     notFound: (subject) =>
@@ -251,19 +251,19 @@ const PERSONALITY_TEMPLATES: Record<PersonalityMode, PersonalityTemplate> = {
     intro: (type, subject) => {
       switch (type) {
         case 'what-does':
-          return `I sense you're curious about ${subject}. Let's explore that together...`;
+          return `I sense you're curious about ${subject}. Let's explore that together...`
         case 'where-is':
-          return `You're searching for ${subject}. What draws you to it?`;
+          return `You're searching for ${subject}. What draws you to it?`
         case 'who-wrote':
-          return `Understanding authorship can help us process ${subject}...`;
+          return `Understanding authorship can help us process ${subject}...`
         case 'why-exists':
-          return `You're asking about the *purpose* of ${subject}. That's deep...`;
+          return `You're asking about the *purpose* of ${subject}. That's deep...`
         case 'how-works':
-          return `Let's gently unpack how ${subject} functions...`;
+          return `Let's gently unpack how ${subject} functions...`
         case 'list':
-          return `I hear you want to see ${subject}. Let's take it one step at a time...`;
+          return `I hear you want to see ${subject}. Let's take it one step at a time...`
         default:
-          return `Tell me more about what draws you to ${subject}...`;
+          return `Tell me more about what draws you to ${subject}...`
       }
     },
     notFound: (subject) => `"${subject}" isn't present here. How does that make you feel?`,
@@ -276,19 +276,19 @@ const PERSONALITY_TEMPLATES: Record<PersonalityMode, PersonalityTemplate> = {
     intro: (type, subject) => {
       switch (type) {
         case 'what-does':
-          return `*thunder rumbles* Behold! The legend of ${subject} unfolds...`;
+          return `*thunder rumbles* Behold! The legend of ${subject} unfolds...`
         case 'where-is':
-          return `*dramatic pause* The sacred location of ${subject} shall be revealed!`;
+          return `*dramatic pause* The sacred location of ${subject} shall be revealed!`
         case 'who-wrote':
-          return `*orchestra swells* The heroes who forged ${subject}:`;
+          return `*orchestra swells* The heroes who forged ${subject}:`
         case 'why-exists':
-          return `*narrator voice* In the beginning, there was ${subject}...`;
+          return `*narrator voice* In the beginning, there was ${subject}...`
         case 'how-works':
-          return `*epic music* Witness the inner workings of ${subject}!`;
+          return `*epic music* Witness the inner workings of ${subject}!`
         case 'list':
-          return `*curtain rises* Presenting... the complete compendium of ${subject}!`;
+          return `*curtain rises* Presenting... the complete compendium of ${subject}!`
         default:
-          return `*spotlight illuminates* ${subject} steps into the light...`;
+          return `*spotlight illuminates* ${subject} steps into the light...`
       }
     },
     notFound: (subject) =>
@@ -302,19 +302,19 @@ const PERSONALITY_TEMPLATES: Record<PersonalityMode, PersonalityTemplate> = {
     intro: (type, subject) => {
       switch (type) {
         case 'what-does':
-          return `*static* ...${subject}... I remember when it was written...`;
+          return `*static* ...${subject}... I remember when it was written...`
         case 'where-is':
-          return `*whispers* ${subject}... it haunts these directories...`;
+          return `*whispers* ${subject}... it haunts these directories...`
         case 'who-wrote':
-          return `*echoes* The spirits who created ${subject}...`;
+          return `*echoes* The spirits who created ${subject}...`
         case 'why-exists':
-          return `*distant voice* ${subject}... it was born from necessity...`;
+          return `*distant voice* ${subject}... it was born from necessity...`
         case 'how-works':
-          return `*fading in and out* ...the mechanisms of ${subject}...`;
+          return `*fading in and out* ...the mechanisms of ${subject}...`
         case 'list':
-          return `*static* ...these are the remnants of ${subject}...`;
+          return `*static* ...these are the remnants of ${subject}...`
         default:
-          return `*static* ...${subject}... I sense its presence...`;
+          return `*static* ...${subject}... I sense its presence...`
       }
     },
     notFound: (subject) =>
@@ -328,19 +328,19 @@ const PERSONALITY_TEMPLATES: Record<PersonalityMode, PersonalityTemplate> = {
     intro: (type, subject) => {
       switch (type) {
         case 'what-does':
-          return `From a strategic perspective, ${subject} delivers the following value...`;
+          return `From a strategic perspective, ${subject} delivers the following value...`
         case 'where-is':
-          return `${subject} is positioned within the architecture as follows...`;
+          return `${subject} is positioned within the architecture as follows...`
         case 'who-wrote':
-          return `Key stakeholders and contributors for ${subject}:`;
+          return `Key stakeholders and contributors for ${subject}:`
         case 'why-exists':
-          return `The business case for ${subject}:`;
+          return `The business case for ${subject}:`
         case 'how-works':
-          return `Let me outline the operational mechanics of ${subject}...`;
+          return `Let me outline the operational mechanics of ${subject}...`
         case 'list':
-          return `Portfolio overview for ${subject}:`;
+          return `Portfolio overview for ${subject}:`
         default:
-          return `Strategic analysis of ${subject}:`;
+          return `Strategic analysis of ${subject}:`
       }
     },
     notFound: (subject) =>
@@ -349,7 +349,184 @@ const PERSONALITY_TEMPLATES: Record<PersonalityMode, PersonalityTemplate> = {
       `Identified ${count} ${count === 1 ? 'asset' : 'assets'} related to "${subject}".`,
     closing: () => 'Recommend reviewing these findings in the next planning cycle.',
   },
-};
+
+  zen: {
+    intro: (type, subject) => {
+      switch (type) {
+        case 'what-does':
+          return `Breathe. Let us observe ${subject} as it is...`
+        case 'where-is':
+          return `${subject} rests where it must. Let us find it...`
+        case 'who-wrote':
+          return `The hands that shaped ${subject}...`
+        case 'why-exists':
+          return `${subject} exists as all things do - with purpose...`
+        case 'how-works':
+          return `The flow of ${subject} reveals itself to the patient mind...`
+        case 'list':
+          return `Observe ${subject} without attachment...`
+        default:
+          return `Be still. Let ${subject} speak...`
+      }
+    },
+    notFound: (subject) => `"${subject}" is absent. In absence, there is also truth.`,
+    found: (subject, count) =>
+      `${count} ${count === 1 ? 'truth' : 'truths'} revealed for "${subject}". Observe.`,
+    closing: () => 'May your path through the codebase be peaceful.',
+  },
+
+  pirate: {
+    intro: (type, subject) => {
+      switch (type) {
+        case 'what-does':
+          return `Arrr! Let me tell ye about ${subject}, matey...`
+        case 'where-is':
+          return `Ye seek ${subject}? *checks treasure map* I know these waters...`
+        case 'who-wrote':
+          return `The scallywags who crafted ${subject}:`
+        case 'why-exists':
+          return `Why does ${subject} sail these seas? Gather 'round...`
+        case 'how-works':
+          return `The inner workin's of ${subject}, ye landlubber...`
+        case 'list':
+          return `The full bounty of ${subject}, straight from the hold!`
+        default:
+          return `Ahoy! ${subject}, ye say? Let me chart the course...`
+      }
+    },
+    notFound: (subject) => `Blimey! "${subject}" be lost to the deep! No trace in these waters!`,
+    found: (subject, count) =>
+      `Yo ho! ${count} ${count === 1 ? 'treasure' : 'treasures'} found for "${subject}"! Arrr!`,
+    closing: () => "Fair winds and followin' seas, matey!",
+  },
+
+  motivational: {
+    intro: (type, subject) => {
+      switch (type) {
+        case 'what-does':
+          return `YES! Let's discover the POWER of ${subject}!`
+        case 'where-is':
+          return `Let's FIND ${subject}! Every search brings us closer to greatness!`
+        case 'who-wrote':
+          return `Let's celebrate the CHAMPIONS who built ${subject}!`
+        case 'why-exists':
+          return `${subject} exists because someone BELIEVED! Here's why...`
+        case 'how-works':
+          return `The incredible machinery of ${subject} - prepare to be INSPIRED!`
+        case 'list':
+          return `BEHOLD the full lineup of ${subject}! Every one a winner!`
+        default:
+          return `LET'S GO! Time to explore ${subject}!`
+      }
+    },
+    notFound: (subject) =>
+      `"${subject}" isn't here YET - but every gap is an opportunity to BUILD!`,
+    found: (subject, count) =>
+      `AMAZING! ${count} ${count === 1 ? 'result' : 'results'} for "${subject}"! You're on FIRE!`,
+    closing: () => "You're CRUSHING IT! Keep going!",
+  },
+
+  sage: {
+    intro: (type, subject) => {
+      switch (type) {
+        case 'what-does':
+          return `Gather close. The nature of ${subject} is worth understanding deeply...`
+        case 'where-is':
+          return `${subject} dwells where purpose placed it. Let me guide you...`
+        case 'who-wrote':
+          return `The artisans who shaped ${subject} left their mark...`
+        case 'why-exists':
+          return `Why does ${subject} exist? A question worthy of contemplation...`
+        case 'how-works':
+          return `The workings of ${subject} reveal deeper truths about the whole...`
+        case 'list':
+          return `Let me lay before you the full accounting of ${subject}...`
+        default:
+          return `${subject}... there is much wisdom to share...`
+      }
+    },
+    notFound: (subject) =>
+      `"${subject}" is absent from these halls. Sometimes knowing what is missing teaches us the most.`,
+    found: (subject, count) =>
+      `${count} ${count === 1 ? 'insight' : 'insights'} on "${subject}" await your reflection.`,
+    closing: () => 'Wisdom is knowing what to remove.',
+  },
+
+  hacker: {
+    intro: (type, subject) => {
+      switch (type) {
+        case 'what-does':
+          return `[*] Analyzing target: ${subject}...`
+        case 'where-is':
+          return `[*] Locating ${subject} in filesystem...`
+        case 'who-wrote':
+          return `[*] Extracting commit signatures for ${subject}...`
+        case 'why-exists':
+          return `[~] Reverse engineering purpose of ${subject}...`
+        case 'how-works':
+          return `[*] Decompiling ${subject} internals...`
+        case 'list':
+          return `[*] Enumerating ${subject}...`
+        default:
+          return `[*] Probing ${subject}...`
+      }
+    },
+    notFound: (subject) => `[-] Target "${subject}" not found. 404. Check your payload.`,
+    found: (subject, count) =>
+      `[+] ${count} ${count === 1 ? 'target' : 'targets'} acquired for "${subject}".`,
+    closing: () => '[*] Scan complete. Stay paranoid.',
+  },
+
+  poet: {
+    intro: (type, subject) => {
+      switch (type) {
+        case 'what-does':
+          return `Like ink on parchment, ${subject} tells its tale...`
+        case 'where-is':
+          return `Where does ${subject} rest? Let us wander and find it...`
+        case 'who-wrote':
+          return `The authors of ${subject}, poets in their own right...`
+        case 'why-exists':
+          return `Why does ${subject} exist? Every verse has its reason...`
+        case 'how-works':
+          return `The inner music of ${subject} plays on...`
+        case 'list':
+          return `A collection of ${subject}, each a stanza of its own...`
+        default:
+          return `${subject}... let the code speak in verse...`
+      }
+    },
+    notFound: (subject) => `"${subject}" - a word unwritten, a verse yet to be composed.`,
+    found: (subject, count) =>
+      `${count} ${count === 1 ? 'verse' : 'verses'} found for "${subject}", each with its own beauty.`,
+    closing: () => 'And so the code writes on...',
+  },
+
+  valley: {
+    intro: (type, subject) => {
+      switch (type) {
+        case 'what-does':
+          return `So ${subject} is basically our core value prop, right? Let me break it down...`
+        case 'where-is':
+          return `${subject}? Yeah, let me pull that up real quick...`
+        case 'who-wrote':
+          return `The rockstars who shipped ${subject}:`
+        case 'why-exists':
+          return `${subject} is literally why we have product-market fit...`
+        case 'how-works':
+          return `OK so ${subject} is super scalable. Here's the architecture...`
+        case 'list':
+          return `Full pipeline of ${subject} - it's all synergy, bro:`
+        default:
+          return `Yo! ${subject}? Let's unpack this real quick...`
+      }
+    },
+    notFound: (subject) => `"${subject}" isn't in the stack. Sounds like a pivot opportunity tbh.`,
+    found: (subject, count) =>
+      `Boom! ${count} ${count === 1 ? 'hit' : 'hits'} for "${subject}". That's traction!`,
+    closing: () => "Ship it! Let's sync up later.",
+  },
+}
 
 /**
  * Detect the type of question being asked
@@ -357,17 +534,17 @@ const PERSONALITY_TEMPLATES: Record<PersonalityMode, PersonalityTemplate> = {
 function detectQuestionType(question: string): QuestionType {
   for (const { pattern, type } of QUESTION_PATTERNS) {
     if (pattern.test(question)) {
-      return type;
+      return type
     }
   }
-  return 'general';
+  return 'general'
 }
 
 /**
  * Extract the subject from a question
  */
 function extractSubject(question: string, type: QuestionType): string {
-  let subject = question;
+  let subject = question
 
   // Remove question words based on type
   const removals: Record<QuestionType, RegExp[]> = {
@@ -382,86 +559,86 @@ function extractSubject(question: string, type: QuestionType): string {
     'how-works': [/^how\s+(does|do|is|are|can)\s+/i, /\s+work.*$/i, /\?$/],
     list: [/^(list|show|find|get)\s+(all\s+|me\s+)?/i, /\?$/],
     general: [/^(tell\s+me\s+about|explain|describe)\s+/i, /\?$/],
-  };
+  }
 
   for (const pattern of removals[type] || []) {
-    subject = subject.replace(pattern, '');
+    subject = subject.replace(pattern, '')
   }
 
   // Clean up common words
-  subject = subject.replace(/^(the|a|an|my|our|this)\s+/i, '');
-  subject = subject.replace(/\s+(code|file|function|class|module|system|feature)$/i, '');
+  subject = subject.replace(/^(the|a|an|my|our|this)\s+/i, '')
+  subject = subject.replace(/\s+(code|file|function|class|module|system|feature)$/i, '')
 
-  return subject.trim().toLowerCase();
+  return subject.trim().toLowerCase()
 }
 
 /**
  * Search for relevant nodes in the graph
  */
 function searchGraph(subject: string, graph: KnowledgeGraph): GraphNode[] {
-  const keywords = subject.split(/\s+/).filter((w) => w.length > 1);
-  const results: Array<{ node: GraphNode; score: number }> = [];
+  const keywords = subject.split(/\s+/).filter((w) => w.length > 1)
+  const results: Array<{ node: GraphNode; score: number }> = []
 
   for (const node of Object.values(graph.nodes)) {
-    let score = 0;
-    const nameLower = node.name.toLowerCase();
-    const pathLower = node.filePath.toLowerCase();
+    let score = 0
+    const nameLower = node.name.toLowerCase()
+    const pathLower = node.filePath.toLowerCase()
 
     for (const keyword of keywords) {
       // Exact name match
       if (nameLower === keyword) {
-        score += 100;
+        score += 100
       }
       // Name contains keyword
       else if (nameLower.includes(keyword)) {
-        score += 50;
+        score += 50
       }
       // Path contains keyword
       else if (pathLower.includes(keyword)) {
-        score += 25;
+        score += 25
       }
     }
 
     // Bonus for exported symbols
     if (node.exported && score > 0) {
-      score += 10;
+      score += 10
     }
 
     // Bonus for files (entry points)
     if (node.type === 'file' && score > 0) {
-      score += 5;
+      score += 5
     }
 
     if (score > 0) {
-      results.push({ node, score });
+      results.push({ node, score })
     }
   }
 
   // Sort by score descending
-  results.sort((a, b) => b.score - a.score);
+  results.sort((a, b) => b.score - a.score)
 
-  return results.slice(0, 10).map((r) => r.node);
+  return results.slice(0, 10).map((r) => r.node)
 }
 
 /**
  * Find directories that match the subject
  */
 function findDirectories(subject: string, graph: KnowledgeGraph): string[] {
-  const dirs = new Set<string>();
-  const keywords = subject.split(/\s+/).filter((w) => w.length > 1);
+  const dirs = new Set<string>()
+  const keywords = subject.split(/\s+/).filter((w) => w.length > 1)
 
   for (const node of Object.values(graph.nodes)) {
     if (node.type === 'file') {
-      const dirPath = node.filePath.split('/').slice(0, -1).join('/');
+      const dirPath = node.filePath.split('/').slice(0, -1).join('/')
       for (const keyword of keywords) {
         if (dirPath.toLowerCase().includes(keyword)) {
-          dirs.add(dirPath);
+          dirs.add(dirPath)
         }
       }
     }
   }
 
-  return Array.from(dirs);
+  return Array.from(dirs)
 }
 
 /**
@@ -471,20 +648,20 @@ async function getGitAuthors(
   rootDir: string,
   filePaths: string[]
 ): Promise<Map<string, { author: string; commits: number }>> {
-  const authors = new Map<string, { author: string; commits: number }>();
-  const git: SimpleGit = simpleGit(rootDir);
+  const authors = new Map<string, { author: string; commits: number }>()
+  const git: SimpleGit = simpleGit(rootDir)
 
   for (const filePath of filePaths.slice(0, 5)) {
     try {
-      const log = await git.log({ file: filePath, maxCount: 20 });
+      const log = await git.log({ file: filePath, maxCount: 20 })
       if (log.total > 0) {
-        const authorCounts = new Map<string, number>();
+        const authorCounts = new Map<string, number>()
         for (const commit of log.all) {
-          authorCounts.set(commit.author_name, (authorCounts.get(commit.author_name) || 0) + 1);
+          authorCounts.set(commit.author_name, (authorCounts.get(commit.author_name) || 0) + 1)
         }
-        const topAuthor = [...authorCounts.entries()].sort((a, b) => b[1] - a[1])[0];
+        const topAuthor = [...authorCounts.entries()].sort((a, b) => b[1] - a[1])[0]
         if (topAuthor) {
-          authors.set(filePath, { author: topAuthor[0], commits: topAuthor[1] });
+          authors.set(filePath, { author: topAuthor[0], commits: topAuthor[1] })
         }
       }
     } catch {
@@ -492,114 +669,110 @@ async function getGitAuthors(
     }
   }
 
-  return authors;
+  return authors
 }
 
 /**
  * Generate description of what a file/symbol does
  */
 function describeNode(node: GraphNode, graph: KnowledgeGraph): string {
-  const descriptions: string[] = [];
+  const descriptions: string[] = []
 
   switch (node.type) {
     case 'file': {
-      const lineCount = (node as { lineCount?: number }).lineCount;
-      const exports = graph.edges.filter(
-        (e) => e.source === node.id && e.type === 'exports'
-      ).length;
-      const imports = graph.edges.filter(
-        (e) => e.source === node.id && e.type === 'imports'
-      ).length;
+      const lineCount = (node as { lineCount?: number }).lineCount
+      const exports = graph.edges.filter((e) => e.source === node.id && e.type === 'exports').length
+      const imports = graph.edges.filter((e) => e.source === node.id && e.type === 'imports').length
 
-      descriptions.push(`File with ${lineCount || '?'} lines of code.`);
-      if (exports > 0) descriptions.push(`Exports ${exports} symbols.`);
-      if (imports > 0) descriptions.push(`Imports from ${imports} modules.`);
+      descriptions.push(`File with ${lineCount || '?'} lines of code.`)
+      if (exports > 0) descriptions.push(`Exports ${exports} symbols.`)
+      if (imports > 0) descriptions.push(`Imports from ${imports} modules.`)
 
       // Check for common patterns
-      const nameLower = node.name.toLowerCase();
+      const nameLower = node.name.toLowerCase()
       if (nameLower.includes('test') || nameLower.includes('spec')) {
-        descriptions.push('This is a test file.');
+        descriptions.push('This is a test file.')
       } else if (nameLower.includes('index')) {
-        descriptions.push('Entry point/barrel file.');
+        descriptions.push('Entry point/barrel file.')
       } else if (nameLower.includes('types')) {
-        descriptions.push('Type definitions.');
+        descriptions.push('Type definitions.')
       }
-      break;
+      break
     }
 
     case 'function': {
-      const funcNode = node as { parameters?: string[]; returnType?: string; isAsync?: boolean };
-      const params = funcNode.parameters?.length || 0;
-      if (funcNode.isAsync) descriptions.push('Async function');
-      else descriptions.push('Function');
-      descriptions.push(`with ${params} parameter${params === 1 ? '' : 's'}.`);
-      if (funcNode.returnType) descriptions.push(`Returns ${funcNode.returnType}.`);
-      break;
+      const funcNode = node as { parameters?: string[]; returnType?: string; isAsync?: boolean }
+      const params = funcNode.parameters?.length || 0
+      if (funcNode.isAsync) descriptions.push('Async function')
+      else descriptions.push('Function')
+      descriptions.push(`with ${params} parameter${params === 1 ? '' : 's'}.`)
+      if (funcNode.returnType) descriptions.push(`Returns ${funcNode.returnType}.`)
+      break
     }
 
     case 'class': {
-      const classNode = node as { extends?: string; memberCount?: number };
-      descriptions.push('Class definition');
-      if (classNode.extends) descriptions.push(`extending ${classNode.extends}.`);
-      if (classNode.memberCount) descriptions.push(`Has ${classNode.memberCount} members.`);
-      break;
+      const classNode = node as { extends?: string; memberCount?: number }
+      descriptions.push('Class definition')
+      if (classNode.extends) descriptions.push(`extending ${classNode.extends}.`)
+      if (classNode.memberCount) descriptions.push(`Has ${classNode.memberCount} members.`)
+      break
     }
 
     case 'interface':
     case 'type':
-      descriptions.push(`TypeScript ${node.type} definition.`);
-      break;
+      descriptions.push(`TypeScript ${node.type} definition.`)
+      break
 
     case 'enum':
-      descriptions.push('Enumeration type.');
-      break;
+      descriptions.push('Enumeration type.')
+      break
 
     case 'variable':
-      descriptions.push('Variable/constant.');
-      if (node.exported) descriptions.push('Exported.');
-      break;
+      descriptions.push('Variable/constant.')
+      if (node.exported) descriptions.push('Exported.')
+      break
   }
 
   // Add documentation if available
   if (node.documentation) {
-    descriptions.push(node.documentation.slice(0, 100));
+    descriptions.push(node.documentation.slice(0, 100))
   }
 
-  return descriptions.join(' ');
+  return descriptions.join(' ')
 }
 
 /**
  * Generate flow description for how-works questions
  */
 function describeFlow(nodes: GraphNode[], graph: KnowledgeGraph): string[] {
-  const flows: string[] = [];
+  const flows: string[] = []
 
   for (const node of nodes.slice(0, 3)) {
     // Find what this node imports
     const imports = graph.edges
       .filter((e) => e.source === node.id && e.type === 'imports')
       .map((e) => graph.nodes[e.target]?.name)
-      .filter(Boolean);
+      .filter(Boolean)
 
     // Find what imports this node
     const importedBy = graph.edges
       .filter((e) => e.target === node.id && e.type === 'imports')
       .map((e) => graph.nodes[e.source]?.name)
-      .filter(Boolean);
+      .filter(Boolean)
 
     if (imports.length > 0 || importedBy.length > 0) {
-      let flow = `${node.name}`;
+      let flow = `${node.name}`
       if (imports.length > 0) {
-        flow += ` depends on [${imports.slice(0, 3).join(', ')}${imports.length > 3 ? '...' : ''}]`;
+        flow += ` depends on [${imports.slice(0, 3).join(', ')}${imports.length > 3 ? '...' : ''}]`
       }
       if (importedBy.length > 0) {
-        flow += ` and is used by [${importedBy.slice(0, 3).join(', ')}${importedBy.length > 3 ? '...' : ''}]`;
+        flow += ` and is used by [${importedBy.slice(0, 3).join(', ')}${importedBy.length > 3 ? '...' : ''}]`
       }
-      flows.push(flow);
+      flows.push(flow)
     }
   }
 
-  return flows;
+  return flows
 }
 
 /**
@@ -619,122 +792,122 @@ function generateAnswer(
   rootDir: string
 ): Promise<string> {
   return (async () => {
-    const parts: string[] = [];
+    const parts: string[] = []
 
     if (nodes.length === 0 && directories.length === 0) {
-      return templates.notFound(subject);
+      return templates.notFound(subject)
     }
 
-    const intro = templates.intro(questionType, subject);
-    if (intro) parts.push(intro);
+    const intro = templates.intro(questionType, subject)
+    if (intro) parts.push(intro)
 
     switch (questionType) {
       case 'what-does':
       case 'general': {
-        parts.push(templates.found(subject, nodes.length + directories.length));
+        parts.push(templates.found(subject, nodes.length + directories.length))
         for (const node of nodes.slice(0, 3)) {
-          parts.push(`\n${node.name}: ${describeNode(node, graph)}`);
+          parts.push(`\n${node.name}: ${describeNode(node, graph)}`)
         }
-        break;
+        break
       }
 
       case 'where-is': {
-        parts.push(templates.found(subject, relevantFiles.length));
+        parts.push(templates.found(subject, relevantFiles.length))
         if (directories.length > 0) {
           parts.push(
             `\nMain location${directories.length > 1 ? 's' : ''}: ${directories.slice(0, 2).join(', ')}`
-          );
+          )
         }
         for (const node of nodes.slice(0, 3)) {
-          parts.push(`\n- ${node.filePath}${node.lineStart > 1 ? `:${node.lineStart}` : ''}`);
+          parts.push(`\n- ${node.filePath}${node.lineStart > 1 ? `:${node.lineStart}` : ''}`)
         }
-        break;
+        break
       }
 
       case 'who-wrote': {
-        const filePaths = nodes.map((n) => n.filePath).slice(0, 5);
-        const authors = await getGitAuthors(rootDir, filePaths);
+        const filePaths = nodes.map((n) => n.filePath).slice(0, 5)
+        const authors = await getGitAuthors(rootDir, filePaths)
 
         if (authors.size > 0) {
-          parts.push(templates.found(subject, authors.size));
+          parts.push(templates.found(subject, authors.size))
           for (const [path, info] of authors.entries()) {
-            const fileName = path.split('/').pop();
-            parts.push(`\n${fileName}: ${info.author} (${info.commits} commits)`);
+            const fileName = path.split('/').pop()
+            parts.push(`\n${fileName}: ${info.author} (${info.commits} commits)`)
           }
         } else {
-          parts.push('\nNo git history available for these files.');
+          parts.push('\nNo git history available for these files.')
         }
-        break;
+        break
       }
 
       case 'why-exists': {
-        parts.push(templates.found(subject, nodes.length));
+        parts.push(templates.found(subject, nodes.length))
         for (const node of nodes.slice(0, 2)) {
-          const description = describeNode(node, graph);
-          parts.push(`\n${node.name}: ${description}`);
+          const description = describeNode(node, graph)
+          parts.push(`\n${node.name}: ${description}`)
           const usedBy = graph.edges.filter(
             (e) => e.target === node.id && e.type === 'imports'
-          ).length;
+          ).length
           if (usedBy > 0) {
-            parts.push(`  Used by ${usedBy} other file${usedBy > 1 ? 's' : ''}.`);
+            parts.push(`  Used by ${usedBy} other file${usedBy > 1 ? 's' : ''}.`)
           }
         }
-        break;
+        break
       }
 
       case 'how-works': {
-        parts.push(templates.found(subject, nodes.length));
-        const flows = describeFlow(nodes, graph);
+        parts.push(templates.found(subject, nodes.length))
+        const flows = describeFlow(nodes, graph)
         if (flows.length > 0) {
-          parts.push('\nData/Control Flow:');
+          parts.push('\nData/Control Flow:')
           for (const flow of flows) {
-            parts.push(`  ${flow}`);
+            parts.push(`  ${flow}`)
           }
         }
         for (const node of nodes.slice(0, 2)) {
-          parts.push(`\n${node.name}: ${describeNode(node, graph)}`);
+          parts.push(`\n${node.name}: ${describeNode(node, graph)}`)
         }
-        break;
+        break
       }
 
       case 'list': {
-        parts.push(templates.found(subject, relevantFiles.length));
+        parts.push(templates.found(subject, relevantFiles.length))
         for (const file of relevantFiles.slice(0, 8)) {
-          parts.push(`\n- ${file.name} (${file.type}): ${file.path}`);
+          parts.push(`\n- ${file.name} (${file.type}): ${file.path}`)
         }
-        break;
+        break
       }
     }
 
-    const closing = templates.closing();
-    if (closing) parts.push(`\n\n${closing}`);
+    const closing = templates.closing()
+    if (closing) parts.push(`\n\n${closing}`)
 
-    return parts.join('');
-  })();
+    return parts.join('')
+  })()
 }
 
 /**
  * Build relevant files list from search results
  */
 function buildRelevantFilesList(nodes: GraphNode[], directories: string[]): RelevantFile[] {
-  const relevantFiles: RelevantFile[] = [];
-  const seenPaths = new Set<string>();
+  const relevantFiles: RelevantFile[] = []
+  const seenPaths = new Set<string>()
 
   for (const dir of directories.slice(0, 2)) {
     if (!seenPaths.has(dir)) {
-      seenPaths.add(dir);
+      seenPaths.add(dir)
       relevantFiles.push({
         path: dir,
         name: dir.split('/').pop() || dir,
         type: 'directory',
         relevance: 'Directory matches search',
-      });
+      })
     }
   }
 
   for (const node of nodes) {
     if (!seenPaths.has(node.filePath)) {
-      seenPaths.add(node.filePath);
+      seenPaths.add(node.filePath)
       relevantFiles.push({
         path: node.filePath,
         name: node.name,
@@ -744,11 +917,11 @@ function buildRelevantFilesList(nodes: GraphNode[], directories: string[]): Rele
             ? 'File matches search'
             : `${node.type} in ${node.filePath.split('/').pop()}`,
         line: node.lineStart > 1 ? node.lineStart : undefined,
-      });
+      })
     }
   }
 
-  return relevantFiles;
+  return relevantFiles
 }
 
 /**
@@ -759,17 +932,17 @@ function calculateAnswerConfidence(
   directories: string[],
   subject: string
 ): number {
-  let confidence = 0;
+  let confidence = 0
   if (nodes.length > 0) {
-    confidence = Math.min(95, 40 + nodes.length * 10);
-    const firstNode = nodes[0];
+    confidence = Math.min(95, 40 + nodes.length * 10)
+    const firstNode = nodes[0]
     if (firstNode && firstNode.name.toLowerCase() === subject) {
-      confidence = Math.min(95, confidence + 20);
+      confidence = Math.min(95, confidence + 20)
     }
   } else if (directories.length > 0) {
-    confidence = 30 + directories.length * 10;
+    confidence = 30 + directories.length * 10
   }
-  return confidence;
+  return confidence
 }
 
 /**
@@ -785,17 +958,17 @@ export async function askCodebase(
   graph: KnowledgeGraph,
   options: { personality?: PersonalityMode } = {}
 ): Promise<AskResult> {
-  const personality = options.personality || 'default';
-  const templates = PERSONALITY_TEMPLATES[personality] || PERSONALITY_TEMPLATES.default;
+  const personality = options.personality || 'default'
+  const templates = PERSONALITY_TEMPLATES[personality] || PERSONALITY_TEMPLATES.default
 
-  const questionType = detectQuestionType(question);
-  const subject = extractSubject(question, questionType);
+  const questionType = detectQuestionType(question)
+  const subject = extractSubject(question, questionType)
 
-  const nodes = searchGraph(subject, graph);
-  const directories = findDirectories(subject, graph);
+  const nodes = searchGraph(subject, graph)
+  const directories = findDirectories(subject, graph)
 
-  const relevantFiles = buildRelevantFilesList(nodes, directories);
-  const confidence = calculateAnswerConfidence(nodes, directories, subject);
+  const relevantFiles = buildRelevantFilesList(nodes, directories)
+  const confidence = calculateAnswerConfidence(nodes, directories, subject)
   const answer = await generateAnswer(
     questionType,
     subject,
@@ -805,7 +978,7 @@ export async function askCodebase(
     templates,
     graph,
     rootDir
-  );
+  )
 
   return {
     question,
@@ -814,50 +987,50 @@ export async function askCodebase(
     relevantFiles: relevantFiles.slice(0, 5),
     confidence,
     personality,
-  };
+  }
 }
 
 /**
  * Format ask result for display
  */
 export function formatAsk(result: AskResult): string {
-  const lines: string[] = [];
+  const lines: string[] = []
 
-  lines.push('┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓');
-  lines.push('┃  💬 ASK SPECTER                                   ┃');
-  lines.push('┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛');
-  lines.push('');
+  lines.push('┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓')
+  lines.push('┃  💬 ASK SPECTER                                   ┃')
+  lines.push('┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛')
+  lines.push('')
 
   // Question
-  lines.push(`Q: ${result.question}`);
-  lines.push('');
+  lines.push(`Q: ${result.question}`)
+  lines.push('')
 
   // Answer (wrap long lines)
-  lines.push('A:');
-  const answerLines = result.answer.split('\n');
+  lines.push('A:')
+  const answerLines = result.answer.split('\n')
   for (const line of answerLines) {
     if (line.length > 60) {
       // Word wrap
-      const words = line.split(' ');
-      let currentLine = '';
+      const words = line.split(' ')
+      let currentLine = ''
       for (const word of words) {
         if (`${currentLine} ${word}`.length > 60) {
-          if (currentLine) lines.push(`   ${currentLine}`);
-          currentLine = word;
+          if (currentLine) lines.push(`   ${currentLine}`)
+          currentLine = word
         } else {
-          currentLine = currentLine ? `${currentLine} ${word}` : word;
+          currentLine = currentLine ? `${currentLine} ${word}` : word
         }
       }
-      if (currentLine) lines.push(`   ${currentLine}`);
+      if (currentLine) lines.push(`   ${currentLine}`)
     } else {
-      lines.push(`   ${line}`);
+      lines.push(`   ${line}`)
     }
   }
-  lines.push('');
+  lines.push('')
 
   // Relevant files
   if (result.relevantFiles.length > 0) {
-    lines.push('📁 Relevant Files:');
+    lines.push('📁 Relevant Files:')
     for (const file of result.relevantFiles) {
       const icon =
         file.type === 'directory'
@@ -870,32 +1043,32 @@ export function formatAsk(result: AskResult): string {
                 ? '📦'
                 : file.type === 'interface' || file.type === 'type'
                   ? '📋'
-                  : '•';
-      const location = file.line ? `${file.path}:${file.line}` : file.path;
-      lines.push(`   ${icon} ${location}`);
-      lines.push(`      ${file.relevance}`);
+                  : '•'
+      const location = file.line ? `${file.path}:${file.line}` : file.path
+      lines.push(`   ${icon} ${location}`)
+      lines.push(`      ${file.relevance}`)
     }
-    lines.push('');
+    lines.push('')
   }
 
   // Confidence
-  const confidenceBar = createConfidenceBar(result.confidence);
-  lines.push(`Confidence: ${confidenceBar} ${result.confidence}%`);
+  const confidenceBar = createConfidenceBar(result.confidence)
+  lines.push(`Confidence: ${confidenceBar} ${result.confidence}%`)
 
-  lines.push('');
-  lines.push('━'.repeat(51));
+  lines.push('')
+  lines.push('━'.repeat(51))
 
-  return lines.join('\n');
+  return lines.join('\n')
 }
 
 /**
  * Create a visual confidence bar
  */
 function createConfidenceBar(confidence: number): string {
-  const barWidth = 10;
-  const filled = Math.round((confidence / 100) * barWidth);
-  const empty = barWidth - filled;
+  const barWidth = 10
+  const filled = Math.round((confidence / 100) * barWidth)
+  const empty = barWidth - filled
 
-  const fillChar = confidence >= 70 ? '█' : confidence >= 40 ? '▓' : '░';
-  return `[${fillChar.repeat(filled)}${'·'.repeat(empty)}]`;
+  const fillChar = confidence >= 70 ? '█' : confidence >= 40 ? '▓' : '░'
+  return `[${fillChar.repeat(filled)}${'·'.repeat(empty)}]`
 }

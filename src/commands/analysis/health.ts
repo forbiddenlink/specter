@@ -26,7 +26,7 @@ export function register(program: Command): void {
     .option('-l, --limit <n>', 'Number of hotspots to show', '10')
     .option(
       '-p, --personality <mode>',
-      'Output personality: mentor, critic, historian, cheerleader, minimalist',
+      'Output personality: default, mentor, critic, historian, cheerleader, minimalist, noir, therapist, roast, dramatic, ghost, executive, zen, pirate, motivational, sage, hacker, poet, valley',
       'default'
     )
     .option('--exit-code', 'Exit with code 1 if health score is below threshold')

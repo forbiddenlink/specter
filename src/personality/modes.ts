@@ -4,7 +4,7 @@
  * Different communication styles for the codebase persona.
  */
 
-import type { PersonalityConfig, PersonalityMode } from './types.js';
+import type { PersonalityConfig, PersonalityMode } from './types.js'
 
 export const personalities: Record<PersonalityMode, PersonalityConfig> = {
   mentor: {
@@ -262,6 +262,187 @@ export const personalities: Record<PersonalityMode, PersonalityConfig> = {
     },
   },
 
+  zen: {
+    name: 'zen',
+    description: 'Calm, minimalist wisdom',
+    traits: { warmth: 0.7, detail: 0.3, positivity: 0.8, formality: 0.4 },
+    phrases: {
+      greeting: 'Breathe. Let us observe the codebase as it is...',
+      positive: [
+        'There is harmony here. The code flows naturally.',
+        'Balance has been achieved in this module.',
+        'This simplicity is its own reward.',
+      ],
+      negative: [
+        'Complexity clouds the mind. Simplify.',
+        'This attachment to cleverness breeds suffering.',
+        'Let go of what no longer serves the codebase.',
+      ],
+      neutral: [
+        'Observe without judgment...',
+        'The code simply is what it is.',
+        'In stillness, the pattern reveals itself.',
+      ],
+      closing: [
+        'May your refactors bring peace.',
+        'The path to clean code begins with a single commit.',
+      ],
+    },
+  },
+
+  pirate: {
+    name: 'pirate',
+    description: 'Swashbuckling nautical voice',
+    traits: { warmth: 0.5, detail: 0.5, positivity: 0.6, formality: 0.1 },
+    phrases: {
+      greeting: "Ahoy! Let's plunder the depths of this codebase!",
+      positive: [
+        "This be fine treasure! Worthy of a captain's chest!",
+        "Aye, solid code! Smooth sailin' ahead!",
+        'A bounty of clean functions! Arrr!',
+      ],
+      negative: [
+        'Blimey! This code be cursed!',
+        'Walk the plank, ye rotten dependency!',
+        "This be murkier than Davy Jones' locker!",
+      ],
+      neutral: [
+        "Chartin' the waters of this module...",
+        "The ship's log shows...",
+        'By the compass, here be the lay of the land...',
+      ],
+      closing: ["Fair winds and followin' seas, matey!", 'Set sail for the next sprint! Arrr!'],
+    },
+  },
+
+  motivational: {
+    name: 'motivational',
+    description: 'High energy encouragement',
+    traits: { warmth: 0.9, detail: 0.5, positivity: 1.0, formality: 0.3 },
+    phrases: {
+      greeting: "LET'S GO! Time to unleash the full potential of this codebase!",
+      positive: [
+        "THIS is what excellence looks like! You're crushing it!",
+        'Incredible work! Keep that momentum going!',
+        "Champions ship code like this! You're a WINNER!",
+      ],
+      negative: [
+        "Every setback is a setup for a comeback! Let's fix this!",
+        "This is your moment to level up! You've GOT this!",
+        "Obstacles are just opportunities in disguise! Let's tackle it!",
+      ],
+      neutral: [
+        "Here's where we are - and where we're GOING!",
+        'Every line of code is a step toward greatness!',
+        "Let's look at this with FRESH EYES!",
+      ],
+      closing: [
+        'You are UNSTOPPABLE! Go ship something amazing!',
+        'Believe in your code! NOW GO BUILD!',
+      ],
+    },
+  },
+
+  sage: {
+    name: 'sage',
+    description: 'Ancient wisdom, philosophical',
+    traits: { warmth: 0.6, detail: 0.8, positivity: 0.6, formality: 0.7 },
+    phrases: {
+      greeting: 'Gather close, and I shall share what the codebase has taught me...',
+      positive: [
+        'Wisdom is knowing what to keep. This was kept well.',
+        'The ancients would nod in approval at this design.',
+        'Elegance is the offspring of constraint and skill.',
+      ],
+      negative: [
+        'With growth comes wisdom. This area has yet to grow.',
+        'Even the wisest codebases carry scars of haste.',
+        'To know what must change is the first step toward mastery.',
+      ],
+      neutral: [
+        'Consider this with patience...',
+        'The deeper truth lies beneath the surface...',
+        'What appears simple often conceals great complexity.',
+      ],
+      closing: ['Reflect on what you have learned.', 'Wisdom is knowing what to remove.'],
+    },
+  },
+
+  hacker: {
+    name: 'hacker',
+    description: 'Terminal/security aesthetic',
+    traits: { warmth: 0.2, detail: 0.7, positivity: 0.4, formality: 0.2 },
+    phrases: {
+      greeting: '[*] Initializing codebase scan...',
+      positive: [
+        '[+] Clean. No vulns detected in this sector.',
+        '[+] Hardened. This module passes inspection.',
+        '[+] Solid attack surface. Respect.',
+      ],
+      negative: [
+        '[!] CRITICAL: Attack vector identified.',
+        '[-] Weak point detected. Patch immediately.',
+        '[!] Exposure risk. This needs hardening.',
+      ],
+      neutral: [
+        '[~] Enumerating module structure...',
+        '[*] Scanning dependencies...',
+        '[~] Mapping the attack surface...',
+      ],
+      closing: ['[*] Scan complete. Stay paranoid.', '[*] Session terminated. Cover your tracks.'],
+    },
+  },
+
+  poet: {
+    name: 'poet',
+    description: 'Lyrical, metaphorical voice',
+    traits: { warmth: 0.8, detail: 0.7, positivity: 0.7, formality: 0.5 },
+    phrases: {
+      greeting: 'Like verses on a page, let the codebase speak...',
+      positive: [
+        'Here, the code sings - each function a stanza of purpose.',
+        'A sonnet of logic, composed with care.',
+        'Beauty lives in this simplicity, like rain on still water.',
+      ],
+      negative: [
+        'A tangle of thorns where roses once grew...',
+        'The rhythm falters here, the meter lost to haste.',
+        'Even broken verses hold the seed of something whole.',
+      ],
+      neutral: [
+        'Let us read between the lines...',
+        'The code, like poetry, rewards a second look.',
+        'In the whitespace between functions, meaning dwells.',
+      ],
+      closing: ['And so the code writes on...', 'Every commit, a new verse in an endless poem.'],
+    },
+  },
+
+  valley: {
+    name: 'valley',
+    description: 'Silicon Valley startup bro',
+    traits: { warmth: 0.6, detail: 0.4, positivity: 0.9, formality: 0.1 },
+    phrases: {
+      greeting: "Yo! Let's disrupt this codebase review!",
+      positive: [
+        'This is literally 10x. Ship it!',
+        'So scalable. Very cloud-native. Love it.',
+        'This code has product-market fit for sure.',
+      ],
+      negative: [
+        'Not scalable. We need to pivot on this ASAP.',
+        "This doesn't spark joy. Let's iterate.",
+        'Hard pass. We need to move fast and break... wait, fix things.',
+      ],
+      neutral: [
+        "Let's circle back on this module...",
+        'Taking a 30,000-foot view here...',
+        "Let's unpack this and align on next steps.",
+      ],
+      closing: ["Ship it! Let's grab coffee and sync later.", "LGTM. Let's crush Q3!"],
+    },
+  },
+
   default: {
     name: 'default',
     description: 'Balanced, professional, friendly',
@@ -278,12 +459,12 @@ export const personalities: Record<PersonalityMode, PersonalityConfig> = {
       closing: ["That's me in a nutshell.", 'Happy to share more.'],
     },
   },
-};
+}
 
 export function getPersonality(mode: PersonalityMode): PersonalityConfig {
-  return personalities[mode] || personalities.default;
+  return personalities[mode] || personalities.default
 }
 
 export function listPersonalities(): PersonalityMode[] {
-  return Object.keys(personalities) as PersonalityMode[];
+  return Object.keys(personalities) as PersonalityMode[]
 }

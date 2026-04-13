@@ -193,7 +193,7 @@ specter dora --json | jq '.score'  # Extract specific fields
 
 ---
 
-## 12 Personality Modes
+## 19 Personality Modes
 
 Add `--personality <mode>` to any command:
 
@@ -211,6 +211,13 @@ Add `--personality <mode>` to any command:
 | `dramatic` | Epic narrator | Presentations |
 | `ghost` | Deleted code voice | Historical analysis |
 | `executive` | Business-focused, ROI | Leadership reports |
+| `zen` | Calm, minimalist wisdom | Mindful reviews |
+| `pirate` | Swashbuckling nautical | Fun presentations |
+| `motivational` | High energy encouragement | Team morale |
+| `sage` | Ancient wisdom, philosophical | Deep analysis |
+| `hacker` | Terminal/security aesthetic | Security reviews |
+| `poet` | Lyrical, metaphorical | Creative presentations |
+| `valley` | Silicon Valley startup bro | Startup teams |
 
 ---
 

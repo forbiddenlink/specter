@@ -22,7 +22,7 @@ export function register(program: Command): void {
     .option('--period <period>', 'Time period: day, week, month, all', 'week')
     .option(
       '-p, --personality <mode>',
-      'Output personality: mentor, critic, historian, cheerleader, minimalist',
+      'Output personality: default, mentor, critic, historian, cheerleader, minimalist, noir, therapist, roast, dramatic, ghost, executive, zen, pirate, motivational, sage, hacker, poet, valley',
       'default'
     )
     .option('--json', 'Output as JSON for CI/CD integration')

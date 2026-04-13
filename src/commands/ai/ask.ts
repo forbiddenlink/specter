@@ -2,19 +2,19 @@
  * Ask command - Natural language Q&A with personality
  */
 
-import path from 'node:path';
-import chalk from 'chalk';
-import type { Command } from 'commander';
-import { askCodebase, formatAsk } from '../../ask.js';
-import { showNextSteps } from '../../cli-utils.js';
-import { loadGraph } from '../../graph/persistence.js';
-import { outputJson, outputJsonError } from '../../json-output.js';
-import type { PersonalityMode } from '../../personality/types.js';
-import { createSpinner } from '../types.js';
+import path from 'node:path'
+import chalk from 'chalk'
+import type { Command } from 'commander'
+import { askCodebase, formatAsk } from '../../ask.js'
+import { showNextSteps } from '../../cli-utils.js'
+import { loadGraph } from '../../graph/persistence.js'
+import { outputJson, outputJsonError } from '../../json-output.js'
+import type { PersonalityMode } from '../../personality/types.js'
+import { createSpinner } from '../types.js'
 
 const ASK_LINE_PATTERNS: Array<{
-  test: (line: string) => boolean;
-  style: (line: string) => string;
+  test: (line: string) => boolean
+  style: (line: string) => string
 }> = [
   {
     test: (l) => l.includes('┏') || l.includes('┗') || l.includes('┃'),
@@ -46,11 +46,11 @@ const ASK_LINE_PATTERNS: Array<{
     style: (l) => chalk.blue(`  ${l}`),
   },
   { test: (l) => l.includes('*'), style: (l) => chalk.italic.dim(`  ${l}`) },
-];
+]
 
 function colorizeAskOutputLine(line: string): string {
-  const match = ASK_LINE_PATTERNS.find((pattern) => pattern.test(line));
-  return match ? match.style(line) : chalk.white(`  ${line}`);
+  const match = ASK_LINE_PATTERNS.find((pattern) => pattern.test(line))
+  return match ? match.style(line) : chalk.white(`  ${line}`)
 }
 
 export function register(program: Command): void {
@@ -60,7 +60,7 @@ export function register(program: Command): void {
     .option('-d, --dir <path>', 'Directory to analyze', '.')
     .option(
       '-p, --personality <mode>',
-      'Output personality: default, noir, roast, mentor, cheerleader, critic, historian, minimalist, therapist, dramatic, ghost',
+      'Output personality: default, mentor, critic, historian, cheerleader, minimalist, noir, therapist, roast, dramatic, ghost, executive, zen, pirate, motivational, sage, hacker, poet, valley',
       'default'
     )
     .option('--json', 'Output as JSON for CI/CD integration')
@@ -74,24 +74,24 @@ Examples:
   $ specter ask "Tell me about the architecture" --personality minimalist`
     )
     .action(async (question, options) => {
-      const rootDir = path.resolve(options.dir);
-      const personality = options.personality as PersonalityMode;
+      const rootDir = path.resolve(options.dir)
+      const personality = options.personality as PersonalityMode
 
-      const spinner = options.json ? null : createSpinner('Thinking...');
-      spinner?.start();
+      const spinner = options.json ? null : createSpinner('Thinking...')
+      spinner?.start()
 
-      const graph = await loadGraph(rootDir);
+      const graph = await loadGraph(rootDir)
 
       if (!graph) {
         if (options.json) {
-          outputJsonError('ask', 'No graph found. Run `specter scan` first.');
+          outputJsonError('ask', 'No graph found. Run `specter scan` first.')
         }
-        spinner?.fail('No graph found. Run `specter scan` first.');
-        return;
+        spinner?.fail('No graph found. Run `specter scan` first.')
+        return
       }
 
-      const result = await askCodebase(question, rootDir, graph, { personality });
-      spinner?.stop();
+      const result = await askCodebase(question, rootDir, graph, { personality })
+      spinner?.stop()
 
       // JSON output for CI/CD
       if (options.json) {
@@ -104,17 +104,17 @@ Examples:
             relevantFiles: result.relevantFiles,
           },
           { personality }
-        );
-        return;
+        )
+        return
       }
 
-      const output = formatAsk(result);
+      const output = formatAsk(result)
 
-      console.log();
+      console.log()
       for (const line of output.split('\n')) {
-        console.log(colorizeAskOutputLine(line));
+        console.log(colorizeAskOutputLine(line))
       }
-      console.log();
+      console.log()
 
       // Show next steps suggestions
       if (!options.json) {
@@ -131,23 +131,23 @@ Examples:
             description: 'Get refactoring suggestions',
             command: 'specter fix',
           },
-        ];
+        ]
 
         // Add context-specific suggestion based on question
-        const lowerQ = question.toLowerCase();
+        const lowerQ = question.toLowerCase()
         if (lowerQ.includes('complex') || lowerQ.includes('refactor')) {
           suggestions.unshift({
             description: 'See who knows these files best',
             command: 'specter who',
-          });
+          })
         } else if (lowerQ.includes('test') || lowerQ.includes('coverage')) {
           suggestions.unshift({
             description: 'Analyze test impact',
             command: 'specter predict',
-          });
+          })
         }
 
-        showNextSteps(suggestions);
+        showNextSteps(suggestions)
       }
-    });
+    })
 }
