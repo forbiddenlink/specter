@@ -54,7 +54,7 @@ function printBanner(): void {
  */
 function printVersion(): void {
   printBanner()
-  console.log(chalk.dim(`  v1.1.0`))
+  console.log(chalk.dim(`  v1.2.0`))
   console.log()
 }
 
@@ -74,7 +74,7 @@ program.option('--no-emoji', 'Disable emoji in output')
 program
   .name('specter')
   .description('Give your codebase a voice. Build a knowledge graph and talk to your code.')
-  .version('1.1.0')
+  .version('1.2.0')
   .showSuggestionAfterError(true)
   .showHelpAfterError('(add --help for additional information)')
   .action(async () => {

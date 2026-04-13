@@ -1,6 +1,6 @@
 {
   "name": "@purplegumdropz/specter",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Give your codebase a voice. A Copilot CLI plugin that builds a knowledge graph and lets you talk to your code.",
   "type": "module",
   "main": "dist/index.js",
@@ -115,6 +115,9 @@
     ]
   },
   "pnpm": {
+    "onlyBuiltDependencies": [
+      "canvas"
+    ],
     "overrides": {
       "minimatch": ">=9.0.7",
       "next": ">=16.2.3",
