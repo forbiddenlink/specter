@@ -10,6 +10,7 @@ import ora from 'ora'
 import { buildKnowledgeGraph } from './graph/builder.js'
 import { graphExists, loadGraph, loadMetadata, saveGraph } from './graph/persistence.js'
 import type { KnowledgeGraph } from './graph/types.js'
+import { acquireScanLock, releaseScanLock } from './scan-lock.js'
 
 /**
  * Format a duration in milliseconds to a human-readable age string.
@@ -49,6 +50,15 @@ export async function ensureGraph(
 
   if (!exists) {
     // Auto-scan: no graph found
+    const lockAcquired = await acquireScanLock(rootDir)
+    if (!lockAcquired) {
+      // Another scan is running — try to load whatever graph exists
+      if (!json && !quiet) {
+        console.error(chalk.dim('\u26A0 Another scan is in progress. Waiting...'))
+      }
+      return null
+    }
+
     if (!json && !quiet) {
       const spinner = ora('No analysis found. Scanning your codebase...').start()
 
@@ -95,6 +105,8 @@ export async function ensureGraph(
         spinner.fail('Auto-scan failed.')
         console.error(chalk.red(error instanceof Error ? error.message : String(error)))
         return null
+      } finally {
+        await releaseScanLock(rootDir)
       }
     } else {
       // JSON or quiet mode: scan silently
@@ -114,6 +126,8 @@ export async function ensureGraph(
         return graph
       } catch {
         return null
+      } finally {
+        await releaseScanLock(rootDir)
       }
     }
   }

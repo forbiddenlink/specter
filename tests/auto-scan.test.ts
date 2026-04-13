@@ -20,6 +20,11 @@ vi.mock('../src/graph/builder.js', () => ({
   buildKnowledgeGraph: vi.fn(),
 }))
 
+vi.mock('../src/scan-lock.js', () => ({
+  acquireScanLock: vi.fn(async () => true),
+  releaseScanLock: vi.fn(async () => {}),
+}))
+
 vi.mock('ora', () => ({
   default: vi.fn(() => ({
     start: vi.fn().mockReturnThis(),
