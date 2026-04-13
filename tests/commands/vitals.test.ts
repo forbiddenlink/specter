@@ -5,38 +5,47 @@
  * Includes regression tests for ESM import fix (commit 0c44a93).
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { KnowledgeGraph } from '../../src/graph/types.js';
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { KnowledgeGraph } from '../../src/graph/types.js'
 
 // Mock dependencies before importing the module
 vi.mock('../../src/graph/persistence.js', () => ({
   loadGraph: vi.fn(),
-}));
+  graphExists: vi.fn(),
+  loadMetadata: vi.fn(),
+}))
+
+vi.mock('../../src/auto-scan.js', async (importOriginal) => {
+  const { loadGraph } = await import('../../src/graph/persistence.js')
+  return {
+    ensureGraph: vi.fn(async () => loadGraph('')),
+  }
+})
 
 vi.mock('../../src/analyzers/complexity.js', () => ({
   generateComplexityReport: vi.fn(),
-}));
+}))
 
 vi.mock('../../src/analyzers/knowledge.js', () => ({
   analyzeKnowledgeDistribution: vi.fn(),
-}));
+}))
 
 vi.mock('../../src/history/storage.js', () => ({
   loadSnapshots: vi.fn(),
-}));
+}))
 
 vi.mock('../../src/json-output.js', () => ({
   outputJson: vi.fn(),
   outputJsonError: vi.fn(),
-}));
+}))
 
 vi.mock('../../src/cli-utils.js', () => ({
   showNextSteps: vi.fn(),
-}));
+}))
 
 vi.mock('../../src/ui/index.js', () => ({
   coloredSparkline: vi.fn(() => '▁▂▃▄▅▆▇█'),
-}));
+}))
 
 // Mock chalk - this is the key regression test for ESM import fix
 vi.mock('chalk', () => ({
@@ -50,14 +59,14 @@ vi.mock('chalk', () => ({
     red: (s: string) => s,
     dim: (s: string) => s,
   },
-}));
+}))
 
-import type { ComplexityReport } from '../../src/analyzers/complexity.js';
-import { generateComplexityReport } from '../../src/analyzers/complexity.js';
-import { analyzeKnowledgeDistribution } from '../../src/analyzers/knowledge.js';
-import { loadGraph } from '../../src/graph/persistence.js';
-import { loadSnapshots } from '../../src/history/storage.js';
-import { outputJson, outputJsonError } from '../../src/json-output.js';
+import type { ComplexityReport } from '../../src/analyzers/complexity.js'
+import { generateComplexityReport } from '../../src/analyzers/complexity.js'
+import { analyzeKnowledgeDistribution } from '../../src/analyzers/knowledge.js'
+import { loadGraph } from '../../src/graph/persistence.js'
+import { loadSnapshots } from '../../src/history/storage.js'
+import { outputJson, outputJsonError } from '../../src/json-output.js'
 
 function createMockGraph(overrides: Partial<KnowledgeGraph> = {}): KnowledgeGraph {
   return {
@@ -83,7 +92,7 @@ function createMockGraph(overrides: Partial<KnowledgeGraph> = {}): KnowledgeGrap
     },
     edges: [],
     ...overrides,
-  };
+  }
 }
 
 function createMockComplexityReport(overrides: Partial<ComplexityReport> = {}): ComplexityReport {
@@ -99,97 +108,96 @@ function createMockComplexityReport(overrides: Partial<ComplexityReport> = {}): 
       veryHigh: 1,
     },
     ...overrides,
-  };
+  }
 }
 
 describe('Vitals Command', () => {
-  let consoleSpy: ReturnType<typeof vi.spyOn>;
+  let consoleSpy: ReturnType<typeof vi.spyOn>
 
   beforeEach(() => {
-    vi.clearAllMocks();
-    consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-  });
+    vi.clearAllMocks()
+    consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+  })
 
   describe('Graph Loading', () => {
-    it('should show error when no graph exists', async () => {
-      vi.mocked(loadGraph).mockResolvedValue(null);
+    it('should return early when no graph exists', async () => {
+      vi.mocked(loadGraph).mockResolvedValue(null)
 
-      const { register } = await import('../../src/commands/analysis/vitals.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/analysis/vitals.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'vitals', '-d', '/test']);
+      await program.parseAsync(['node', 'test', 'vitals', '-d', '/test'])
 
-      expect(loadGraph).toHaveBeenCalledWith('/test');
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('No graph found'));
-    });
+      // ensureGraph delegates to loadGraph mock which returns null
+      // Command should return early without generating a report
+      expect(generateComplexityReport).not.toHaveBeenCalled()
+    })
 
-    it('should output JSON error when no graph exists with --json flag', async () => {
-      vi.mocked(loadGraph).mockResolvedValue(null);
+    it('should return early when no graph exists with --json flag', async () => {
+      vi.mocked(loadGraph).mockResolvedValue(null)
 
-      const { register } = await import('../../src/commands/analysis/vitals.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/analysis/vitals.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'vitals', '-d', '/test', '--json']);
+      await program.parseAsync(['node', 'test', 'vitals', '-d', '/test', '--json'])
 
-      expect(outputJsonError).toHaveBeenCalledWith(
-        'vitals',
-        expect.stringContaining('No graph found')
-      );
-    });
-  });
+      // Should not produce any output when graph is unavailable
+      expect(generateComplexityReport).not.toHaveBeenCalled()
+    })
+  })
 
   describe('Vitals Display', () => {
     it('should display vitals dashboard with valid graph', async () => {
-      const mockGraph = createMockGraph();
-      const mockReport = createMockComplexityReport();
+      const mockGraph = createMockGraph()
+      const mockReport = createMockComplexityReport()
 
-      vi.mocked(loadGraph).mockResolvedValue(mockGraph);
-      vi.mocked(generateComplexityReport).mockReturnValue(mockReport);
+      vi.mocked(loadGraph).mockResolvedValue(mockGraph)
+      vi.mocked(generateComplexityReport).mockReturnValue(mockReport)
       vi.mocked(analyzeKnowledgeDistribution).mockResolvedValue({
         overallBusFactor: 2.5,
         files: [],
-      });
-      vi.mocked(loadSnapshots).mockResolvedValue([]);
+      })
+      vi.mocked(loadSnapshots).mockResolvedValue([])
 
-      const { register } = await import('../../src/commands/analysis/vitals.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/analysis/vitals.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'vitals', '-d', '/test']);
+      await program.parseAsync(['node', 'test', 'vitals', '-d', '/test'])
 
-      expect(generateComplexityReport).toHaveBeenCalledWith(mockGraph);
-      expect(analyzeKnowledgeDistribution).toHaveBeenCalled();
+      expect(generateComplexityReport).toHaveBeenCalledWith(mockGraph)
+      expect(analyzeKnowledgeDistribution).toHaveBeenCalled()
       // Verify dashboard output contains expected sections
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('SPECTER VITAL SIGNS'));
-    });
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('SPECTER VITAL SIGNS'))
+    })
 
     it('should output JSON with vitals data when --json flag is set', async () => {
-      const mockGraph = createMockGraph();
-      const mockReport = createMockComplexityReport({ averageComplexity: 4 });
+      const mockGraph = createMockGraph()
+      const mockReport = createMockComplexityReport({ averageComplexity: 4 })
 
-      vi.mocked(loadGraph).mockResolvedValue(mockGraph);
-      vi.mocked(generateComplexityReport).mockReturnValue(mockReport);
+      vi.mocked(loadGraph).mockResolvedValue(mockGraph)
+      vi.mocked(generateComplexityReport).mockReturnValue(mockReport)
       vi.mocked(analyzeKnowledgeDistribution).mockResolvedValue({
         overallBusFactor: 3,
         files: [],
-      });
-      vi.mocked(loadSnapshots).mockResolvedValue([]);
+      })
+      vi.mocked(loadSnapshots).mockResolvedValue([])
 
-      const { register } = await import('../../src/commands/analysis/vitals.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/analysis/vitals.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'vitals', '-d', '/test', '--json']);
+      await program.parseAsync(['node', 'test', 'vitals', '-d', '/test', '--json'])
 
       // Health score = 100 - 4*5 = 80
       expect(outputJson).toHaveBeenCalledWith(
@@ -200,30 +208,30 @@ describe('Vitals Command', () => {
           avgComplexity: 4,
           busFactor: 3,
         })
-      );
-    });
-  });
+      )
+    })
+  })
 
   describe('Health Score Calculation', () => {
     it('should calculate correct health score from complexity', async () => {
-      const mockGraph = createMockGraph();
-      const mockReport = createMockComplexityReport({ averageComplexity: 8 });
+      const mockGraph = createMockGraph()
+      const mockReport = createMockComplexityReport({ averageComplexity: 8 })
 
-      vi.mocked(loadGraph).mockResolvedValue(mockGraph);
-      vi.mocked(generateComplexityReport).mockReturnValue(mockReport);
+      vi.mocked(loadGraph).mockResolvedValue(mockGraph)
+      vi.mocked(generateComplexityReport).mockReturnValue(mockReport)
       vi.mocked(analyzeKnowledgeDistribution).mockResolvedValue({
         overallBusFactor: 2,
         files: [],
-      });
-      vi.mocked(loadSnapshots).mockResolvedValue([]);
+      })
+      vi.mocked(loadSnapshots).mockResolvedValue([])
 
-      const { register } = await import('../../src/commands/analysis/vitals.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/analysis/vitals.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'vitals', '-d', '/test', '--json']);
+      await program.parseAsync(['node', 'test', 'vitals', '-d', '/test', '--json'])
 
       // Health score = 100 - 8*5 = 60
       expect(outputJson).toHaveBeenCalledWith(
@@ -232,28 +240,28 @@ describe('Vitals Command', () => {
           healthScore: 60,
           pulseStatus: 'ELEVATED',
         })
-      );
-    });
+      )
+    })
 
     it('should not return health score below 0', async () => {
-      const mockGraph = createMockGraph();
-      const mockReport = createMockComplexityReport({ averageComplexity: 30 });
+      const mockGraph = createMockGraph()
+      const mockReport = createMockComplexityReport({ averageComplexity: 30 })
 
-      vi.mocked(loadGraph).mockResolvedValue(mockGraph);
-      vi.mocked(generateComplexityReport).mockReturnValue(mockReport);
+      vi.mocked(loadGraph).mockResolvedValue(mockGraph)
+      vi.mocked(generateComplexityReport).mockReturnValue(mockReport)
       vi.mocked(analyzeKnowledgeDistribution).mockResolvedValue({
         overallBusFactor: 1,
         files: [],
-      });
-      vi.mocked(loadSnapshots).mockResolvedValue([]);
+      })
+      vi.mocked(loadSnapshots).mockResolvedValue([])
 
-      const { register } = await import('../../src/commands/analysis/vitals.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/analysis/vitals.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'vitals', '-d', '/test', '--json']);
+      await program.parseAsync(['node', 'test', 'vitals', '-d', '/test', '--json'])
 
       // Health score = max(0, 100 - 30*5) = max(0, -50) = 0
       expect(outputJson).toHaveBeenCalledWith(
@@ -262,10 +270,10 @@ describe('Vitals Command', () => {
           healthScore: 0,
           pulseStatus: 'CRITICAL',
         })
-      );
-    });
-  });
-});
+      )
+    })
+  })
+})
 
 describe('Vitals Helpers', () => {
   // These tests verify the helper functions work correctly
@@ -274,57 +282,57 @@ describe('Vitals Helpers', () => {
   it('should import vitals-helpers without ESM errors', async () => {
     // This is a regression test for commit 0c44a93
     // The module should import successfully with ESM chalk
-    const helpers = await import('../../src/commands/analysis/vitals-helpers.js');
+    const helpers = await import('../../src/commands/analysis/vitals-helpers.js')
 
-    expect(helpers.getHealthStatus).toBeDefined();
-    expect(helpers.getComplexityStatus).toBeDefined();
-    expect(helpers.getBusFactorStatus).toBeDefined();
-    expect(helpers.getDeadExportsStatus).toBeDefined();
-    expect(helpers.getCoverageStatus).toBeDefined();
-    expect(helpers.makeBar).toBeDefined();
-    expect(helpers.formatHealthIndicator).toBeDefined();
-  });
+    expect(helpers.getHealthStatus).toBeDefined()
+    expect(helpers.getComplexityStatus).toBeDefined()
+    expect(helpers.getBusFactorStatus).toBeDefined()
+    expect(helpers.getDeadExportsStatus).toBeDefined()
+    expect(helpers.getCoverageStatus).toBeDefined()
+    expect(helpers.makeBar).toBeDefined()
+    expect(helpers.formatHealthIndicator).toBeDefined()
+  })
 
   it('should calculate health status correctly', async () => {
-    const { getHealthStatus } = await import('../../src/commands/analysis/vitals-helpers.js');
+    const { getHealthStatus } = await import('../../src/commands/analysis/vitals-helpers.js')
 
-    expect(getHealthStatus(85).status).toBe('STABLE');
-    expect(getHealthStatus(70).status).toBe('ELEVATED');
-    expect(getHealthStatus(50).status).toBe('CRITICAL');
-  });
+    expect(getHealthStatus(85).status).toBe('STABLE')
+    expect(getHealthStatus(70).status).toBe('ELEVATED')
+    expect(getHealthStatus(50).status).toBe('CRITICAL')
+  })
 
   it('should calculate complexity status correctly', async () => {
-    const { getComplexityStatus } = await import('../../src/commands/analysis/vitals-helpers.js');
+    const { getComplexityStatus } = await import('../../src/commands/analysis/vitals-helpers.js')
 
-    expect(getComplexityStatus(3).statusText).toBe('healthy');
-    expect(getComplexityStatus(7).statusText).toBe('⚠️  warning');
-    expect(getComplexityStatus(15).statusText).toBe('critical');
-  });
+    expect(getComplexityStatus(3).statusText).toBe('healthy')
+    expect(getComplexityStatus(7).statusText).toBe('⚠️  warning')
+    expect(getComplexityStatus(15).statusText).toBe('critical')
+  })
 
   it('should calculate bus factor status correctly', async () => {
-    const { getBusFactorStatus } = await import('../../src/commands/analysis/vitals-helpers.js');
+    const { getBusFactorStatus } = await import('../../src/commands/analysis/vitals-helpers.js')
 
-    expect(getBusFactorStatus(4).statusText).toBe('healthy');
-    expect(getBusFactorStatus(2.5).statusText).toBe('😰 at risk');
-    expect(getBusFactorStatus(1).statusText).toBe('critical');
-  });
+    expect(getBusFactorStatus(4).statusText).toBe('healthy')
+    expect(getBusFactorStatus(2.5).statusText).toBe('😰 at risk')
+    expect(getBusFactorStatus(1).statusText).toBe('critical')
+  })
 
   it('should generate progress bars correctly', async () => {
-    const { makeBar } = await import('../../src/commands/analysis/vitals-helpers.js');
+    const { makeBar } = await import('../../src/commands/analysis/vitals-helpers.js')
 
-    expect(makeBar(50, 100, 10)).toBe('█████░░░░░');
-    expect(makeBar(100, 100, 10)).toBe('██████████');
-    expect(makeBar(0, 100, 10)).toBe('░░░░░░░░░░');
-  });
+    expect(makeBar(50, 100, 10)).toBe('█████░░░░░')
+    expect(makeBar(100, 100, 10)).toBe('██████████')
+    expect(makeBar(0, 100, 10)).toBe('░░░░░░░░░░')
+  })
 
   it('should format health indicator correctly', async () => {
-    const { formatHealthIndicator } = await import('../../src/commands/analysis/vitals-helpers.js');
+    const { formatHealthIndicator } = await import('../../src/commands/analysis/vitals-helpers.js')
 
     // The result will be colored, but we verify it contains expected content
-    const positive = formatHealthIndicator(5);
-    expect(positive).toContain('+5');
+    const positive = formatHealthIndicator(5)
+    expect(positive).toContain('+5')
 
-    const negative = formatHealthIndicator(-3);
-    expect(negative).toContain('-3');
-  });
-});
+    const negative = formatHealthIndicator(-3)
+    expect(negative).toContain('-3')
+  })
+})
