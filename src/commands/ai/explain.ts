@@ -9,17 +9,17 @@
  * - Refactoring suggestions
  */
 
-import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
-import path from 'node:path';
-import chalk from 'chalk';
-import type { Command } from 'commander';
-import ora from 'ora';
-import { isAIEnabled, reasonAboutCode } from '../../ai/claude-client.js';
+import { spawnSync } from 'node:child_process'
+import { existsSync, readFileSync } from 'node:fs'
+import path from 'node:path'
+import chalk from 'chalk'
+import type { Command } from 'commander'
+import ora from 'ora'
+import { isAIEnabled, reasonAboutCode } from '../../ai/claude-client.js'
 
 interface ExplainOptions {
-  dir: string;
-  verbose?: boolean;
+  dir: string
+  verbose?: boolean
 }
 
 /**
@@ -35,15 +35,15 @@ function getGitHistory(filePath: string, rootDir: string): string {
         cwd: rootDir,
         timeout: 10000,
       }
-    );
+    )
 
     if (result.status === 0 && result.stdout.trim()) {
-      return result.stdout.trim();
+      return result.stdout.trim()
     }
 
-    return 'No git history available';
+    return 'No git history available'
   } catch {
-    return 'Unable to retrieve git history';
+    return 'Unable to retrieve git history'
   }
 }
 
@@ -57,22 +57,22 @@ function getGitBlameSummary(filePath: string, rootDir: string): string {
       encoding: 'utf-8',
       cwd: rootDir,
       timeout: 10000,
-    });
+    })
 
     if (result.status !== 0 || !result.stdout.trim()) {
-      return 'No blame data available';
+      return 'No blame data available'
     }
 
     // Parse porcelain output to extract unique authors and their line counts
-    const lines = result.stdout.split('\n');
-    const authorCounts: Record<string, number> = {};
-    let currentAuthor = '';
+    const lines = result.stdout.split('\n')
+    const authorCounts: Record<string, number> = {}
+    let currentAuthor = ''
 
     for (const line of lines) {
       if (line.startsWith('author ')) {
-        currentAuthor = line.slice(7);
+        currentAuthor = line.slice(7)
       } else if (line.startsWith('\t') && currentAuthor) {
-        authorCounts[currentAuthor] = (authorCounts[currentAuthor] || 0) + 1;
+        authorCounts[currentAuthor] = (authorCounts[currentAuthor] || 0) + 1
       }
     }
 
@@ -81,11 +81,11 @@ function getGitBlameSummary(filePath: string, rootDir: string): string {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
       .map(([author, count]) => `  ${author}: ${count} lines`)
-      .join('\n');
+      .join('\n')
 
-    return sorted || 'No contributor data available';
+    return sorted || 'No contributor data available'
   } catch {
-    return 'Unable to retrieve blame data';
+    return 'Unable to retrieve blame data'
   }
 }
 
@@ -93,26 +93,26 @@ function getGitBlameSummary(filePath: string, rootDir: string): string {
  * Extract imports and exports from the file
  */
 function extractImportsExports(content: string): { imports: string[]; exports: string[] } {
-  const imports: string[] = [];
-  const exports: string[] = [];
+  const imports: string[] = []
+  const exports: string[] = []
 
-  const lines = content.split('\n');
+  const lines = content.split('\n')
 
   for (const line of lines) {
-    const trimmed = line.trim();
+    const trimmed = line.trim()
 
     // Match import statements
     if (trimmed.startsWith('import ')) {
-      imports.push(trimmed);
+      imports.push(trimmed)
     }
 
     // Match export statements
     if (trimmed.startsWith('export ')) {
-      exports.push(trimmed);
+      exports.push(trimmed)
     }
   }
 
-  return { imports, exports };
+  return { imports, exports }
 }
 
 /**
@@ -167,7 +167,7 @@ Please provide a comprehensive explanation covering:
    - Are there any quick wins?
    - What would make this code more maintainable?
 
-Be specific and reference actual code from the file.`;
+Be specific and reference actual code from the file.`
 }
 
 /**
@@ -181,55 +181,55 @@ function generateFallbackExplanation(
   imports: string[],
   exports: string[]
 ): string {
-  const lines = content.split('\n');
-  const nonEmptyLines = lines.filter((l) => l.trim().length > 0);
-  const ext = path.extname(filePath);
+  const lines = content.split('\n')
+  const nonEmptyLines = lines.filter((l) => l.trim().length > 0)
+  const ext = path.extname(filePath)
 
-  let output = '';
+  let output = ''
 
-  output += chalk.bold.cyan('\n=== File Overview ===\n');
-  output += `File: ${filePath}\n`;
-  output += `Extension: ${ext}\n`;
-  output += `Total lines: ${lines.length}\n`;
-  output += `Non-empty lines: ${nonEmptyLines.length}\n`;
+  output += chalk.bold.cyan('\n=== File Overview ===\n')
+  output += `File: ${filePath}\n`
+  output += `Extension: ${ext}\n`
+  output += `Total lines: ${lines.length}\n`
+  output += `Non-empty lines: ${nonEmptyLines.length}\n`
 
-  output += chalk.bold.cyan('\n=== Git History ===\n');
-  output += `${gitHistory}\n`;
+  output += chalk.bold.cyan('\n=== Git History ===\n')
+  output += `${gitHistory}\n`
 
-  output += chalk.bold.cyan('\n=== Contributors ===\n');
-  output += `${blameSummary}\n`;
+  output += chalk.bold.cyan('\n=== Contributors ===\n')
+  output += `${blameSummary}\n`
 
-  output += chalk.bold.cyan('\n=== Dependencies ===\n');
+  output += chalk.bold.cyan('\n=== Dependencies ===\n')
   if (imports.length > 0) {
-    output += `Imports (${imports.length}):\n`;
+    output += `Imports (${imports.length}):\n`
     imports.slice(0, 10).forEach((imp) => {
-      output += `  ${imp}\n`;
-    });
+      output += `  ${imp}\n`
+    })
     if (imports.length > 10) {
-      output += `  ... and ${imports.length - 10} more\n`;
+      output += `  ... and ${imports.length - 10} more\n`
     }
   } else {
-    output += 'No imports found\n';
+    output += 'No imports found\n'
   }
 
-  output += chalk.bold.cyan('\n=== Exports ===\n');
+  output += chalk.bold.cyan('\n=== Exports ===\n')
   if (exports.length > 0) {
-    output += `Exports (${exports.length}):\n`;
+    output += `Exports (${exports.length}):\n`
     exports.slice(0, 10).forEach((exp) => {
-      output += `  ${exp}\n`;
-    });
+      output += `  ${exp}\n`
+    })
     if (exports.length > 10) {
-      output += `  ... and ${exports.length - 10} more\n`;
+      output += `  ... and ${exports.length - 10} more\n`
     }
   } else {
-    output += 'No exports found\n';
+    output += 'No exports found\n'
   }
 
   output += chalk.yellow(
     '\nNote: Enable AI features by setting ANTHROPIC_API_KEY for deeper analysis.\n'
-  );
+  )
 
-  return output;
+  return output
 }
 
 /**
@@ -240,37 +240,37 @@ export async function explainFile(
   rootDir: string,
   options: ExplainOptions
 ): Promise<void> {
-  const spinner = ora('Analyzing file...').start();
+  const spinner = ora('Analyzing file...').start()
 
   try {
     // Resolve file path
-    const fullPath = path.resolve(rootDir, filePath);
-    const relativePath = path.relative(rootDir, fullPath);
+    const fullPath = path.resolve(rootDir, filePath)
+    const relativePath = path.relative(rootDir, fullPath)
 
     if (!existsSync(fullPath)) {
-      spinner.fail('File not found');
-      console.error(chalk.red(`Error: ${filePath} does not exist`));
-      process.exit(1);
+      spinner.fail('File not found')
+      console.error(chalk.red(`Error: ${filePath} does not exist`))
+      process.exit(1)
     }
 
     // Read file content
-    spinner.text = 'Reading file content...';
-    const content = readFileSync(fullPath, 'utf-8');
+    spinner.text = 'Reading file content...'
+    const content = readFileSync(fullPath, 'utf-8')
 
     // Get git history
-    spinner.text = 'Gathering git history...';
-    const gitHistory = getGitHistory(relativePath, rootDir);
+    spinner.text = 'Gathering git history...'
+    const gitHistory = getGitHistory(relativePath, rootDir)
 
     // Get blame summary
-    spinner.text = 'Analyzing contributors...';
-    const blameSummary = getGitBlameSummary(relativePath, rootDir);
+    spinner.text = 'Analyzing contributors...'
+    const blameSummary = getGitBlameSummary(relativePath, rootDir)
 
     // Extract imports/exports
-    const { imports, exports } = extractImportsExports(content);
+    const { imports, exports } = extractImportsExports(content)
 
     // Check if AI is enabled
     if (!isAIEnabled()) {
-      spinner.warn('AI features not enabled');
+      spinner.warn('AI features not enabled')
       const fallback = generateFallbackExplanation(
         relativePath,
         content,
@@ -278,13 +278,13 @@ export async function explainFile(
         blameSummary,
         imports,
         exports
-      );
-      console.log(fallback);
-      return;
+      )
+      console.log(fallback)
+      return
     }
 
     // Build prompt and get AI explanation
-    spinner.text = 'Generating AI explanation...';
+    spinner.text = 'Generating AI explanation...'
     const prompt = buildExplainPrompt(
       relativePath,
       content,
@@ -292,23 +292,23 @@ export async function explainFile(
       blameSummary,
       imports,
       exports
-    );
+    )
 
     if (options.verbose) {
-      console.log(chalk.dim('\n--- Context sent to AI ---'));
-      console.log(chalk.dim(prompt));
-      console.log(chalk.dim('--- End context ---\n'));
+      console.log(chalk.dim('\n--- Context sent to AI ---'))
+      console.log(chalk.dim(prompt))
+      console.log(chalk.dim('--- End context ---\n'))
     }
 
     const explanation = await reasonAboutCode(
       'Provide a comprehensive explanation of this file.',
       prompt
-    );
+    )
 
-    spinner.succeed('Analysis complete');
+    spinner.succeed('Analysis complete')
 
-    console.log(chalk.bold.cyan(`\n=== Explanation: ${relativePath} ===\n`));
-    console.log(explanation);
+    console.log(chalk.bold.cyan(`\n=== Explanation: ${relativePath} ===\n`))
+    console.log(explanation)
 
     // Add tip for related commands
     console.log(
@@ -321,13 +321,13 @@ export async function explainFile(
         chalk.dim(' - Get detailed refactoring steps\n') +
         chalk.white(`  specter graph show ${relativePath}`) +
         chalk.dim(' - View dependency graph')
-    );
+    )
   } catch (error) {
-    spinner.fail('Failed to explain file');
+    spinner.fail('Failed to explain file')
     if (error instanceof Error) {
-      console.error(chalk.red(`Error: ${error.message}`));
+      console.error(chalk.red(`Error: ${error.message}`))
     }
-    process.exit(1);
+    process.exit(1)
   }
 }
 
@@ -341,7 +341,7 @@ export function register(program: Command): void {
     .option('-d, --dir <path>', 'Directory to analyze', '.')
     .option('-v, --verbose', 'Show the context sent to AI')
     .action(async (file: string, options: ExplainOptions) => {
-      const rootDir = path.resolve(options.dir);
-      await explainFile(file, rootDir, options);
-    });
+      const rootDir = path.resolve(options.dir)
+      await explainFile(file, rootDir, options)
+    })
 }

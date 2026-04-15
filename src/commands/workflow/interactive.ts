@@ -5,16 +5,16 @@
  * without restarting the CLI. Perfect for exploration and learning.
  */
 
-import path from 'node:path';
-import readline from 'node:readline';
-import chalk from 'chalk';
-import type { Command } from 'commander';
-import { suggestCommand } from '../../cli-utils.js';
+import path from 'node:path'
+import readline from 'node:readline'
+import chalk from 'chalk'
+import type { Command } from 'commander'
+import { suggestCommand } from '../../cli-utils.js'
 
 interface CommandRegistry {
-  name: string;
-  description: string;
-  category: string;
+  name: string
+  description: string
+  category: string
 }
 
 const COMMANDS_REGISTRY: CommandRegistry[] = [
@@ -33,7 +33,7 @@ const COMMANDS_REGISTRY: CommandRegistry[] = [
   { name: 'help', category: 'meta', description: 'Show help' },
   { name: 'clear', category: 'meta', description: 'Clear screen' },
   { name: 'exit', category: 'meta', description: 'Exit interactive mode' },
-];
+]
 
 const CATEGORY_EMOJIS: Record<string, string> = {
   analysis: '📊',
@@ -45,7 +45,7 @@ const CATEGORY_EMOJIS: Record<string, string> = {
   stats: '📉',
   fun: '🎮',
   meta: '⚙️',
-};
+}
 
 export function register(program: Command): void {
   program
@@ -77,37 +77,37 @@ Commands available in interactive mode:
 `
     )
     .action(async (options) => {
-      const rootDir = path.resolve(options.dir);
-      await startInteractiveMode(rootDir, !options.welcome);
-    });
+      const rootDir = path.resolve(options.dir)
+      await startInteractiveMode(rootDir, !options.welcome)
+    })
 }
 
 async function startInteractiveMode(rootDir: string, showWelcome: boolean = true): Promise<void> {
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
-  });
+  })
 
   if (showWelcome) {
-    printWelcome();
+    printWelcome()
   }
 
   const prompt = (): void => {
     rl.question(chalk.cyan('👻 > '), async (input) => {
-      const trimmedInput = input.trim();
+      const trimmedInput = input.trim()
 
       if (!trimmedInput) {
-        prompt();
-        return;
+        prompt()
+        return
       }
 
-      await handleCommand(trimmedInput, rootDir, rl);
+      await handleCommand(trimmedInput, rootDir, rl)
 
-      prompt();
-    });
-  };
+      prompt()
+    })
+  }
 
-  prompt();
+  prompt()
 }
 
 async function handleCommand(
@@ -115,146 +115,146 @@ async function handleCommand(
   _rootDir: string,
   rl: readline.Interface
 ): Promise<void> {
-  const [cmd, ...args] = input.split(/\s+/);
-  if (!cmd) return;
+  const [cmd, ...args] = input.split(/\s+/)
+  if (!cmd) return
 
   switch (cmd.toLowerCase()) {
     case 'exit':
     case 'quit':
     case 'q':
-      console.log(chalk.dim('👋 Goodbye!'));
-      rl.close();
-      process.exit(0);
-      break;
+      console.log(chalk.dim('👋 Goodbye!'))
+      rl.close()
+      process.exit(0)
+      break
 
     case 'clear':
     case 'cls':
-      console.clear();
-      break;
+      console.clear()
+      break
 
     case 'help':
     case 'h':
-      showHelp(args[0]);
-      break;
+      showHelp(args[0])
+      break
 
     case 'health':
-      console.log(chalk.dim('  → Would run: specter health'));
-      console.log(chalk.gray('  (in real implementation, this would execute the command)'));
-      break;
+      console.log(chalk.dim('  → Would run: specter health'))
+      console.log(chalk.gray('  (in real implementation, this would execute the command)'))
+      break
 
     case 'hotspots':
     case 'hot':
       {
-        const limit = args[0] || '10';
-        console.log(chalk.dim(`  → Would run: specter hotspots --limit ${limit}`));
-        console.log(chalk.gray('  (in real implementation, this would execute the command)'));
+        const limit = args[0] || '10'
+        console.log(chalk.dim(`  → Would run: specter hotspots --limit ${limit}`))
+        console.log(chalk.gray('  (in real implementation, this would execute the command)'))
       }
-      break;
+      break
 
     case 'ask':
       {
-        const question = args.join(' ') || 'what should I focus on?';
-        console.log(chalk.dim(`  → Would run: specter ask "${question}"`));
-        console.log(chalk.gray('  (in real implementation, this would execute the command)'));
+        const question = args.join(' ') || 'what should I focus on?'
+        console.log(chalk.dim(`  → Would run: specter ask "${question}"`))
+        console.log(chalk.gray('  (in real implementation, this would execute the command)'))
       }
-      break;
+      break
 
     case 'fix':
       {
-        const file = args[0] || 'all';
-        console.log(chalk.dim(`  → Would run: specter fix ${file}`));
-        console.log(chalk.gray('  (in real implementation, this would execute the command)'));
+        const file = args[0] || 'all'
+        console.log(chalk.dim(`  → Would run: specter fix ${file}`))
+        console.log(chalk.gray('  (in real implementation, this would execute the command)'))
       }
-      break;
+      break
 
     case 'roast':
       {
-        const personality = args[0] || 'default';
-        console.log(chalk.dim(`  → Would run: specter roast --personality ${personality}`));
-        console.log(chalk.gray('  (in real implementation, this would execute the command)'));
+        const personality = args[0] || 'default'
+        console.log(chalk.dim(`  → Would run: specter roast --personality ${personality}`))
+        console.log(chalk.gray('  (in real implementation, this would execute the command)'))
       }
-      break;
+      break
 
     case 'wrapped':
-      console.log(chalk.dim('  → Would run: specter wrapped'));
-      console.log(chalk.gray('  (in real implementation, this would execute the command)'));
-      break;
+      console.log(chalk.dim('  → Would run: specter wrapped'))
+      console.log(chalk.gray('  (in real implementation, this would execute the command)'))
+      break
 
     case 'ls':
     case 'commands':
-      showAvailableCommands();
-      break;
+      showAvailableCommands()
+      break
 
     default: {
       const suggestion = suggestCommand(
         cmd,
         COMMANDS_REGISTRY.map((c) => c.name)
-      );
-      console.error(chalk.red(`❌ Unknown command: ${cmd}`));
+      )
+      console.error(chalk.red(`❌ Unknown command: ${cmd}`))
       if (suggestion) {
-        console.error(chalk.yellow(`💡 Did you mean: ${suggestion}?`));
-        console.error(chalk.dim('   Type "help" for all commands'));
+        console.error(chalk.yellow(`💡 Did you mean: ${suggestion}?`))
+        console.error(chalk.dim('   Type "help" for all commands'))
       } else {
-        console.error(chalk.yellow(`💡 Type "help" to see available commands`));
+        console.error(chalk.yellow(`💡 Type "help" to see available commands`))
       }
     }
   }
 }
 
 function printWelcome(): void {
-  console.log();
-  console.log(chalk.bold.magenta('  👻 Welcome to Specter Interactive Mode'));
-  console.log(chalk.dim('  ─────────────────────────────────────'));
-  console.log();
-  console.log(chalk.cyan('  Type "help" to see available commands'));
-  console.log(chalk.cyan('  Type "exit" to quit'));
-  console.log();
+  console.log()
+  console.log(chalk.bold.magenta('  👻 Welcome to Specter Interactive Mode'))
+  console.log(chalk.dim('  ─────────────────────────────────────'))
+  console.log()
+  console.log(chalk.cyan('  Type "help" to see available commands'))
+  console.log(chalk.cyan('  Type "exit" to quit'))
+  console.log()
 }
 
 function showHelp(commandFilter?: string): void {
   if (commandFilter) {
-    const cmd = COMMANDS_REGISTRY.find((c) => c.name.toLowerCase() === commandFilter.toLowerCase());
+    const cmd = COMMANDS_REGISTRY.find((c) => c.name.toLowerCase() === commandFilter.toLowerCase())
     if (cmd) {
-      console.log();
-      console.log(chalk.bold(`  ${cmd.name}`));
-      console.log(chalk.gray(`  ${cmd.description}`));
-      console.log();
-      return;
+      console.log()
+      console.log(chalk.bold(`  ${cmd.name}`))
+      console.log(chalk.gray(`  ${cmd.description}`))
+      console.log()
+      return
     }
   }
 
-  showAvailableCommands();
+  showAvailableCommands()
 }
 
 function showAvailableCommands(): void {
-  console.log();
-  console.log(chalk.bold('  📚 Available Commands'));
-  console.log(chalk.dim('  ─────────────────────'));
-  console.log();
+  console.log()
+  console.log(chalk.bold('  📚 Available Commands'))
+  console.log(chalk.dim('  ─────────────────────'))
+  console.log()
 
   // Group by category
-  const grouped: Record<string, CommandRegistry[]> = {};
+  const grouped: Record<string, CommandRegistry[]> = {}
   for (const cmd of COMMANDS_REGISTRY) {
-    const existing = grouped[cmd.category];
+    const existing = grouped[cmd.category]
     if (existing) {
-      existing.push(cmd);
+      existing.push(cmd)
     } else {
-      grouped[cmd.category] = [cmd];
+      grouped[cmd.category] = [cmd]
     }
   }
 
   // Display by category
   for (const [category, cmds] of Object.entries(grouped)) {
-    const emoji = CATEGORY_EMOJIS[category] || '•';
-    console.log(chalk.bold(`  ${emoji} ${category.toUpperCase()}`));
+    const emoji = CATEGORY_EMOJIS[category] || '•'
+    console.log(chalk.bold(`  ${emoji} ${category.toUpperCase()}`))
 
     for (const cmd of cmds) {
-      console.log(chalk.cyan(`    ${cmd.name.padEnd(15)}`), chalk.gray(cmd.description));
+      console.log(chalk.cyan(`    ${cmd.name.padEnd(15)}`), chalk.gray(cmd.description))
     }
 
-    console.log();
+    console.log()
   }
 
-  console.log(chalk.dim('  💡 Example: health | hotspots 5 | ask "why is X complex?"'));
-  console.log();
+  console.log(chalk.dim('  💡 Example: health | hotspots 5 | ask "why is X complex?"'))
+  console.log()
 }

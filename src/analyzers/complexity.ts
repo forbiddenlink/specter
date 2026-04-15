@@ -5,28 +5,28 @@
  * across the codebase.
  */
 
-import type { ComplexityThresholds } from '../config/index.js';
-import { DEFAULT_CONFIG } from '../config/index.js';
-import type { ComplexityHotspot, GraphNode, KnowledgeGraph } from '../graph/types.js';
+import type { ComplexityThresholds } from '../config/index.js'
+import { DEFAULT_CONFIG } from '../config/index.js'
+import type { ComplexityHotspot, GraphNode, KnowledgeGraph } from '../graph/types.js'
 
 export interface ComplexityReport {
-  averageComplexity: number;
-  maxComplexity: number;
-  totalComplexity: number;
-  hotspots: ComplexityHotspot[];
+  averageComplexity: number
+  maxComplexity: number
+  totalComplexity: number
+  hotspots: ComplexityHotspot[]
   distribution: {
-    low: number; // 1-5
-    medium: number; // 6-10
-    high: number; // 11-20
-    veryHigh: number; // 21+
-  };
+    low: number // 1-5
+    medium: number // 6-10
+    high: number // 11-20
+    veryHigh: number // 21+
+  }
 }
 
 /**
  * Default complexity thresholds (for backwards compatibility)
  * @deprecated Use getConfig(rootDir).complexity instead
  */
-export const COMPLEXITY_THRESHOLDS = DEFAULT_CONFIG.complexity;
+export const COMPLEXITY_THRESHOLDS = DEFAULT_CONFIG.complexity
 
 /**
  * Get complexity category
@@ -35,10 +35,10 @@ export function getComplexityCategory(
   complexity: number,
   thresholds: ComplexityThresholds = COMPLEXITY_THRESHOLDS
 ): 'low' | 'medium' | 'high' | 'veryHigh' {
-  if (complexity <= thresholds.low) return 'low';
-  if (complexity <= thresholds.medium) return 'medium';
-  if (complexity <= thresholds.high) return 'high';
-  return 'veryHigh';
+  if (complexity <= thresholds.low) return 'low'
+  if (complexity <= thresholds.medium) return 'medium'
+  if (complexity <= thresholds.high) return 'high'
+  return 'veryHigh'
 }
 
 /**
@@ -48,16 +48,16 @@ export function getComplexityEmoji(
   complexity: number,
   thresholds: ComplexityThresholds = COMPLEXITY_THRESHOLDS
 ): string {
-  const category = getComplexityCategory(complexity, thresholds);
+  const category = getComplexityCategory(complexity, thresholds)
   switch (category) {
     case 'low':
-      return '🟢';
+      return '🟢'
     case 'medium':
-      return '🟡';
+      return '🟡'
     case 'high':
-      return '🟠';
+      return '🟠'
     case 'veryHigh':
-      return '🔴';
+      return '🔴'
   }
 }
 
@@ -67,22 +67,22 @@ export function getComplexityEmoji(
 export function findComplexityHotspots(
   graph: KnowledgeGraph,
   options: {
-    limit?: number;
-    threshold?: number;
-    includeFiles?: boolean;
-    thresholds?: ComplexityThresholds;
+    limit?: number
+    threshold?: number
+    includeFiles?: boolean
+    thresholds?: ComplexityThresholds
   } = {}
 ): ComplexityHotspot[] {
-  const thresholds = options.thresholds || COMPLEXITY_THRESHOLDS;
-  const { limit = 10, threshold = thresholds.medium, includeFiles = false } = options;
+  const thresholds = options.thresholds || COMPLEXITY_THRESHOLDS
+  const { limit = 10, threshold = thresholds.medium, includeFiles = false } = options
 
-  const hotspots: ComplexityHotspot[] = [];
+  const hotspots: ComplexityHotspot[] = []
 
   for (const node of Object.values(graph.nodes)) {
-    if (!node.complexity || node.complexity < threshold) continue;
+    if (!node.complexity || node.complexity < threshold) continue
 
     // Skip file nodes unless explicitly included
-    if (node.type === 'file' && !includeFiles) continue;
+    if (node.type === 'file' && !includeFiles) continue
 
     hotspots.push({
       filePath: node.filePath,
@@ -91,10 +91,10 @@ export function findComplexityHotspots(
       complexity: node.complexity,
       lineStart: node.lineStart,
       lineEnd: node.lineEnd,
-    });
+    })
   }
 
-  return hotspots.sort((a, b) => b.complexity - a.complexity).slice(0, limit);
+  return hotspots.sort((a, b) => b.complexity - a.complexity).slice(0, limit)
 }
 
 /**
@@ -106,7 +106,7 @@ export function generateComplexityReport(
 ): ComplexityReport {
   const nodesWithComplexity = Object.values(graph.nodes).filter(
     (n) => n.type !== 'file' && n.complexity !== undefined
-  );
+  )
 
   if (nodesWithComplexity.length === 0) {
     return {
@@ -115,27 +115,27 @@ export function generateComplexityReport(
       totalComplexity: 0,
       hotspots: [],
       distribution: { low: 0, medium: 0, high: 0, veryHigh: 0 },
-    };
+    }
   }
 
-  const complexities = nodesWithComplexity.map((n) => n.complexity!);
-  const totalComplexity = complexities.reduce((sum, c) => sum + c, 0);
-  const averageComplexity = totalComplexity / complexities.length;
-  const maxComplexity = Math.max(...complexities);
+  const complexities = nodesWithComplexity.map((n) => n.complexity!)
+  const totalComplexity = complexities.reduce((sum, c) => sum + c, 0)
+  const averageComplexity = totalComplexity / complexities.length
+  const maxComplexity = Math.max(...complexities)
 
   const distribution = {
     low: 0,
     medium: 0,
     high: 0,
     veryHigh: 0,
-  };
-
-  for (const complexity of complexities) {
-    const category = getComplexityCategory(complexity, thresholds);
-    distribution[category]++;
   }
 
-  const hotspots = findComplexityHotspots(graph, { limit: 20, thresholds });
+  for (const complexity of complexities) {
+    const category = getComplexityCategory(complexity, thresholds)
+    distribution[category]++
+  }
+
+  const hotspots = findComplexityHotspots(graph, { limit: 20, thresholds })
 
   return {
     averageComplexity: Math.round(averageComplexity * 100) / 100,
@@ -143,7 +143,7 @@ export function generateComplexityReport(
     totalComplexity,
     hotspots,
     distribution,
-  };
+  }
 }
 
 /**
@@ -153,21 +153,21 @@ export function compareComplexity(
   before: KnowledgeGraph,
   after: KnowledgeGraph
 ): {
-  improved: ComplexityHotspot[];
-  worsened: ComplexityHotspot[];
-  unchanged: number;
+  improved: ComplexityHotspot[]
+  worsened: ComplexityHotspot[]
+  unchanged: number
 } {
-  const improved: ComplexityHotspot[] = [];
-  const worsened: ComplexityHotspot[] = [];
-  let unchanged = 0;
+  const improved: ComplexityHotspot[] = []
+  const worsened: ComplexityHotspot[] = []
+  let unchanged = 0
 
   for (const nodeId of Object.keys(after.nodes)) {
-    const beforeNode = before.nodes[nodeId];
-    const afterNode = after.nodes[nodeId];
+    const beforeNode = before.nodes[nodeId]
+    const afterNode = after.nodes[nodeId]
 
-    if (!afterNode || !beforeNode || !afterNode.complexity || !beforeNode.complexity) continue;
+    if (!afterNode || !beforeNode || !afterNode.complexity || !beforeNode.complexity) continue
 
-    const diff = afterNode.complexity - beforeNode.complexity;
+    const diff = afterNode.complexity - beforeNode.complexity
 
     if (diff > 0) {
       worsened.push({
@@ -177,7 +177,7 @@ export function compareComplexity(
         complexity: afterNode.complexity,
         lineStart: afterNode.lineStart,
         lineEnd: afterNode.lineEnd,
-      });
+      })
     } else if (diff < 0) {
       improved.push({
         filePath: afterNode.filePath,
@@ -186,13 +186,13 @@ export function compareComplexity(
         complexity: afterNode.complexity,
         lineStart: afterNode.lineStart,
         lineEnd: afterNode.lineEnd,
-      });
+      })
     } else {
-      unchanged++;
+      unchanged++
     }
   }
 
-  return { improved, worsened, unchanged };
+  return { improved, worsened, unchanged }
 }
 
 /**
@@ -201,32 +201,32 @@ export function compareComplexity(
 export function getComplexityByDirectory(
   graph: KnowledgeGraph
 ): Map<string, { totalComplexity: number; fileCount: number; avgComplexity: number }> {
-  const dirStats = new Map<string, { totalComplexity: number; fileCount: number }>();
+  const dirStats = new Map<string, { totalComplexity: number; fileCount: number }>()
 
   for (const node of Object.values(graph.nodes)) {
-    if (node.type !== 'file' || !node.complexity) continue;
+    if (node.type !== 'file' || !node.complexity) continue
 
-    const dir = node.filePath.split('/').slice(0, -1).join('/') || '.';
+    const dir = node.filePath.split('/').slice(0, -1).join('/') || '.'
 
-    const existing = dirStats.get(dir) || { totalComplexity: 0, fileCount: 0 };
-    existing.totalComplexity += node.complexity;
-    existing.fileCount++;
-    dirStats.set(dir, existing);
+    const existing = dirStats.get(dir) || { totalComplexity: 0, fileCount: 0 }
+    existing.totalComplexity += node.complexity
+    existing.fileCount++
+    dirStats.set(dir, existing)
   }
 
   const result = new Map<
     string,
     { totalComplexity: number; fileCount: number; avgComplexity: number }
-  >();
+  >()
 
   for (const [dir, stats] of dirStats) {
     result.set(dir, {
       ...stats,
       avgComplexity: Math.round((stats.totalComplexity / stats.fileCount) * 100) / 100,
-    });
+    })
   }
 
-  return result;
+  return result
 }
 
 /**
@@ -236,19 +236,19 @@ export function suggestRefactoringTargets(
   graph: KnowledgeGraph,
   thresholds: ComplexityThresholds = COMPLEXITY_THRESHOLDS
 ): Array<{
-  node: GraphNode;
-  reason: string;
-  priority: 'high' | 'medium' | 'low';
+  node: GraphNode
+  reason: string
+  priority: 'high' | 'medium' | 'low'
 }> {
   const suggestions: Array<{
-    node: GraphNode;
-    reason: string;
-    priority: 'high' | 'medium' | 'low';
-  }> = [];
+    node: GraphNode
+    reason: string
+    priority: 'high' | 'medium' | 'low'
+  }> = []
 
   for (const node of Object.values(graph.nodes)) {
-    if (node.type === 'file') continue;
-    if (!node.complexity) continue;
+    if (node.type === 'file') continue
+    if (!node.complexity) continue
 
     // Very high complexity
     if (node.complexity > thresholds.high) {
@@ -256,7 +256,7 @@ export function suggestRefactoringTargets(
         node,
         reason: `Cyclomatic complexity of ${node.complexity} is very high. Consider breaking into smaller functions.`,
         priority: 'high',
-      });
+      })
     }
     // High complexity
     else if (node.complexity > thresholds.medium) {
@@ -264,22 +264,22 @@ export function suggestRefactoringTargets(
         node,
         reason: `Cyclomatic complexity of ${node.complexity} is above recommended threshold.`,
         priority: 'medium',
-      });
+      })
     }
 
     // Long functions (rough heuristic: >50 lines with moderate complexity)
-    const lineCount = node.lineEnd - node.lineStart;
+    const lineCount = node.lineEnd - node.lineStart
     if (lineCount > 50 && node.complexity > thresholds.low) {
       suggestions.push({
         node,
         reason: `Function spans ${lineCount} lines. Consider extracting helper functions.`,
         priority: 'medium',
-      });
+      })
     }
   }
 
   return suggestions.sort((a, b) => {
-    const priorityOrder = { high: 0, medium: 1, low: 2 };
-    return priorityOrder[a.priority] - priorityOrder[b.priority];
-  });
+    const priorityOrder = { high: 0, medium: 1, low: 2 }
+    return priorityOrder[a.priority] - priorityOrder[b.priority]
+  })
 }

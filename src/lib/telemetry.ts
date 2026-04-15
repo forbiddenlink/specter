@@ -5,36 +5,36 @@
  * with manual spans for graph queries, AST analysis, and git operations.
  */
 
-import { NodeSDK, node } from '@opentelemetry/sdk-node';
-import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
-import { resourceFromAttributes } from '@opentelemetry/resources';
-import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
-import { trace, Span, SpanStatusCode, context, SpanKind } from '@opentelemetry/api';
+import { context, type Span, SpanKind, SpanStatusCode, trace } from '@opentelemetry/api'
+import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node'
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http'
+import { resourceFromAttributes } from '@opentelemetry/resources'
+import { NodeSDK, node } from '@opentelemetry/sdk-node'
+import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions'
 
 // Service name for all traces
-export const SERVICE_NAME = 'specter';
+export const SERVICE_NAME = 'specter'
 
 // Get the tracer for creating spans
-const tracer = trace.getTracer(SERVICE_NAME, '1.0.0');
+const tracer = trace.getTracer(SERVICE_NAME, '1.0.0')
 
 // ============================================================
 // SDK Initialization
 // ============================================================
 
-let sdkInstance: NodeSDK | null = null;
+let sdkInstance: NodeSDK | null = null
 
 /**
  * Initialize the OpenTelemetry SDK
  */
 export function initTelemetry(): void {
-  const isOtelEnabled = process.env['OTEL_ENABLED'] === 'true';
-  const endpoint = process.env['OTEL_EXPORTER_OTLP_ENDPOINT'];
+  const isOtelEnabled = process.env['OTEL_ENABLED'] === 'true'
+  const endpoint = process.env['OTEL_EXPORTER_OTLP_ENDPOINT']
 
   // Use OTLP exporter if endpoint is configured, otherwise console
   const traceExporter = endpoint
     ? new OTLPTraceExporter({ url: endpoint })
-    : new node.ConsoleSpanExporter();
+    : new node.ConsoleSpanExporter()
 
   const sdk = new NodeSDK({
     resource: resourceFromAttributes({
@@ -50,18 +50,18 @@ export function initTelemetry(): void {
           }),
         ]
       : [],
-  });
+  })
 
-  sdk.start();
-  sdkInstance = sdk;
+  sdk.start()
+  sdkInstance = sdk
 
   process.on('SIGTERM', () => {
     sdk
       .shutdown()
       .then(() => console.log('Telemetry shut down'))
       .catch((error) => console.log('Error shutting down telemetry', error))
-      .finally(() => process.exit(0));
-  });
+      .finally(() => process.exit(0))
+  })
 }
 
 /**
@@ -69,8 +69,8 @@ export function initTelemetry(): void {
  */
 export async function shutdownTelemetry(): Promise<void> {
   if (sdkInstance) {
-    await sdkInstance.shutdown();
-    sdkInstance = null;
+    await sdkInstance.shutdown()
+    sdkInstance = null
   }
 }
 
@@ -89,23 +89,23 @@ export async function withSpan<T>(
   const span = tracer.startSpan(name, {
     kind: SpanKind.INTERNAL,
     attributes,
-  });
+  })
 
   try {
-    const result = await fn(span);
-    span.setStatus({ code: SpanStatusCode.OK });
-    return result;
+    const result = await fn(span)
+    span.setStatus({ code: SpanStatusCode.OK })
+    return result
   } catch (error) {
     span.setStatus({
       code: SpanStatusCode.ERROR,
       message: error instanceof Error ? error.message : 'Unknown error',
-    });
+    })
     if (error instanceof Error) {
-      span.recordException(error);
+      span.recordException(error)
     }
-    throw error;
+    throw error
   } finally {
-    span.end();
+    span.end()
   }
 }
 
@@ -116,49 +116,40 @@ export async function withSpan<T>(
 /**
  * Start a graph query span
  */
-export function startGraphQuerySpan(
-  queryType: string,
-  database?: string
-): Span {
+export function startGraphQuerySpan(queryType: string, database?: string): Span {
   return tracer.startSpan('graph.query', {
     kind: SpanKind.CLIENT,
     attributes: {
       'graph.query_type': queryType,
       'graph.database': database || 'neo4j',
     },
-  });
+  })
 }
 
 /**
  * Start a graph write span
  */
-export function startGraphWriteSpan(
-  operation: string,
-  nodeCount?: number
-): Span {
+export function startGraphWriteSpan(operation: string, nodeCount?: number): Span {
   return tracer.startSpan('graph.write', {
     kind: SpanKind.CLIENT,
     attributes: {
       'graph.operation': operation,
       'graph.node_count': nodeCount,
     },
-  });
+  })
 }
 
 /**
  * Start a graph build span (full graph construction)
  */
-export function startGraphBuildSpan(
-  projectPath: string,
-  fileCount: number
-): Span {
+export function startGraphBuildSpan(projectPath: string, fileCount: number): Span {
   return tracer.startSpan('graph.build', {
     kind: SpanKind.INTERNAL,
     attributes: {
       'graph.project_path': projectPath,
       'graph.file_count': fileCount,
     },
-  });
+  })
 }
 
 // ============================================================
@@ -168,12 +159,8 @@ export function startGraphBuildSpan(
 /**
  * Start an AST parse span
  */
-export function startASTParseSpan(
-  filePath: string,
-  language: string,
-  parentSpan?: Span
-): Span {
-  const ctx = parentSpan ? trace.setSpan(context.active(), parentSpan) : context.active();
+export function startASTParseSpan(filePath: string, language: string, parentSpan?: Span): Span {
+  const ctx = parentSpan ? trace.setSpan(context.active(), parentSpan) : context.active()
 
   return tracer.startSpan(
     'ast.parse',
@@ -185,7 +172,7 @@ export function startASTParseSpan(
       },
     },
     ctx
-  );
+  )
 }
 
 /**
@@ -196,7 +183,7 @@ export function startASTAnalysisSpan(
   fileCount: number,
   parentSpan?: Span
 ): Span {
-  const ctx = parentSpan ? trace.setSpan(context.active(), parentSpan) : context.active();
+  const ctx = parentSpan ? trace.setSpan(context.active(), parentSpan) : context.active()
 
   return tracer.startSpan(
     'ast.analyze',
@@ -208,17 +195,14 @@ export function startASTAnalysisSpan(
       },
     },
     ctx
-  );
+  )
 }
 
 /**
  * Start a complexity calculation span
  */
-export function startComplexitySpan(
-  filePath: string,
-  parentSpan?: Span
-): Span {
-  const ctx = parentSpan ? trace.setSpan(context.active(), parentSpan) : context.active();
+export function startComplexitySpan(filePath: string, parentSpan?: Span): Span {
+  const ctx = parentSpan ? trace.setSpan(context.active(), parentSpan) : context.active()
 
   return tracer.startSpan(
     'ast.complexity',
@@ -229,7 +213,7 @@ export function startComplexitySpan(
       },
     },
     ctx
-  );
+  )
 }
 
 // ============================================================
@@ -239,27 +223,21 @@ export function startComplexitySpan(
 /**
  * Start a git history analysis span
  */
-export function startGitHistorySpan(
-  operation: string,
-  commitCount?: number
-): Span {
+export function startGitHistorySpan(operation: string, commitCount?: number): Span {
   return tracer.startSpan('git.history', {
     kind: SpanKind.INTERNAL,
     attributes: {
       'git.operation': operation,
       'git.commit_count': commitCount,
     },
-  });
+  })
 }
 
 /**
  * Start a git blame span
  */
-export function startGitBlameSpan(
-  filePath: string,
-  parentSpan?: Span
-): Span {
-  const ctx = parentSpan ? trace.setSpan(context.active(), parentSpan) : context.active();
+export function startGitBlameSpan(filePath: string, parentSpan?: Span): Span {
+  const ctx = parentSpan ? trace.setSpan(context.active(), parentSpan) : context.active()
 
   return tracer.startSpan(
     'git.blame',
@@ -270,18 +248,14 @@ export function startGitBlameSpan(
       },
     },
     ctx
-  );
+  )
 }
 
 /**
  * Start a git diff span
  */
-export function startGitDiffSpan(
-  fromRef: string,
-  toRef: string,
-  parentSpan?: Span
-): Span {
-  const ctx = parentSpan ? trace.setSpan(context.active(), parentSpan) : context.active();
+export function startGitDiffSpan(fromRef: string, toRef: string, parentSpan?: Span): Span {
+  const ctx = parentSpan ? trace.setSpan(context.active(), parentSpan) : context.active()
 
   return tracer.startSpan(
     'git.diff',
@@ -293,7 +267,7 @@ export function startGitDiffSpan(
       },
     },
     ctx
-  );
+  )
 }
 
 // ============================================================
@@ -303,17 +277,14 @@ export function startGitDiffSpan(
 /**
  * Start a CLI command span
  */
-export function startCommandSpan(
-  command: string,
-  args: string[]
-): Span {
+export function startCommandSpan(command: string, args: string[]): Span {
   return tracer.startSpan('command.execute', {
     kind: SpanKind.INTERNAL,
     attributes: {
       'command.name': command,
       'command.args': args.join(' '),
     },
-  });
+  })
 }
 
 /**
@@ -330,7 +301,7 @@ export function startScanSpan(
       'scan.include_tests': options.includeTests ?? false,
       'scan.max_depth': options.maxDepth,
     },
-  });
+  })
 }
 
 // ============================================================
@@ -340,12 +311,8 @@ export function startScanSpan(
 /**
  * Start an AI query span
  */
-export function startAIQuerySpan(
-  queryType: string,
-  model: string,
-  parentSpan?: Span
-): Span {
-  const ctx = parentSpan ? trace.setSpan(context.active(), parentSpan) : context.active();
+export function startAIQuerySpan(queryType: string, model: string, parentSpan?: Span): Span {
+  const ctx = parentSpan ? trace.setSpan(context.active(), parentSpan) : context.active()
 
   return tracer.startSpan(
     'ai.query',
@@ -357,7 +324,7 @@ export function startAIQuerySpan(
       },
     },
     ctx
-  );
+  )
 }
 
 // ============================================================
@@ -370,46 +337,46 @@ export function startAIQuerySpan(
 export function endSpanWithResult(
   span: Span,
   result: {
-    success: boolean;
-    durationMs?: number;
-    recordCount?: number;
-    error?: Error | string;
+    success: boolean
+    durationMs?: number
+    recordCount?: number
+    error?: Error | string
   }
 ): void {
-  span.setAttribute('result.success', result.success);
+  span.setAttribute('result.success', result.success)
 
   if (result.durationMs !== undefined) {
-    span.setAttribute('result.duration_ms', result.durationMs);
+    span.setAttribute('result.duration_ms', result.durationMs)
   }
   if (result.recordCount !== undefined) {
-    span.setAttribute('result.record_count', result.recordCount);
+    span.setAttribute('result.record_count', result.recordCount)
   }
 
   if (!result.success) {
-    const errorMessage = result.error instanceof Error ? result.error.message : result.error;
-    span.setStatus({ code: SpanStatusCode.ERROR, message: errorMessage });
+    const errorMessage = result.error instanceof Error ? result.error.message : result.error
+    span.setStatus({ code: SpanStatusCode.ERROR, message: errorMessage })
     if (result.error instanceof Error) {
-      span.recordException(result.error);
+      span.recordException(result.error)
     }
   } else {
-    span.setStatus({ code: SpanStatusCode.OK });
+    span.setStatus({ code: SpanStatusCode.OK })
   }
 
-  span.end();
+  span.end()
 }
 
 /**
  * Get the current active span
  */
 export function getCurrentSpan(): Span | undefined {
-  return trace.getActiveSpan();
+  return trace.getActiveSpan()
 }
 
 /**
  * Run a function within a span context
  */
 export function runWithSpan<T>(span: Span, fn: () => T): T {
-  return context.with(trace.setSpan(context.active(), span), fn);
+  return context.with(trace.setSpan(context.active(), span), fn)
 }
 
-export default { initTelemetry, shutdownTelemetry };
+export default { initTelemetry, shutdownTelemetry }

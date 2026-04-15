@@ -1,26 +1,26 @@
 #!/usr/bin/env node
-import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
-import { relative, resolve } from 'node:path';
-import chalk from 'chalk';
-import type { Command } from 'commander';
-import ora from 'ora';
-import { findComplexityHotspots, generateComplexityReport } from './analyzers/complexity.js';
-import { loadGraph } from './graph/persistence.js';
-import { analyzeHotspots } from './hotspots.js';
+import { spawnSync } from 'node:child_process'
+import { existsSync, readFileSync } from 'node:fs'
+import { relative, resolve } from 'node:path'
+import chalk from 'chalk'
+import type { Command } from 'commander'
+import ora from 'ora'
+import { findComplexityHotspots, generateComplexityReport } from './analyzers/complexity.js'
+import { loadGraph } from './graph/persistence.js'
+import { analyzeHotspots } from './hotspots.js'
 
 interface RefactorOptions {
-  focus?: string;
-  priority?: 'complexity' | 'coupling' | 'testability' | 'all';
-  format?: 'steps' | 'diff' | 'explanation';
+  focus?: string
+  priority?: 'complexity' | 'coupling' | 'testability' | 'all'
+  format?: 'steps' | 'diff' | 'explanation'
 }
 
 /**
  * Check if GitHub Copilot CLI is installed
  */
 function checkCopilotCLI(): boolean {
-  const result = spawnSync('copilot', ['--version'], { stdio: 'ignore' });
-  return result.status === 0;
+  const result = spawnSync('copilot', ['--version'], { stdio: 'ignore' })
+  return result.status === 0
 }
 
 /**
@@ -31,62 +31,62 @@ async function analyzeRefactoringNeeds(
   rootDir: string,
   priority: string
 ): Promise<string> {
-  const relativePath = relative(rootDir, filePath);
-  const issues: string[] = [];
+  const relativePath = relative(rootDir, filePath)
+  const issues: string[] = []
 
   try {
     // Load knowledge graph
-    const graph = await loadGraph(rootDir);
+    const graph = await loadGraph(rootDir)
     if (!graph) {
-      return '\nNo analysis data available. Run `specter scan` first.';
+      return '\nNo analysis data available. Run `specter scan` first.'
     }
 
     // Complexity analysis
     if (priority === 'complexity' || priority === 'all') {
-      const _complexityReport = generateComplexityReport(graph);
-      const complexFiles = findComplexityHotspots(graph, { limit: 20 });
-      const file = complexFiles.find((c) => c.filePath === relativePath);
+      const _complexityReport = generateComplexityReport(graph)
+      const complexFiles = findComplexityHotspots(graph, { limit: 20 })
+      const file = complexFiles.find((c) => c.filePath === relativePath)
 
       if (file) {
-        issues.push(`\n## Complexity Issues:`);
-        issues.push(`- Cyclomatic complexity: ${file.complexity}`);
+        issues.push(`\n## Complexity Issues:`)
+        issues.push(`- Cyclomatic complexity: ${file.complexity}`)
 
         if (file.complexity > 20) {
-          issues.push(`- ⚠️  Very high complexity (should be < 10)`);
-          issues.push(`- Recommendation: Split into smaller functions`);
+          issues.push(`- ⚠️  Very high complexity (should be < 10)`)
+          issues.push(`- Recommendation: Split into smaller functions`)
         } else if (file.complexity > 10) {
-          issues.push(`- ⚠️  High complexity (should be < 10)`);
-          issues.push(`- Recommendation: Simplify conditional logic`);
+          issues.push(`- ⚠️  High complexity (should be < 10)`)
+          issues.push(`- Recommendation: Simplify conditional logic`)
         }
       }
     }
 
     // Hotspot analysis
     if (priority === 'coupling' || priority === 'all') {
-      const hotspotsResult = await analyzeHotspots(rootDir, graph, { top: 20 });
+      const hotspotsResult = await analyzeHotspots(rootDir, graph, { top: 20 })
       if (hotspotsResult?.hotspots) {
-        const file = hotspotsResult.hotspots.find((h) => h.file === relativePath);
+        const file = hotspotsResult.hotspots.find((h) => h.file === relativePath)
 
         if (file && file.churn > 50) {
-          issues.push(`\n## Change Frequency:`);
-          issues.push(`- Changes: ${file.churn}`);
-          issues.push(`- High churn indicates stability issues`);
-          issues.push(`- Recommendation: Add tests and stabilize interface`);
+          issues.push(`\n## Change Frequency:`)
+          issues.push(`- Changes: ${file.churn}`)
+          issues.push(`- High churn indicates stability issues`)
+          issues.push(`- Recommendation: Add tests and stabilize interface`)
         }
       }
     }
 
     // Mention coupling analysis requires deeper analysis
     if (priority === 'coupling' || priority === 'all') {
-      issues.push(`\n## Coupling:`);
-      issues.push(`- Run 'specter coupling' for detailed dependency analysis`);
+      issues.push(`\n## Coupling:`)
+      issues.push(`- Run 'specter coupling' for detailed dependency analysis`)
     }
 
     return issues.length > 0
       ? issues.join('\n')
-      : '\nNo critical issues detected. Code quality looks good!';
+      : '\nNo critical issues detected. Code quality looks good!'
   } catch (_error) {
-    return '\nCould not analyze code. Run `specter scan` first.';
+    return '\nCould not analyze code. Run `specter scan` first.'
   }
 }
 
@@ -98,53 +98,53 @@ export async function suggestRefactoring(
   rootDir: string,
   options: RefactorOptions
 ): Promise<void> {
-  const spinner = ora('Analyzing code...').start();
+  const spinner = ora('Analyzing code...').start()
 
   try {
     // Resolve file path
-    const fullPath = resolve(rootDir, filePath);
+    const fullPath = resolve(rootDir, filePath)
 
     if (!existsSync(fullPath)) {
-      spinner.fail('File not found');
-      console.error(chalk.red(`Error: ${filePath} does not exist`));
-      process.exit(1);
+      spinner.fail('File not found')
+      console.error(chalk.red(`Error: ${filePath} does not exist`))
+      process.exit(1)
     }
 
     // Check if Copilot CLI is available
     if (!checkCopilotCLI()) {
-      spinner.fail('GitHub Copilot CLI not found');
+      spinner.fail('GitHub Copilot CLI not found')
       console.log(
         chalk.yellow('\n⚠️  GitHub Copilot CLI is required for AI refactoring suggestions.')
-      );
-      console.log(chalk.white('Install it with:'));
-      console.log(chalk.cyan('  npm install -g @github/copilot\n'));
-      process.exit(1);
+      )
+      console.log(chalk.white('Install it with:'))
+      console.log(chalk.cyan('  npm install -g @github/copilot\n'))
+      process.exit(1)
     }
 
     // Analyze code issues
-    spinner.text = 'Detecting issues...';
-    const priority = options.priority || 'all';
-    const codeIssues = await analyzeRefactoringNeeds(fullPath, rootDir, priority);
+    spinner.text = 'Detecting issues...'
+    const priority = options.priority || 'all'
+    const codeIssues = await analyzeRefactoringNeeds(fullPath, rootDir, priority)
 
     // Read file content
-    spinner.text = 'Reading code...';
-    const fileContent = readFileSync(fullPath, 'utf-8');
+    spinner.text = 'Reading code...'
+    const fileContent = readFileSync(fullPath, 'utf-8')
 
     // Limit content size
     const contentPreview =
       fileContent.length > 2000
         ? `${fileContent.slice(0, 2000)}\n... (truncated for analysis)`
-        : fileContent;
+        : fileContent
 
     // Build prompt based on format
-    let prompt = '';
-    const focusArea = options.focus || 'general refactoring';
+    let prompt = ''
+    const focusArea = options.focus || 'general refactoring'
     const formatInstruction =
       options.format === 'steps'
         ? 'Provide step-by-step refactoring instructions.'
         : options.format === 'diff'
           ? 'Show before/after code examples.'
-          : 'Explain the refactoring strategy and benefits.';
+          : 'Explain the refactoring strategy and benefits.'
 
     prompt = `Analyze this code and suggest refactoring improvements.
 
@@ -163,9 +163,9 @@ Include:
 1. Specific problems identified
 2. Recommended refactoring patterns
 3. Expected benefits (readability, testability, maintainability)
-4. Potential risks or tradeoffs`;
+4. Potential risks or tradeoffs`
 
-    spinner.text = 'Generating refactoring suggestions...';
+    spinner.text = 'Generating refactoring suggestions...'
 
     try {
       // Use spawnSync with argument array to avoid shell injection
@@ -175,44 +175,44 @@ Include:
         cwd: rootDir,
         maxBuffer: 10 * 1024 * 1024, // 10MB buffer for large responses
         timeout: 120000, // 2 minute timeout for complex refactoring
-      });
+      })
 
-      if (spawnResult.error) throw spawnResult.error;
-      if (spawnResult.status !== 0) throw new Error(spawnResult.stderr || 'Copilot failed');
+      if (spawnResult.error) throw spawnResult.error
+      if (spawnResult.status !== 0) throw new Error(spawnResult.stderr || 'Copilot failed')
 
-      spinner.succeed('Refactoring suggestions ready');
+      spinner.succeed('Refactoring suggestions ready')
 
-      console.log(`\n${chalk.bold.cyan('📊 Current Code Analysis:\n')}`);
-      console.log(codeIssues);
+      console.log(`\n${chalk.bold.cyan('📊 Current Code Analysis:\n')}`)
+      console.log(codeIssues)
 
-      console.log(`\n${chalk.bold.cyan('🤖 AI Refactoring Suggestions:\n')}`);
-      console.log(spawnResult.stdout);
+      console.log(`\n${chalk.bold.cyan('🤖 AI Refactoring Suggestions:\n')}`)
+      console.log(spawnResult.stdout)
 
-      console.log(`\n${chalk.bold.green('💡 Next Steps:')}`);
-      console.log(chalk.white('1. Review the suggestions carefully'));
+      console.log(`\n${chalk.bold.green('💡 Next Steps:')}`)
+      console.log(chalk.white('1. Review the suggestions carefully'))
       console.log(
         chalk.white('2. Create a feature branch: ') +
           chalk.cyan('git checkout -b refactor/filename')
-      );
-      console.log(chalk.white('3. Apply changes incrementally'));
-      console.log(chalk.white('4. Run tests after each change'));
+      )
+      console.log(chalk.white('3. Apply changes incrementally'))
+      console.log(chalk.white('4. Run tests after each change'))
       console.log(
         chalk.white('5. Use ') +
           chalk.cyan('specter fix --interactive') +
           chalk.white(' to apply fixes\n')
-      );
+      )
     } catch (_copilotError) {
-      spinner.fail('Failed to generate suggestions');
-      console.log(chalk.yellow('\n⚠️  GitHub Copilot is unavailable.'));
-      console.log(chalk.white('\nCode analysis results:'));
-      console.log(codeIssues);
+      spinner.fail('Failed to generate suggestions')
+      console.log(chalk.yellow('\n⚠️  GitHub Copilot is unavailable.'))
+      console.log(chalk.white('\nCode analysis results:'))
+      console.log(codeIssues)
     }
   } catch (error) {
-    spinner.fail('Failed to analyze code');
+    spinner.fail('Failed to analyze code')
     if (error instanceof Error) {
-      console.error(chalk.red(`Error: ${error.message}`));
+      console.error(chalk.red(`Error: ${error.message}`))
     }
-    process.exit(1);
+    process.exit(1)
   }
 }
 
@@ -227,9 +227,9 @@ export function registerSuggestRefactorCommand(program: Command): void {
     .option('-p, --priority <type>', 'Priority: complexity, coupling, testability, or all', 'all')
     .option('--format <type>', 'Output format: steps, diff, or explanation', 'steps')
     .action(async (file: string, options: RefactorOptions) => {
-      const rootDir = resolve(process.cwd());
-      await suggestRefactoring(file, rootDir, options);
-    });
+      const rootDir = resolve(process.cwd())
+      await suggestRefactoring(file, rootDir, options)
+    })
 }
 
 /**

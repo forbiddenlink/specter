@@ -2,59 +2,59 @@
  * Index command - Build embedding index for semantic search
  */
 
-import path from 'node:path';
-import chalk from 'chalk';
-import type { Command } from 'commander';
+import path from 'node:path'
+import chalk from 'chalk'
+import type { Command } from 'commander'
 import {
   buildEmbeddingIndex,
   type EmbeddingIndex,
   embeddingIndexExists,
   isEmbeddingIndexStale,
   saveEmbeddingIndex,
-} from '../../embeddings.js';
-import { loadGraph } from '../../graph/persistence.js';
-import type { KnowledgeGraph } from '../../graph/types.js';
-import { outputJson, outputJsonError } from '../../json-output.js';
-import { createSpinner } from '../types.js';
+} from '../../embeddings.js'
+import { loadGraph } from '../../graph/persistence.js'
+import type { KnowledgeGraph } from '../../graph/types.js'
+import { outputJson, outputJsonError } from '../../json-output.js'
+import { createSpinner } from '../types.js'
 
 function printBanner(): void {
-  console.log();
-  console.log(chalk.bold.magenta('  ╔═══════════════════════════════════════════╗'));
+  console.log()
+  console.log(chalk.bold.magenta('  ╔═══════════════════════════════════════════╗'))
   console.log(
     chalk.bold.magenta('  ║') +
       chalk.bold.white('      🧠 BUILDING SEMANTIC INDEX...         ') +
       chalk.bold.magenta('║')
-  );
-  console.log(chalk.bold.magenta('  ╚═══════════════════════════════════════════╝'));
-  console.log();
+  )
+  console.log(chalk.bold.magenta('  ╚═══════════════════════════════════════════╝'))
+  console.log()
 }
 
 function printIndexSummary(index: EmbeddingIndex, duration: number): void {
-  console.log();
-  console.log(chalk.bold('┌─────────────────────────────────────────────┐'));
+  console.log()
+  console.log(chalk.bold('┌─────────────────────────────────────────────┐'))
   console.log(
     chalk.bold('│') + chalk.cyan('  🧠 EMBEDDING INDEX READY'.padEnd(44)) + chalk.bold('│')
-  );
-  console.log(chalk.bold('├─────────────────────────────────────────────┤'));
+  )
+  console.log(chalk.bold('├─────────────────────────────────────────────┤'))
   console.log(
     chalk.bold('│') +
       `  📦 Chunks:      ${chalk.cyan(String(index.chunkCount).padStart(6))}`.padEnd(50) +
       chalk.bold('│')
-  );
+  )
   console.log(
     chalk.bold('│') +
       `  📚 Vocabulary:  ${chalk.cyan(String(index.vocabularySize).padStart(6))}`.padEnd(50) +
       chalk.bold('│')
-  );
+  )
   console.log(
     chalk.bold('│') +
       `  ⏱️  Built in:    ${chalk.cyan(String(duration).padStart(4))}ms`.padEnd(49) +
       chalk.bold('│')
-  );
-  console.log(chalk.bold('└─────────────────────────────────────────────┘'));
-  console.log();
-  console.log(chalk.dim('  Use `specter search "query"` for semantic search'));
-  console.log();
+  )
+  console.log(chalk.bold('└─────────────────────────────────────────────┘'))
+  console.log()
+  console.log(chalk.dim('  Use `specter search "query"` for semantic search'))
+  console.log()
 }
 
 async function checkIndexFreshness(
@@ -63,21 +63,21 @@ async function checkIndexFreshness(
   isJson: boolean
 ): Promise<boolean> {
   if (rebuild || !(await embeddingIndexExists(rootDir))) {
-    return false;
+    return false
   }
 
-  const isStale = await isEmbeddingIndexStale(rootDir);
+  const isStale = await isEmbeddingIndexStale(rootDir)
   if (!isStale) {
     if (isJson) {
-      outputJson('index', { upToDate: true, rebuilt: false });
+      outputJson('index', { upToDate: true, rebuilt: false })
     } else {
-      const spinner = createSpinner('');
-      spinner.info('Embedding index is up to date. Use --rebuild to force rebuild.');
+      const spinner = createSpinner('')
+      spinner.info('Embedding index is up to date. Use --rebuild to force rebuild.')
     }
-    return true;
+    return true
   }
 
-  return false;
+  return false
 }
 
 async function buildAndSaveIndex(
@@ -85,19 +85,19 @@ async function buildAndSaveIndex(
   rootDir: string,
   isJson: boolean
 ): Promise<{ index: EmbeddingIndex; duration: number }> {
-  const spinner = isJson ? null : createSpinner('Building TF-IDF vectors...');
-  spinner?.start();
+  const spinner = isJson ? null : createSpinner('Building TF-IDF vectors...')
+  spinner?.start()
 
-  const startTime = Date.now();
-  const index = await buildEmbeddingIndex(graph);
+  const startTime = Date.now()
+  const index = await buildEmbeddingIndex(graph)
 
-  if (spinner) spinner.text = 'Saving embedding index...';
-  await saveEmbeddingIndex(rootDir, index);
+  if (spinner) spinner.text = 'Saving embedding index...'
+  await saveEmbeddingIndex(rootDir, index)
 
-  const duration = Date.now() - startTime;
-  spinner?.succeed(chalk.bold('Semantic index built!'));
+  const duration = Date.now() - startTime
+  spinner?.succeed(chalk.bold('Semantic index built!'))
 
-  return { index, duration };
+  return { index, duration }
 }
 
 function outputIndexResult(index: EmbeddingIndex, duration: number, isJson: boolean): void {
@@ -108,9 +108,9 @@ function outputIndexResult(index: EmbeddingIndex, duration: number, isJson: bool
       chunkCount: index.chunkCount,
       vocabularySize: index.vocabularySize,
       durationMs: duration,
-    });
+    })
   } else {
-    printIndexSummary(index, duration);
+    printIndexSummary(index, duration)
   }
 }
 
@@ -118,29 +118,29 @@ async function handleIndexRebuild(
   rootDir: string,
   graph: KnowledgeGraph,
   options: {
-    rebuild?: boolean;
-    json?: boolean;
+    rebuild?: boolean
+    json?: boolean
   }
 ): Promise<void> {
-  const isJson = options.json ?? false;
-  const rebuild = options.rebuild ?? false;
+  const isJson = options.json ?? false
+  const rebuild = options.rebuild ?? false
 
   // Check if index is fresh
-  const isFresh = await checkIndexFreshness(rootDir, rebuild, isJson);
-  if (isFresh) return;
+  const isFresh = await checkIndexFreshness(rootDir, rebuild, isJson)
+  if (isFresh) return
 
-  const spinner = isJson ? null : createSpinner('Building embedding index...');
+  const spinner = isJson ? null : createSpinner('Building embedding index...')
   if (spinner && rebuild) {
-    spinner.text = 'Index is stale, rebuilding...';
+    spinner.text = 'Index is stale, rebuilding...'
   }
-  spinner?.start();
+  spinner?.start()
 
   // Build and save index
-  const { index, duration } = await buildAndSaveIndex(graph, rootDir, isJson);
-  spinner?.stop();
+  const { index, duration } = await buildAndSaveIndex(graph, rootDir, isJson)
+  spinner?.stop()
 
   // Output results
-  outputIndexResult(index, duration, isJson);
+  outputIndexResult(index, duration, isJson)
 }
 
 export function register(program: Command): void {
@@ -151,25 +151,25 @@ export function register(program: Command): void {
     .option('--rebuild', 'Force rebuild even if index exists')
     .option('--json', 'Output as JSON for CI/CD integration')
     .action(async (options) => {
-      const rootDir = path.resolve(options.dir);
-      const isJson = options.json;
+      const rootDir = path.resolve(options.dir)
+      const isJson = options.json
 
-      if (!isJson) printBanner();
+      if (!isJson) printBanner()
 
-      const spinner = isJson ? null : createSpinner('Loading knowledge graph...');
-      spinner?.start();
+      const spinner = isJson ? null : createSpinner('Loading knowledge graph...')
+      spinner?.start()
 
-      const graph = await loadGraph(rootDir);
+      const graph = await loadGraph(rootDir)
 
       if (!graph) {
-        spinner?.fail('No graph found. Run `specter scan` first.');
+        spinner?.fail('No graph found. Run `specter scan` first.')
         if (isJson) {
-          outputJsonError('index', 'No graph found. Run `specter scan` first.');
+          outputJsonError('index', 'No graph found. Run `specter scan` first.')
         }
-        return;
+        return
       }
 
-      spinner?.stop();
-      await handleIndexRebuild(rootDir, graph, options);
-    });
+      spinner?.stop()
+      await handleIndexRebuild(rootDir, graph, options)
+    })
 }

@@ -1,5 +1,5 @@
-import pino from 'pino';
-import { randomUUID } from 'crypto';
+import { randomUUID } from 'node:crypto'
+import pino from 'pino'
 
 /**
  * Pino structured logging for Specter
@@ -16,32 +16,30 @@ import { randomUUID } from 'crypto';
  *   reqLogger.info({ toolName: 'scan' }, 'Processing MCP request');
  */
 
-const isDevelopment = process.env['NODE_ENV'] === 'development';
+const isDevelopment = process.env['NODE_ENV'] === 'development'
 
 export const logger = pino({
   level: process.env['LOG_LEVEL'] || 'info',
-  transport: isDevelopment
-    ? { target: 'pino-pretty', options: { colorize: true } }
-    : undefined,
+  transport: isDevelopment ? { target: 'pino-pretty', options: { colorize: true } } : undefined,
   base: {
     service: 'specter',
     env: process.env['NODE_ENV'] || 'development',
   },
   timestamp: pino.stdTimeFunctions.isoTime,
-});
+})
 
 // Module-specific child loggers
-export const scanLogger = logger.child({ module: 'scanner' });
-export const graphLogger = logger.child({ module: 'graph' });
-export const mcpLogger = logger.child({ module: 'mcp' });
-export const analysisLogger = logger.child({ module: 'analysis' });
-export const dashboardLogger = logger.child({ module: 'dashboard' });
+export const scanLogger = logger.child({ module: 'scanner' })
+export const graphLogger = logger.child({ module: 'graph' })
+export const mcpLogger = logger.child({ module: 'mcp' })
+export const analysisLogger = logger.child({ module: 'analysis' })
+export const dashboardLogger = logger.child({ module: 'dashboard' })
 
 /**
  * Generate a correlation ID for request tracing
  */
 export function generateCorrelationId(): string {
-  return `${Date.now().toString(36)}-${randomUUID().slice(0, 8)}`;
+  return `${Date.now().toString(36)}-${randomUUID().slice(0, 8)}`
 }
 
 /**
@@ -50,7 +48,7 @@ export function generateCorrelationId(): string {
 export function createRequestLogger(correlationId?: string) {
   return logger.child({
     correlationId: correlationId || generateCorrelationId(),
-  });
+  })
 }
 
 /**
@@ -61,8 +59,8 @@ export function logPerformance(
   durationMs: number,
   context?: Record<string, unknown>
 ): void {
-  const level = durationMs > 5000 ? 'warn' : 'info';
-  logger[level]({ operation, durationMs, ...context }, `Performance: ${operation}`);
+  const level = durationMs > 5000 ? 'warn' : 'info'
+  logger[level]({ operation, durationMs, ...context }, `Performance: ${operation}`)
 }
 
 /**
@@ -70,14 +68,15 @@ export function logPerformance(
  */
 export function createFastifyRequestLogger() {
   return {
-    onRequest: (request: { id: string; method: string; url: string }, _reply: unknown, done: () => void) => {
-      const correlationId = generateCorrelationId();
-      (request as { correlationId?: string }).correlationId = correlationId;
-      logger.info(
-        { correlationId, method: request.method, url: request.url },
-        'Request started'
-      );
-      done();
+    onRequest: (
+      request: { id: string; method: string; url: string },
+      _reply: unknown,
+      done: () => void
+    ) => {
+      const correlationId = generateCorrelationId()
+      ;(request as { correlationId?: string }).correlationId = correlationId
+      logger.info({ correlationId, method: request.method, url: request.url }, 'Request started')
+      done()
     },
     onResponse: (
       request: { id: string; method: string; url: string; correlationId?: string },
@@ -93,10 +92,10 @@ export function createFastifyRequestLogger() {
           durationMs: Math.round(reply.elapsedTime),
         },
         'Request completed'
-      );
-      done();
+      )
+      done()
     },
-  };
+  }
 }
 
-export default logger;
+export default logger

@@ -2,13 +2,13 @@
  * Precommit command - quick risk check before committing
  */
 
-import path from 'node:path';
-import chalk from 'chalk';
-import type { Command } from 'commander';
-import { loadGraph } from '../../graph/persistence.js';
-import { outputJson, outputJsonError } from '../../json-output.js';
-import { formatPrecommit, runPrecommitCheck } from '../../precommit.js';
-import { createSpinner } from '../types.js';
+import path from 'node:path'
+import chalk from 'chalk'
+import type { Command } from 'commander'
+import { loadGraph } from '../../graph/persistence.js'
+import { outputJson, outputJsonError } from '../../json-output.js'
+import { formatPrecommit, runPrecommitCheck } from '../../precommit.js'
+import { createSpinner } from '../types.js'
 
 export function register(program: Command): void {
   program
@@ -18,37 +18,37 @@ export function register(program: Command): void {
     .option('--exit-code', 'Exit with code 1 if high-risk changes detected')
     .option('--json', 'Output as JSON for CI/CD integration')
     .action(async (options) => {
-      const rootDir = path.resolve(options.dir);
-      const exitCode = options.exitCode;
+      const rootDir = path.resolve(options.dir)
+      const exitCode = options.exitCode
 
-      const spinner = options.json ? null : createSpinner('Checking staged changes...');
-      spinner?.start();
+      const spinner = options.json ? null : createSpinner('Checking staged changes...')
+      spinner?.start()
 
-      const graph = await loadGraph(rootDir);
+      const graph = await loadGraph(rootDir)
 
       if (!graph) {
-        spinner?.fail('No graph found. Run `specter scan` first.');
+        spinner?.fail('No graph found. Run `specter scan` first.')
         if (options.json) {
-          outputJsonError('precommit', 'No graph found. Run `specter scan` first.');
+          outputJsonError('precommit', 'No graph found. Run `specter scan` first.')
         }
-        return;
+        return
       }
 
-      const result = await runPrecommitCheck(rootDir, graph);
-      spinner?.stop();
+      const result = await runPrecommitCheck(rootDir, graph)
+      spinner?.stop()
 
       // JSON output for CI/CD
       if (options.json) {
-        outputJson('precommit', result);
+        outputJson('precommit', result)
         if (exitCode && result.status === 'fail') {
-          process.exit(1);
+          process.exit(1)
         }
-        return;
+        return
       }
 
-      const output = formatPrecommit(result);
+      const output = formatPrecommit(result)
 
-      console.log();
+      console.log()
       for (const line of output.split('\n')) {
         if (line.includes('┏') || line.includes('┗') || line.includes('┃')) {
           const color =
@@ -56,29 +56,29 @@ export function register(program: Command): void {
               ? chalk.bold.green
               : result.status === 'warn'
                 ? chalk.bold.yellow
-                : chalk.bold.red;
-          console.log(color(`  ${line}`));
+                : chalk.bold.red
+          console.log(color(`  ${line}`))
         } else if (line.includes('HIGH RISK')) {
-          console.log(chalk.bold.red(`  ${line}`));
+          console.log(chalk.bold.red(`  ${line}`))
         } else if (line.includes('MEDIUM RISK')) {
-          console.log(chalk.bold.yellow(`  ${line}`));
+          console.log(chalk.bold.yellow(`  ${line}`))
         } else if (line.includes('LOW RISK')) {
-          console.log(chalk.bold.green(`  ${line}`));
+          console.log(chalk.bold.green(`  ${line}`))
         } else if (line.includes('SUGGESTIONS')) {
-          console.log(chalk.bold.cyan(`  ${line}`));
+          console.log(chalk.bold.cyan(`  ${line}`))
         } else if (line.startsWith('─') || line.startsWith('━')) {
-          console.log(chalk.dim(`  ${line}`));
+          console.log(chalk.dim(`  ${line}`))
         } else if (line.startsWith('  •')) {
-          console.log(chalk.white(`  ${line}`));
+          console.log(chalk.white(`  ${line}`))
         } else {
-          console.log(chalk.white(`  ${line}`));
+          console.log(chalk.white(`  ${line}`))
         }
       }
-      console.log();
+      console.log()
 
       // Exit with error code if high-risk changes detected
       if (exitCode && result.status === 'fail') {
-        process.exit(1);
+        process.exit(1)
       }
-    });
+    })
 }

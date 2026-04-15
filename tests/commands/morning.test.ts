@@ -4,24 +4,24 @@
  * Tests for the morning command which generates daily standup summaries.
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { KnowledgeGraph } from '../../src/graph/types.js';
-import type { MorningBriefing } from '../../src/morning.js';
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { KnowledgeGraph } from '../../src/graph/types.js'
+import type { MorningBriefing } from '../../src/morning.js'
 
 // Mock dependencies before importing the module
 vi.mock('../../src/graph/persistence.js', () => ({
   loadGraph: vi.fn(),
-}));
+}))
 
 vi.mock('../../src/morning.js', () => ({
   generateMorning: vi.fn(),
   formatMorning: vi.fn(),
-}));
+}))
 
 vi.mock('../../src/json-output.js', () => ({
   outputJson: vi.fn(),
   outputJsonError: vi.fn(),
-}));
+}))
 
 vi.mock('chalk', () => ({
   default: {
@@ -34,7 +34,7 @@ vi.mock('chalk', () => ({
     white: (s: string) => s,
     dim: (s: string) => s,
   },
-}));
+}))
 
 vi.mock('ora', () => ({
   default: vi.fn(() => ({
@@ -43,11 +43,11 @@ vi.mock('ora', () => ({
     succeed: vi.fn().mockReturnThis(),
     fail: vi.fn().mockReturnThis(),
   })),
-}));
+}))
 
-import { loadGraph } from '../../src/graph/persistence.js';
-import { outputJson, outputJsonError } from '../../src/json-output.js';
-import { formatMorning, generateMorning } from '../../src/morning.js';
+import { loadGraph } from '../../src/graph/persistence.js'
+import { outputJson, outputJsonError } from '../../src/json-output.js'
+import { formatMorning, generateMorning } from '../../src/morning.js'
 
 /**
  * Helper to create a mock knowledge graph
@@ -79,7 +79,7 @@ function createMockGraph(overrides: Partial<KnowledgeGraph> = {}): KnowledgeGrap
     },
     edges: [],
     ...overrides,
-  };
+  }
 }
 
 /**
@@ -110,114 +110,114 @@ function createMockBriefing(overrides: Partial<MorningBriefing> = {}): MorningBr
     alerts: [],
     todaysFocus: ['Review recent changes before starting new work'],
     ...overrides,
-  };
+  }
 }
 
 describe('Morning Command', () => {
-  let consoleSpy: ReturnType<typeof vi.spyOn>;
+  let consoleSpy: ReturnType<typeof vi.spyOn>
 
   beforeEach(() => {
-    vi.clearAllMocks();
-    consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-  });
+    vi.clearAllMocks()
+    consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+  })
 
   describe('Graph Loading', () => {
     it('should show error when no graph exists', async () => {
-      vi.mocked(loadGraph).mockResolvedValue(null);
+      vi.mocked(loadGraph).mockResolvedValue(null)
 
-      const { register } = await import('../../src/commands/workflow/morning.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/workflow/morning.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'morning', '-d', '/test']);
+      await program.parseAsync(['node', 'test', 'morning', '-d', '/test'])
 
-      expect(loadGraph).toHaveBeenCalledWith('/test');
-    });
+      expect(loadGraph).toHaveBeenCalledWith('/test')
+    })
 
     it('should output JSON error when no graph exists with --json flag', async () => {
-      vi.mocked(loadGraph).mockResolvedValue(null);
+      vi.mocked(loadGraph).mockResolvedValue(null)
 
-      const { register } = await import('../../src/commands/workflow/morning.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/workflow/morning.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'morning', '-d', '/test', '--json']);
+      await program.parseAsync(['node', 'test', 'morning', '-d', '/test', '--json'])
 
       expect(outputJsonError).toHaveBeenCalledWith(
         'morning',
         expect.stringContaining('No graph found')
-      );
-    });
-  });
+      )
+    })
+  })
 
   describe('Morning Briefing Generation', () => {
     it('should generate morning briefing for a valid graph', async () => {
-      const mockGraph = createMockGraph();
-      const mockBriefing = createMockBriefing();
+      const mockGraph = createMockGraph()
+      const mockBriefing = createMockBriefing()
 
-      vi.mocked(loadGraph).mockResolvedValue(mockGraph);
-      vi.mocked(generateMorning).mockResolvedValue(mockBriefing);
-      vi.mocked(formatMorning).mockReturnValue('Formatted morning output');
+      vi.mocked(loadGraph).mockResolvedValue(mockGraph)
+      vi.mocked(generateMorning).mockResolvedValue(mockBriefing)
+      vi.mocked(formatMorning).mockReturnValue('Formatted morning output')
 
-      const { register } = await import('../../src/commands/workflow/morning.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/workflow/morning.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'morning', '-d', '/test']);
+      await program.parseAsync(['node', 'test', 'morning', '-d', '/test'])
 
-      expect(generateMorning).toHaveBeenCalledWith(mockGraph, '/test');
-      expect(formatMorning).toHaveBeenCalledWith(mockBriefing);
-    });
+      expect(generateMorning).toHaveBeenCalledWith(mockGraph, '/test')
+      expect(formatMorning).toHaveBeenCalledWith(mockBriefing)
+    })
 
     it('should pass correct root directory to generateMorning', async () => {
-      const mockGraph = createMockGraph();
-      const mockBriefing = createMockBriefing();
+      const mockGraph = createMockGraph()
+      const mockBriefing = createMockBriefing()
 
-      vi.mocked(loadGraph).mockResolvedValue(mockGraph);
-      vi.mocked(generateMorning).mockResolvedValue(mockBriefing);
-      vi.mocked(formatMorning).mockReturnValue('Output');
+      vi.mocked(loadGraph).mockResolvedValue(mockGraph)
+      vi.mocked(generateMorning).mockResolvedValue(mockBriefing)
+      vi.mocked(formatMorning).mockReturnValue('Output')
 
-      const { register } = await import('../../src/commands/workflow/morning.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/workflow/morning.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'morning', '-d', '/custom/path']);
+      await program.parseAsync(['node', 'test', 'morning', '-d', '/custom/path'])
 
-      expect(generateMorning).toHaveBeenCalledWith(mockGraph, '/custom/path');
-    });
-  });
+      expect(generateMorning).toHaveBeenCalledWith(mockGraph, '/custom/path')
+    })
+  })
 
   describe('JSON Output', () => {
     it('should output JSON when --json flag is set', async () => {
-      const mockGraph = createMockGraph();
-      const mockBriefing = createMockBriefing();
+      const mockGraph = createMockGraph()
+      const mockBriefing = createMockBriefing()
 
-      vi.mocked(loadGraph).mockResolvedValue(mockGraph);
-      vi.mocked(generateMorning).mockResolvedValue(mockBriefing);
+      vi.mocked(loadGraph).mockResolvedValue(mockGraph)
+      vi.mocked(generateMorning).mockResolvedValue(mockBriefing)
 
-      const { register } = await import('../../src/commands/workflow/morning.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/workflow/morning.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'morning', '-d', '/test', '--json']);
+      await program.parseAsync(['node', 'test', 'morning', '-d', '/test', '--json'])
 
-      expect(outputJson).toHaveBeenCalledWith('morning', mockBriefing);
+      expect(outputJson).toHaveBeenCalledWith('morning', mockBriefing)
       // formatMorning should not be called for JSON output
-      expect(formatMorning).not.toHaveBeenCalled();
-    });
+      expect(formatMorning).not.toHaveBeenCalled()
+    })
 
     it('should include all briefing data in JSON output', async () => {
-      const mockGraph = createMockGraph();
+      const mockGraph = createMockGraph()
       const mockBriefing = createMockBriefing({
         health: {
           score: 85,
@@ -235,27 +235,27 @@ describe('Morning Command', () => {
         ],
         alerts: ['High complexity detected', 'Bus factor risk'],
         todaysFocus: ['Review PRs', 'Refactor core module'],
-      });
+      })
 
-      vi.mocked(loadGraph).mockResolvedValue(mockGraph);
-      vi.mocked(generateMorning).mockResolvedValue(mockBriefing);
+      vi.mocked(loadGraph).mockResolvedValue(mockGraph)
+      vi.mocked(generateMorning).mockResolvedValue(mockBriefing)
 
-      const { register } = await import('../../src/commands/workflow/morning.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/workflow/morning.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'morning', '-d', '/test', '--json']);
+      await program.parseAsync(['node', 'test', 'morning', '-d', '/test', '--json'])
 
-      expect(outputJson).toHaveBeenCalledWith('morning', mockBriefing);
-    });
-  });
+      expect(outputJson).toHaveBeenCalledWith('morning', mockBriefing)
+    })
+  })
 
   describe('Console Output Formatting', () => {
     it('should display formatted output to console', async () => {
-      const mockGraph = createMockGraph();
-      const mockBriefing = createMockBriefing();
+      const mockGraph = createMockGraph()
+      const mockBriefing = createMockBriefing()
       const formattedOutput = `
 MORNING BRIEFING
 ================
@@ -270,74 +270,74 @@ LAST 24 HOURS
 -------------
 5 commits, 12 files changed
 Active: Alice, Bob
-`;
+`
 
-      vi.mocked(loadGraph).mockResolvedValue(mockGraph);
-      vi.mocked(generateMorning).mockResolvedValue(mockBriefing);
-      vi.mocked(formatMorning).mockReturnValue(formattedOutput);
+      vi.mocked(loadGraph).mockResolvedValue(mockGraph)
+      vi.mocked(generateMorning).mockResolvedValue(mockBriefing)
+      vi.mocked(formatMorning).mockReturnValue(formattedOutput)
 
-      const { register } = await import('../../src/commands/workflow/morning.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/workflow/morning.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'morning', '-d', '/test']);
+      await program.parseAsync(['node', 'test', 'morning', '-d', '/test'])
 
       // Should have printed output lines
-      expect(consoleSpy).toHaveBeenCalled();
-    });
+      expect(consoleSpy).toHaveBeenCalled()
+    })
 
     it('should apply styling to different output types', async () => {
-      const mockGraph = createMockGraph();
+      const mockGraph = createMockGraph()
       const mockBriefing = createMockBriefing({
         alerts: ['Warning: High complexity'],
-      });
+      })
       const formattedOutput = `
 GOOD MORNING!
 Today: Some tasks
 Completed
 attention needed
-`;
+`
 
-      vi.mocked(loadGraph).mockResolvedValue(mockGraph);
-      vi.mocked(generateMorning).mockResolvedValue(mockBriefing);
-      vi.mocked(formatMorning).mockReturnValue(formattedOutput);
+      vi.mocked(loadGraph).mockResolvedValue(mockGraph)
+      vi.mocked(generateMorning).mockResolvedValue(mockBriefing)
+      vi.mocked(formatMorning).mockReturnValue(formattedOutput)
 
-      const { register } = await import('../../src/commands/workflow/morning.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/workflow/morning.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'morning', '-d', '/test']);
+      await program.parseAsync(['node', 'test', 'morning', '-d', '/test'])
 
       // Verify console.log was called (styling is applied internally)
-      expect(consoleSpy).toHaveBeenCalled();
-    });
-  });
+      expect(consoleSpy).toHaveBeenCalled()
+    })
+  })
 
   describe('Health Information', () => {
     it('should handle high health score', async () => {
-      const mockGraph = createMockGraph();
+      const mockGraph = createMockGraph()
       const mockBriefing = createMockBriefing({
         health: {
           score: 90,
           trend: 'improving',
           summary: 'Excellent health!',
         },
-      });
+      })
 
-      vi.mocked(loadGraph).mockResolvedValue(mockGraph);
-      vi.mocked(generateMorning).mockResolvedValue(mockBriefing);
+      vi.mocked(loadGraph).mockResolvedValue(mockGraph)
+      vi.mocked(generateMorning).mockResolvedValue(mockBriefing)
 
-      const { register } = await import('../../src/commands/workflow/morning.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/workflow/morning.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'morning', '-d', '/test', '--json']);
+      await program.parseAsync(['node', 'test', 'morning', '-d', '/test', '--json'])
 
       expect(outputJson).toHaveBeenCalledWith(
         'morning',
@@ -347,29 +347,29 @@ attention needed
             trend: 'improving',
           }),
         })
-      );
-    });
+      )
+    })
 
     it('should handle low health score', async () => {
-      const mockGraph = createMockGraph();
+      const mockGraph = createMockGraph()
       const mockBriefing = createMockBriefing({
         health: {
           score: 30,
           trend: 'declining',
           summary: 'Health needs attention.',
         },
-      });
+      })
 
-      vi.mocked(loadGraph).mockResolvedValue(mockGraph);
-      vi.mocked(generateMorning).mockResolvedValue(mockBriefing);
+      vi.mocked(loadGraph).mockResolvedValue(mockGraph)
+      vi.mocked(generateMorning).mockResolvedValue(mockBriefing)
 
-      const { register } = await import('../../src/commands/workflow/morning.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/workflow/morning.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'morning', '-d', '/test', '--json']);
+      await program.parseAsync(['node', 'test', 'morning', '-d', '/test', '--json'])
 
       expect(outputJson).toHaveBeenCalledWith(
         'morning',
@@ -379,13 +379,13 @@ attention needed
             trend: 'declining',
           }),
         })
-      );
-    });
-  });
+      )
+    })
+  })
 
   describe('Activity Information', () => {
     it('should handle no recent commits', async () => {
-      const mockGraph = createMockGraph();
+      const mockGraph = createMockGraph()
       const mockBriefing = createMockBriefing({
         recentActivity: {
           commits: 0,
@@ -393,18 +393,18 @@ attention needed
           contributors: [],
         },
         alerts: ['No commits in the last 24 hours'],
-      });
+      })
 
-      vi.mocked(loadGraph).mockResolvedValue(mockGraph);
-      vi.mocked(generateMorning).mockResolvedValue(mockBriefing);
+      vi.mocked(loadGraph).mockResolvedValue(mockGraph)
+      vi.mocked(generateMorning).mockResolvedValue(mockBriefing)
 
-      const { register } = await import('../../src/commands/workflow/morning.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/workflow/morning.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'morning', '-d', '/test', '--json']);
+      await program.parseAsync(['node', 'test', 'morning', '-d', '/test', '--json'])
 
       expect(outputJson).toHaveBeenCalledWith(
         'morning',
@@ -414,29 +414,29 @@ attention needed
           }),
           alerts: expect.arrayContaining(['No commits in the last 24 hours']),
         })
-      );
-    });
+      )
+    })
 
     it('should handle many active contributors', async () => {
-      const mockGraph = createMockGraph();
+      const mockGraph = createMockGraph()
       const mockBriefing = createMockBriefing({
         recentActivity: {
           commits: 25,
           filesChanged: 50,
           contributors: ['Alice', 'Bob', 'Charlie'],
         },
-      });
+      })
 
-      vi.mocked(loadGraph).mockResolvedValue(mockGraph);
-      vi.mocked(generateMorning).mockResolvedValue(mockBriefing);
+      vi.mocked(loadGraph).mockResolvedValue(mockGraph)
+      vi.mocked(generateMorning).mockResolvedValue(mockBriefing)
 
-      const { register } = await import('../../src/commands/workflow/morning.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/workflow/morning.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'morning', '-d', '/test', '--json']);
+      await program.parseAsync(['node', 'test', 'morning', '-d', '/test', '--json'])
 
       expect(outputJson).toHaveBeenCalledWith(
         'morning',
@@ -446,31 +446,31 @@ attention needed
             contributors: ['Alice', 'Bob', 'Charlie'],
           }),
         })
-      );
-    });
-  });
+      )
+    })
+  })
 
   describe('Hot Files', () => {
     it('should include hot files in output', async () => {
-      const mockGraph = createMockGraph();
+      const mockGraph = createMockGraph()
       const mockBriefing = createMockBriefing({
         hotFiles: [
           { path: 'src/core.ts', changes: 15, reason: 'Hotspot - many recent changes' },
           { path: 'src/api.ts', changes: 10, reason: 'Heavy activity this week' },
           { path: 'src/utils.ts', changes: 5, reason: 'Active development' },
         ],
-      });
+      })
 
-      vi.mocked(loadGraph).mockResolvedValue(mockGraph);
-      vi.mocked(generateMorning).mockResolvedValue(mockBriefing);
+      vi.mocked(loadGraph).mockResolvedValue(mockGraph)
+      vi.mocked(generateMorning).mockResolvedValue(mockBriefing)
 
-      const { register } = await import('../../src/commands/workflow/morning.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/workflow/morning.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'morning', '-d', '/test', '--json']);
+      await program.parseAsync(['node', 'test', 'morning', '-d', '/test', '--json'])
 
       expect(outputJson).toHaveBeenCalledWith(
         'morning',
@@ -479,55 +479,55 @@ attention needed
             expect.objectContaining({ path: 'src/core.ts', changes: 15 }),
           ]),
         })
-      );
-    });
+      )
+    })
 
     it('should handle no hot files', async () => {
-      const mockGraph = createMockGraph();
+      const mockGraph = createMockGraph()
       const mockBriefing = createMockBriefing({
         hotFiles: [],
-      });
+      })
 
-      vi.mocked(loadGraph).mockResolvedValue(mockGraph);
-      vi.mocked(generateMorning).mockResolvedValue(mockBriefing);
+      vi.mocked(loadGraph).mockResolvedValue(mockGraph)
+      vi.mocked(generateMorning).mockResolvedValue(mockBriefing)
 
-      const { register } = await import('../../src/commands/workflow/morning.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/workflow/morning.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'morning', '-d', '/test', '--json']);
+      await program.parseAsync(['node', 'test', 'morning', '-d', '/test', '--json'])
 
       expect(outputJson).toHaveBeenCalledWith(
         'morning',
         expect.objectContaining({
           hotFiles: [],
         })
-      );
-    });
-  });
+      )
+    })
+  })
 
   describe('Alerts and Focus', () => {
     it('should include alerts in output', async () => {
-      const mockGraph = createMockGraph();
+      const mockGraph = createMockGraph()
       const mockBriefing = createMockBriefing({
         alerts: [
           'src/core.ts has been very active - check for conflicts',
           '5 files have high complexity',
         ],
-      });
+      })
 
-      vi.mocked(loadGraph).mockResolvedValue(mockGraph);
-      vi.mocked(generateMorning).mockResolvedValue(mockBriefing);
+      vi.mocked(loadGraph).mockResolvedValue(mockGraph)
+      vi.mocked(generateMorning).mockResolvedValue(mockBriefing)
 
-      const { register } = await import('../../src/commands/workflow/morning.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/workflow/morning.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'morning', '-d', '/test', '--json']);
+      await program.parseAsync(['node', 'test', 'morning', '-d', '/test', '--json'])
 
       expect(outputJson).toHaveBeenCalledWith(
         'morning',
@@ -537,29 +537,29 @@ attention needed
             expect.stringContaining('complexity'),
           ]),
         })
-      );
-    });
+      )
+    })
 
     it('should include focus items in output', async () => {
-      const mockGraph = createMockGraph();
+      const mockGraph = createMockGraph()
       const mockBriefing = createMockBriefing({
         todaysFocus: [
           'Review recent changes before starting new work',
           'Check src/core.ts for potential conflicts',
           'Consider refactoring high-complexity areas',
         ],
-      });
+      })
 
-      vi.mocked(loadGraph).mockResolvedValue(mockGraph);
-      vi.mocked(generateMorning).mockResolvedValue(mockBriefing);
+      vi.mocked(loadGraph).mockResolvedValue(mockGraph)
+      vi.mocked(generateMorning).mockResolvedValue(mockBriefing)
 
-      const { register } = await import('../../src/commands/workflow/morning.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/workflow/morning.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'morning', '-d', '/test', '--json']);
+      await program.parseAsync(['node', 'test', 'morning', '-d', '/test', '--json'])
 
       expect(outputJson).toHaveBeenCalledWith(
         'morning',
@@ -570,7 +570,7 @@ attention needed
             expect.stringContaining('refactoring'),
           ]),
         })
-      );
-    });
-  });
-});
+      )
+    })
+  })
+})

@@ -2,13 +2,13 @@
  * Safe and Danger zones commands
  */
 
-import path from 'node:path';
-import chalk from 'chalk';
-import type { Command } from 'commander';
-import { loadGraph } from '../../graph/persistence.js';
-import { outputJson, outputJsonError } from '../../json-output.js';
-import { analyzeZones, formatDangerZones, formatSafeZones } from '../../zones.js';
-import { createSpinner } from '../types.js';
+import path from 'node:path'
+import chalk from 'chalk'
+import type { Command } from 'commander'
+import { loadGraph } from '../../graph/persistence.js'
+import { outputJson, outputJsonError } from '../../json-output.js'
+import { analyzeZones, formatDangerZones, formatSafeZones } from '../../zones.js'
+import { createSpinner } from '../types.js'
 
 export function registerSafe(program: Command): void {
   program
@@ -18,50 +18,50 @@ export function registerSafe(program: Command): void {
     .option('-l, --limit <n>', 'Number of zones to show', '10')
     .option('--json', 'Output as JSON for CI/CD integration')
     .action(async (options) => {
-      const rootDir = path.resolve(options.dir);
-      const limit = parseInt(options.limit, 10);
+      const rootDir = path.resolve(options.dir)
+      const limit = parseInt(options.limit, 10)
 
-      const spinner = options.json ? null : createSpinner('Finding safe zones...');
-      spinner?.start();
+      const spinner = options.json ? null : createSpinner('Finding safe zones...')
+      spinner?.start()
 
-      const graph = await loadGraph(rootDir);
+      const graph = await loadGraph(rootDir)
 
       if (!graph) {
-        spinner?.fail('No graph found. Run `specter scan` first.');
+        spinner?.fail('No graph found. Run `specter scan` first.')
         if (options.json) {
-          outputJsonError('safe', 'No graph found. Run `specter scan` first.');
+          outputJsonError('safe', 'No graph found. Run `specter scan` first.')
         }
-        return;
+        return
       }
 
-      const result = analyzeZones(graph);
-      spinner?.stop();
+      const result = analyzeZones(graph)
+      spinner?.stop()
 
       // JSON output for CI/CD
       if (options.json) {
         outputJson('safe', {
           safeZones: result.safeZones.slice(0, limit),
           totalSafe: result.safeZones.length,
-        });
-        return;
+        })
+        return
       }
 
-      const output = formatSafeZones(result);
+      const output = formatSafeZones(result)
 
-      console.log();
+      console.log()
       for (const line of output.split('\n')) {
         if (line.includes('SAFE ZONES') || line.includes('🛡️')) {
-          console.log(chalk.bold.green(`  ${line}`));
+          console.log(chalk.bold.green(`  ${line}`))
         } else if (line.includes('✅')) {
-          console.log(chalk.green(`  ${line}`));
+          console.log(chalk.green(`  ${line}`))
         } else if (line.startsWith('─')) {
-          console.log(chalk.dim(`  ${line}`));
+          console.log(chalk.dim(`  ${line}`))
         } else {
-          console.log(chalk.white(`  ${line}`));
+          console.log(chalk.white(`  ${line}`))
         }
       }
-      console.log();
-    });
+      console.log()
+    })
 }
 
 export function registerDanger(program: Command): void {
@@ -72,55 +72,55 @@ export function registerDanger(program: Command): void {
     .option('-l, --limit <n>', 'Number of zones to show', '10')
     .option('--json', 'Output as JSON for CI/CD integration')
     .action(async (options) => {
-      const rootDir = path.resolve(options.dir);
-      const limit = parseInt(options.limit, 10);
+      const rootDir = path.resolve(options.dir)
+      const limit = parseInt(options.limit, 10)
 
-      const spinner = options.json ? null : createSpinner('Finding danger zones...');
-      spinner?.start();
+      const spinner = options.json ? null : createSpinner('Finding danger zones...')
+      spinner?.start()
 
-      const graph = await loadGraph(rootDir);
+      const graph = await loadGraph(rootDir)
 
       if (!graph) {
-        spinner?.fail('No graph found. Run `specter scan` first.');
+        spinner?.fail('No graph found. Run `specter scan` first.')
         if (options.json) {
-          outputJsonError('danger', 'No graph found. Run `specter scan` first.');
+          outputJsonError('danger', 'No graph found. Run `specter scan` first.')
         }
-        return;
+        return
       }
 
-      const result = analyzeZones(graph);
-      spinner?.stop();
+      const result = analyzeZones(graph)
+      spinner?.stop()
 
       // JSON output for CI/CD
       if (options.json) {
         outputJson('danger', {
           dangerZones: result.dangerZones.slice(0, limit),
           totalDanger: result.dangerZones.length,
-        });
-        return;
+        })
+        return
       }
 
-      const output = formatDangerZones(result);
+      const output = formatDangerZones(result)
 
-      console.log();
+      console.log()
       for (const line of output.split('\n')) {
         if (line.includes('DANGER ZONES') || line.includes('⚠️')) {
-          console.log(chalk.bold.red(`  ${line}`));
+          console.log(chalk.bold.red(`  ${line}`))
         } else if (line.includes('🔴') || line.includes('CRITICAL')) {
-          console.log(chalk.red(`  ${line}`));
+          console.log(chalk.red(`  ${line}`))
         } else if (line.includes('🟠') || line.includes('HIGH')) {
-          console.log(chalk.yellow(`  ${line}`));
+          console.log(chalk.yellow(`  ${line}`))
         } else if (line.startsWith('─')) {
-          console.log(chalk.dim(`  ${line}`));
+          console.log(chalk.dim(`  ${line}`))
         } else {
-          console.log(chalk.white(`  ${line}`));
+          console.log(chalk.white(`  ${line}`))
         }
       }
-      console.log();
-    });
+      console.log()
+    })
 }
 
 export function register(program: Command): void {
-  registerSafe(program);
-  registerDanger(program);
+  registerSafe(program)
+  registerDanger(program)
 }

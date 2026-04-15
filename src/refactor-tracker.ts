@@ -189,7 +189,7 @@ export function formatDelta(delta: RefactorDelta): string {
 
   if (delta.estimatedSavings > 0) {
     lines.push(
-      `  Estimated savings: ~${chalk.green('$' + delta.estimatedSavings.toLocaleString())}/year in maintenance`
+      `  Estimated savings: ~${chalk.green(`$${delta.estimatedSavings.toLocaleString()}`)}/year in maintenance`
     )
     lines.push('')
   }

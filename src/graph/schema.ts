@@ -2,7 +2,7 @@
  * Zod schemas for Knowledge Graph validation
  */
 
-import { z } from 'zod';
+import { z } from 'zod'
 
 export const NodeTypeSchema = z.enum([
   'file',
@@ -12,7 +12,7 @@ export const NodeTypeSchema = z.enum([
   'type',
   'variable',
   'enum',
-]);
+])
 
 export const EdgeTypeSchema = z.enum([
   'imports',
@@ -22,7 +22,7 @@ export const EdgeTypeSchema = z.enum([
   'implements',
   'uses',
   'contains',
-]);
+])
 
 export const GraphNodeSchema = z.object({
   id: z.string(),
@@ -37,7 +37,7 @@ export const GraphNodeSchema = z.object({
   modificationCount: z.number().optional(),
   contributors: z.array(z.string()).optional(),
   documentation: z.string().optional(),
-});
+})
 
 export const GraphEdgeSchema = z.object({
   id: z.string(),
@@ -46,7 +46,7 @@ export const GraphEdgeSchema = z.object({
   type: EdgeTypeSchema,
   weight: z.number().optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
-});
+})
 
 export const GraphMetadataSchema = z.object({
   scannedAt: z.string(),
@@ -57,13 +57,13 @@ export const GraphMetadataSchema = z.object({
   languages: z.record(z.string(), z.number()),
   nodeCount: z.number(),
   edgeCount: z.number(),
-});
+})
 
 export const KnowledgeGraphSchema = z.object({
   version: z.string(),
   metadata: GraphMetadataSchema,
   nodes: z.record(z.string(), GraphNodeSchema),
   edges: z.array(GraphEdgeSchema),
-});
+})
 
-export type ValidatedKnowledgeGraph = z.infer<typeof KnowledgeGraphSchema>;
+export type ValidatedKnowledgeGraph = z.infer<typeof KnowledgeGraphSchema>

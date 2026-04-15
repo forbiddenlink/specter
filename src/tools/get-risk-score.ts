@@ -4,22 +4,22 @@
  * MCP tool for analyzing commit/PR risk.
  */
 
-import { z } from 'zod';
-import type { KnowledgeGraph } from '../graph/types.js';
-import { calculateRiskScore } from '../risk/scorer.js';
-import type { RiskScore } from '../risk/types.js';
+import { z } from 'zod'
+import type { KnowledgeGraph } from '../graph/types.js'
+import { calculateRiskScore } from '../risk/scorer.js'
+import type { RiskScore } from '../risk/types.js'
 
 export const schema = {
   staged: z.boolean().optional().describe('Analyze staged changes (default: true)'),
   branch: z.string().optional().describe('Compare against this branch (e.g., "main")'),
   commit: z.string().optional().describe('Analyze a specific commit hash'),
-};
+}
 
-export type Input = z.infer<z.ZodObject<typeof schema>>;
+export type Input = z.infer<z.ZodObject<typeof schema>>
 
 export interface GetRiskScoreResult {
-  risk: RiskScore;
-  summary: string;
+  risk: RiskScore
+  summary: string
 }
 
 export async function execute(graph: KnowledgeGraph, input: Input): Promise<GetRiskScoreResult> {
@@ -27,10 +27,10 @@ export async function execute(graph: KnowledgeGraph, input: Input): Promise<GetR
     staged: input.staged !== false,
     branch: input.branch,
     commit: input.commit,
-  });
+  })
 
   // Format detailed summary
-  const lines: string[] = [];
+  const lines: string[] = []
 
   // Header with emoji based on risk level
   const levelEmoji = {
@@ -38,18 +38,18 @@ export async function execute(graph: KnowledgeGraph, input: Input): Promise<GetR
     medium: '\u{1F7E1}', // yellow circle
     high: '\u{1F7E0}', // orange circle
     critical: '\u{1F534}', // red circle
-  }[risk.level];
+  }[risk.level]
 
-  lines.push(`## ${levelEmoji} Risk Analysis: ${risk.level.toUpperCase()} (${risk.overall}/100)`);
-  lines.push('');
-  lines.push(risk.summary);
-  lines.push('');
+  lines.push(`## ${levelEmoji} Risk Analysis: ${risk.level.toUpperCase()} (${risk.overall}/100)`)
+  lines.push('')
+  lines.push(risk.summary)
+  lines.push('')
 
   // Factor breakdown
-  lines.push('### Risk Factors');
-  lines.push('');
-  lines.push('| Factor | Score | Details |');
-  lines.push('|--------|-------|---------|');
+  lines.push('### Risk Factors')
+  lines.push('')
+  lines.push('| Factor | Score | Details |')
+  lines.push('|--------|-------|---------|')
 
   for (const [, factor] of Object.entries(risk.factors)) {
     const emoji =
@@ -59,41 +59,41 @@ export async function execute(graph: KnowledgeGraph, input: Input): Promise<GetR
           ? '\u{1F7E1}'
           : factor.score <= 75
             ? '\u{1F7E0}'
-            : '\u{1F534}';
-    lines.push(`| ${emoji} ${factor.name} | ${factor.score}/100 | ${factor.details} |`);
+            : '\u{1F534}'
+    lines.push(`| ${emoji} ${factor.name} | ${factor.score}/100 | ${factor.details} |`)
   }
 
-  lines.push('');
+  lines.push('')
 
   // Detailed items for high-risk factors
   const highRiskFactors = Object.values(risk.factors).filter(
     (f) => f.score >= 50 && f.items && f.items.length > 0
-  );
+  )
 
   if (highRiskFactors.length > 0) {
-    lines.push('### Details');
-    lines.push('');
+    lines.push('### Details')
+    lines.push('')
 
     for (const factor of highRiskFactors) {
-      lines.push(`**${factor.name}:**`);
+      lines.push(`**${factor.name}:**`)
       for (const item of factor.items || []) {
-        lines.push(`- ${item}`);
+        lines.push(`- ${item}`)
       }
-      lines.push('');
+      lines.push('')
     }
   }
 
   // Recommendations
   if (risk.recommendations.length > 0) {
-    lines.push('### Recommendations');
-    lines.push('');
+    lines.push('### Recommendations')
+    lines.push('')
     for (const rec of risk.recommendations) {
-      lines.push(`- ${rec}`);
+      lines.push(`- ${rec}`)
     }
   }
 
   return {
     risk,
     summary: lines.join('\n'),
-  };
+  }
 }

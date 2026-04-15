@@ -5,29 +5,29 @@
  * based on git history and contribution patterns.
  */
 
-import { type SimpleGit, simpleGit } from 'simple-git';
-import type { KnowledgeGraph } from './graph/types.js';
+import { type SimpleGit, simpleGit } from 'simple-git'
+import type { KnowledgeGraph } from './graph/types.js'
 
 export interface Expert {
-  name: string;
-  email: string;
-  commits: number;
-  linesChanged: number;
-  lastTouch: string;
-  expertise: 'primary' | 'significant' | 'contributor';
-  recentActivity: boolean;
+  name: string
+  email: string
+  commits: number
+  linesChanged: number
+  lastTouch: string
+  expertise: 'primary' | 'significant' | 'contributor'
+  recentActivity: boolean
 }
 
 export interface WhoResult {
-  filePath: string;
-  exists: boolean;
-  experts: Expert[];
+  filePath: string
+  exists: boolean
+  experts: Expert[]
   relatedExperts: Array<{
-    file: string;
-    expert: string;
-    reason: string;
-  }>;
-  suggestions: string[];
+    file: string
+    expert: string
+    reason: string
+  }>
+  suggestions: string[]
 }
 
 /**
@@ -40,25 +40,25 @@ async function getAuthorStats(
   git: SimpleGit,
   filePath: string
 ): Promise<Map<string, { name: string; email: string; commits: number; lastTouch: string }>> {
-  const log = await git.log({ file: filePath, maxCount: 100 });
+  const log = await git.log({ file: filePath, maxCount: 100 })
 
   if (log.total === 0) {
-    return new Map();
+    return new Map()
   }
 
   const authorStats = new Map<
     string,
     { name: string; email: string; commits: number; lastTouch: string }
-  >();
+  >()
 
   for (const commit of log.all) {
-    const key = commit.author_email;
-    const existing = authorStats.get(key);
+    const key = commit.author_email
+    const existing = authorStats.get(key)
 
     if (existing) {
-      existing.commits++;
+      existing.commits++
       if (new Date(commit.date) > new Date(existing.lastTouch)) {
-        existing.lastTouch = commit.date;
+        existing.lastTouch = commit.date
       }
     } else {
       authorStats.set(key, {
@@ -66,40 +66,40 @@ async function getAuthorStats(
         email: commit.author_email,
         commits: 1,
         lastTouch: commit.date,
-      });
+      })
     }
   }
 
-  return authorStats;
+  return authorStats
 }
 
 /**
  * Get line change statistics from git numstat
  */
 async function getAuthorLines(git: SimpleGit, filePath: string): Promise<Map<string, number>> {
-  const authorLines = new Map<string, number>();
+  const authorLines = new Map<string, number>()
   try {
-    const numstat = await git.raw(['log', '--numstat', '--format=%ae', '--', filePath]);
+    const numstat = await git.raw(['log', '--numstat', '--format=%ae', '--', filePath])
 
-    let currentAuthor = '';
+    let currentAuthor = ''
     for (const line of numstat.split('\n')) {
       if (line.includes('@')) {
-        currentAuthor = line.trim();
+        currentAuthor = line.trim()
       } else if (line.match(/^\d+\s+\d+/)) {
-        const match = line.match(/^(\d+)\s+(\d+)/);
-        const addedStr = match?.[1];
-        const removedStr = match?.[2];
+        const match = line.match(/^(\d+)\s+(\d+)/)
+        const addedStr = match?.[1]
+        const removedStr = match?.[2]
         if (match && currentAuthor && addedStr && removedStr) {
-          const added = parseInt(addedStr, 10) || 0;
-          const removed = parseInt(removedStr, 10) || 0;
-          authorLines.set(currentAuthor, (authorLines.get(currentAuthor) || 0) + added + removed);
+          const added = parseInt(addedStr, 10) || 0
+          const removed = parseInt(removedStr, 10) || 0
+          authorLines.set(currentAuthor, (authorLines.get(currentAuthor) || 0) + added + removed)
         }
       }
     }
   } catch {
     // Fallback: use commit count estimate
   }
-  return authorLines;
+  return authorLines
 }
 
 /**
@@ -110,21 +110,21 @@ function buildExpertList(
   authorLines: Map<string, number>,
   totalCommits: number
 ): Expert[] {
-  const experts: Expert[] = [];
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const experts: Expert[] = []
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
 
   for (const [email, stats] of authorStats.entries()) {
-    const commitPercentage = stats.commits / totalCommits;
-    const linesChanged = authorLines.get(email) || stats.commits * 20;
-    const recentActivity = new Date(stats.lastTouch) > thirtyDaysAgo;
+    const commitPercentage = stats.commits / totalCommits
+    const linesChanged = authorLines.get(email) || stats.commits * 20
+    const recentActivity = new Date(stats.lastTouch) > thirtyDaysAgo
 
-    let expertise: Expert['expertise'];
+    let expertise: Expert['expertise']
     if (commitPercentage >= 0.5) {
-      expertise = 'primary';
+      expertise = 'primary'
     } else if (commitPercentage >= 0.2) {
-      expertise = 'significant';
+      expertise = 'significant'
     } else {
-      expertise = 'contributor';
+      expertise = 'contributor'
     }
 
     experts.push({
@@ -135,19 +135,19 @@ function buildExpertList(
       lastTouch: stats.lastTouch,
       expertise,
       recentActivity,
-    });
+    })
   }
 
   // Sort by expertise level, then commits
   experts.sort((a, b) => {
-    const order = { primary: 0, significant: 1, contributor: 2 };
+    const order = { primary: 0, significant: 1, contributor: 2 }
     if (order[a.expertise] !== order[b.expertise]) {
-      return order[a.expertise] - order[b.expertise];
+      return order[a.expertise] - order[b.expertise]
     }
-    return b.commits - a.commits;
-  });
+    return b.commits - a.commits
+  })
 
-  return experts;
+  return experts
 }
 
 /**
@@ -159,19 +159,19 @@ async function findRelatedExperts(
   filePath: string,
   primaryExperts: Expert[]
 ): Promise<Array<{ file: string; expert: string; reason: string }>> {
-  const relatedExperts: Array<{ file: string; expert: string; reason: string }> = [];
+  const relatedExperts: Array<{ file: string; expert: string; reason: string }> = []
 
   // Find related files from graph edges
-  const relatedFiles: string[] = [];
+  const relatedFiles: string[] = []
   for (const edge of graph.edges) {
     if (edge.type === 'imports') {
-      const sourceNode = graph.nodes[edge.source];
-      const targetNode = graph.nodes[edge.target];
+      const sourceNode = graph.nodes[edge.source]
+      const targetNode = graph.nodes[edge.target]
 
       if (sourceNode?.filePath === filePath && targetNode) {
-        relatedFiles.push(targetNode.filePath);
+        relatedFiles.push(targetNode.filePath)
       } else if (targetNode?.filePath === filePath && sourceNode) {
-        relatedFiles.push(sourceNode.filePath);
+        relatedFiles.push(sourceNode.filePath)
       }
     }
   }
@@ -179,22 +179,22 @@ async function findRelatedExperts(
   // Get top expert for each related file (limit to 3)
   for (const relatedFile of relatedFiles.slice(0, 3)) {
     try {
-      const relatedLog = await git.log({ file: relatedFile, maxCount: 20 });
+      const relatedLog = await git.log({ file: relatedFile, maxCount: 20 })
 
       if (relatedLog.total > 0) {
         // Find most frequent author
-        const authorCounts = new Map<string, number>();
+        const authorCounts = new Map<string, number>()
         for (const commit of relatedLog.all) {
-          authorCounts.set(commit.author_name, (authorCounts.get(commit.author_name) || 0) + 1);
+          authorCounts.set(commit.author_name, (authorCounts.get(commit.author_name) || 0) + 1)
         }
 
-        const topAuthor = [...authorCounts.entries()].sort((a, b) => b[1] - a[1])[0];
+        const topAuthor = [...authorCounts.entries()].sort((a, b) => b[1] - a[1])[0]
         if (topAuthor && !primaryExperts.find((e) => e.name === topAuthor[0])) {
           relatedExperts.push({
             file: relatedFile,
             expert: topAuthor[0],
             reason: `Expert on related file (${topAuthor[1]} commits)`,
-          });
+          })
         }
       }
     } catch {
@@ -202,40 +202,40 @@ async function findRelatedExperts(
     }
   }
 
-  return relatedExperts;
+  return relatedExperts
 }
 
 /**
  * Generate suggestions based on expert analysis
  */
 function generateSuggestions(experts: Expert[]): string[] {
-  const suggestions: string[] = [];
+  const suggestions: string[] = []
 
   if (experts.length === 0) {
-    suggestions.push('No contributors found for this file.');
-    return suggestions;
+    suggestions.push('No contributors found for this file.')
+    return suggestions
   }
 
-  const primary = experts.find((e) => e.expertise === 'primary');
+  const primary = experts.find((e) => e.expertise === 'primary')
   if (primary) {
-    suggestions.push(`${primary.name} is the primary expert - start with them.`);
+    suggestions.push(`${primary.name} is the primary expert - start with them.`)
   }
 
-  const recentExperts = experts.filter((e) => e.recentActivity);
-  const mostRecentExpert = recentExperts[0];
+  const recentExperts = experts.filter((e) => e.recentActivity)
+  const mostRecentExpert = recentExperts[0]
   if (mostRecentExpert && mostRecentExpert !== primary) {
-    suggestions.push(`${mostRecentExpert.name} has been active recently.`);
+    suggestions.push(`${mostRecentExpert.name} has been active recently.`)
   }
 
   if (experts.length === 1) {
-    suggestions.push('⚠️ Single point of knowledge - consider pairing.');
+    suggestions.push('⚠️ Single point of knowledge - consider pairing.')
   }
 
   if (experts.every((e) => !e.recentActivity)) {
-    suggestions.push('⚠️ No recent activity - knowledge may be stale.');
+    suggestions.push('⚠️ No recent activity - knowledge may be stale.')
   }
 
-  return suggestions;
+  return suggestions
 }
 
 /**
@@ -246,11 +246,11 @@ export async function findExperts(
   filePath: string,
   graph: KnowledgeGraph
 ): Promise<WhoResult> {
-  const git: SimpleGit = simpleGit(rootDir);
+  const git: SimpleGit = simpleGit(rootDir)
 
   // Check if git repo
   try {
-    await git.status();
+    await git.status()
   } catch {
     return {
       filePath,
@@ -258,19 +258,19 @@ export async function findExperts(
       experts: [],
       relatedExperts: [],
       suggestions: ['This is not a git repository.'],
-    };
+    }
   }
 
   // Check if file exists in graph
   const fileNode = Object.values(graph.nodes).find(
     (n) => n.type === 'file' && (n.filePath === filePath || n.filePath.endsWith(filePath))
-  );
+  )
 
-  const actualPath = fileNode?.filePath || filePath;
+  const actualPath = fileNode?.filePath || filePath
 
   try {
     // Get author statistics
-    const authorStats = await getAuthorStats(git, actualPath);
+    const authorStats = await getAuthorStats(git, actualPath)
 
     if (authorStats.size === 0) {
       return {
@@ -279,21 +279,21 @@ export async function findExperts(
         experts: [],
         relatedExperts: [],
         suggestions: [`No git history found for ${actualPath}`],
-      };
+      }
     }
 
     // Get line statistics
-    const authorLines = await getAuthorLines(git, actualPath);
+    const authorLines = await getAuthorLines(git, actualPath)
 
     // Build expert list
-    const totalCommits = [...authorStats.values()].reduce((sum, s) => sum + s.commits, 0);
-    const experts = buildExpertList(authorStats, authorLines, totalCommits);
+    const totalCommits = [...authorStats.values()].reduce((sum, s) => sum + s.commits, 0)
+    const experts = buildExpertList(authorStats, authorLines, totalCommits)
 
     // Find related experts
-    const relatedExperts = await findRelatedExperts(git, graph, actualPath, experts);
+    const relatedExperts = await findRelatedExperts(git, graph, actualPath, experts)
 
     // Generate suggestions
-    const suggestions = generateSuggestions(experts);
+    const suggestions = generateSuggestions(experts)
 
     return {
       filePath: actualPath,
@@ -301,7 +301,7 @@ export async function findExperts(
       experts: experts.slice(0, 5),
       relatedExperts: relatedExperts.slice(0, 3),
       suggestions,
-    };
+    }
   } catch (error) {
     return {
       filePath: actualPath,
@@ -309,7 +309,7 @@ export async function findExperts(
       experts: [],
       relatedExperts: [],
       suggestions: [`Error analyzing file: ${error instanceof Error ? error.message : 'Unknown'}`],
-    };
+    }
   }
 }
 
@@ -317,73 +317,73 @@ export async function findExperts(
  * Format who result for display
  */
 export function formatWho(result: WhoResult): string {
-  const lines: string[] = [];
+  const lines: string[] = []
 
-  lines.push('┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓');
-  lines.push('┃  👤 WHO KNOWS THIS CODE?                         ┃');
-  lines.push('┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛');
-  lines.push('');
-  lines.push(`File: ${result.filePath}`);
-  lines.push('');
+  lines.push('┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓')
+  lines.push('┃  👤 WHO KNOWS THIS CODE?                         ┃')
+  lines.push('┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛')
+  lines.push('')
+  lines.push(`File: ${result.filePath}`)
+  lines.push('')
 
   if (!result.exists || result.experts.length === 0) {
-    lines.push('No experts found for this file.');
+    lines.push('No experts found for this file.')
     if (result.suggestions.length > 0) {
-      lines.push('');
+      lines.push('')
       for (const suggestion of result.suggestions) {
-        lines.push(`  ${suggestion}`);
+        lines.push(`  ${suggestion}`)
       }
     }
-    return lines.join('\n');
+    return lines.join('\n')
   }
 
-  lines.push('EXPERTS');
-  lines.push('─'.repeat(50));
+  lines.push('EXPERTS')
+  lines.push('─'.repeat(50))
 
   for (let i = 0; i < result.experts.length; i++) {
-    const expert = result.experts[i];
-    if (!expert) continue;
-    const rank = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '  ';
+    const expert = result.experts[i]
+    if (!expert) continue
+    const rank = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '  '
     const badge =
       expert.expertise === 'primary'
         ? '⭐ Primary'
         : expert.expertise === 'significant'
           ? '📌 Significant'
-          : '👤 Contributor';
+          : '👤 Contributor'
 
     const lastTouchDate = new Date(expert.lastTouch).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
-    });
+    })
 
-    lines.push(`${rank} ${expert.name}`);
-    lines.push(`   ${badge} | ${expert.commits} commits | ~${expert.linesChanged} lines`);
-    lines.push(`   Last touch: ${lastTouchDate}${expert.recentActivity ? ' (recent)' : ''}`);
-    lines.push('');
+    lines.push(`${rank} ${expert.name}`)
+    lines.push(`   ${badge} | ${expert.commits} commits | ~${expert.linesChanged} lines`)
+    lines.push(`   Last touch: ${lastTouchDate}${expert.recentActivity ? ' (recent)' : ''}`)
+    lines.push('')
   }
 
   if (result.relatedExperts.length > 0) {
-    lines.push('RELATED EXPERTS');
-    lines.push('─'.repeat(50));
+    lines.push('RELATED EXPERTS')
+    lines.push('─'.repeat(50))
     for (const related of result.relatedExperts) {
-      lines.push(`  ${related.expert}`);
-      lines.push(`    ${related.reason}`);
-      lines.push(`    File: ${related.file}`);
-      lines.push('');
+      lines.push(`  ${related.expert}`)
+      lines.push(`    ${related.reason}`)
+      lines.push(`    File: ${related.file}`)
+      lines.push('')
     }
   }
 
   if (result.suggestions.length > 0) {
-    lines.push('SUGGESTIONS');
-    lines.push('─'.repeat(50));
+    lines.push('SUGGESTIONS')
+    lines.push('─'.repeat(50))
     for (const suggestion of result.suggestions) {
-      lines.push(`  💡 ${suggestion}`);
+      lines.push(`  💡 ${suggestion}`)
     }
-    lines.push('');
+    lines.push('')
   }
 
-  lines.push('━'.repeat(51));
+  lines.push('━'.repeat(51))
 
-  return lines.join('\n');
+  return lines.join('\n')
 }

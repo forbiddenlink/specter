@@ -12,13 +12,13 @@
  * - Structured error responses
  */
 
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { registerPrompts, registerResources, registerTools } from './mcp/index.js';
-import { initTelemetry } from './lib/telemetry.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
+import { initTelemetry } from './lib/telemetry.js'
+import { registerPrompts, registerResources, registerTools } from './mcp/index.js'
 
 // Initialize telemetry before server starts
-initTelemetry();
+initTelemetry()
 
 /**
  * Create the MCP server with all tools, prompts, and resources
@@ -27,38 +27,38 @@ function createServer(): McpServer {
   const server = new McpServer({
     name: 'specter',
     version: '1.0.0',
-  });
+  })
 
   // Register all MCP components
-  registerTools(server);
-  registerPrompts(server);
-  registerResources(server);
+  registerTools(server)
+  registerPrompts(server)
+  registerResources(server)
 
-  return server;
+  return server
 }
 
 /**
  * Main entry point
  */
 async function main() {
-  const server = createServer();
-  const transport = new StdioServerTransport();
+  const server = createServer()
+  const transport = new StdioServerTransport()
 
-  await server.connect(transport);
+  await server.connect(transport)
 
   // Handle graceful shutdown
   process.on('SIGINT', async () => {
-    await server.close();
-    process.exit(0);
-  });
+    await server.close()
+    process.exit(0)
+  })
 
   process.on('SIGTERM', async () => {
-    await server.close();
-    process.exit(0);
-  });
+    await server.close()
+    process.exit(0)
+  })
 }
 
 main().catch((error) => {
-  console.error('Failed to start Specter MCP server:', error);
-  process.exit(1);
-});
+  console.error('Failed to start Specter MCP server:', error)
+  process.exit(1)
+})

@@ -5,20 +5,20 @@
  * Mood is layered on top of personality modes to add emotional context.
  */
 
-import type { PersonalityMode } from './types.js';
+import type { PersonalityMode } from './types.js'
 
 /**
  * Mood states based on codebase health score
  */
-export type Mood = 'confident' | 'stable' | 'anxious' | 'distressed';
+export type Mood = 'confident' | 'stable' | 'anxious' | 'distressed'
 
 /**
  * Mood-specific phrase modifiers
  */
 interface MoodPhrases {
-  prefix: string[];
-  suffix: string[];
-  interjections: string[];
+  prefix: string[]
+  suffix: string[]
+  interjections: string[]
 }
 
 const moodPhrases: Record<Mood, MoodPhrases> = {
@@ -82,27 +82,27 @@ const moodPhrases: Record<Mood, MoodPhrases> = {
     ],
     interjections: ['*trembles*', '*desperately*', '*pleading*', '*on the verge*'],
   },
-};
+}
 
 /**
  * Determine mood based on health score
  */
 export function getMood(healthScore: number): Mood {
-  if (healthScore > 90) return 'confident';
-  if (healthScore > 70) return 'stable';
-  if (healthScore > 50) return 'anxious';
-  return 'distressed';
+  if (healthScore > 90) return 'confident'
+  if (healthScore > 70) return 'stable'
+  if (healthScore > 50) return 'anxious'
+  return 'distressed'
 }
 
 /**
  * Get a random phrase from an array
  */
 function pick<T>(arr: T[]): T {
-  const item = arr[Math.floor(Math.random() * arr.length)];
+  const item = arr[Math.floor(Math.random() * arr.length)]
   if (item === undefined) {
-    throw new Error('Cannot pick from empty array');
+    throw new Error('Cannot pick from empty array')
   }
-  return item;
+  return item
 }
 
 /**
@@ -111,16 +111,16 @@ function pick<T>(arr: T[]): T {
 export function getMoodIntensity(healthScore: number): number {
   if (healthScore > 90) {
     // Confident: 90-100, intensity increases as we approach 100
-    return (healthScore - 90) / 10;
+    return (healthScore - 90) / 10
   } else if (healthScore > 70) {
     // Stable: 70-90, fairly flat intensity
-    return 0.5;
+    return 0.5
   } else if (healthScore > 50) {
     // Anxious: 50-70, intensity increases as we approach 50
-    return (70 - healthScore) / 20;
+    return (70 - healthScore) / 20
   } else {
     // Distressed: 0-50, intensity increases as we approach 0
-    return Math.min(1, (50 - healthScore) / 30);
+    return Math.min(1, (50 - healthScore) / 30)
   }
 }
 
@@ -138,51 +138,51 @@ export function applyMood(
 ): string {
   // Minimalist personality ignores mood - data only
   if (personality === 'minimalist') {
-    return message;
+    return message
   }
 
   // Stable mood doesn't modify much - personality speaks for itself
   if (mood === 'stable') {
-    return message;
+    return message
   }
 
-  const phrases = moodPhrases[mood];
-  const intensity = getMoodIntensity(mood === 'confident' ? 95 : mood === 'anxious' ? 60 : 25);
+  const phrases = moodPhrases[mood]
+  const intensity = getMoodIntensity(mood === 'confident' ? 95 : mood === 'anxious' ? 60 : 25)
 
-  let result = message;
+  let result = message
 
   // Add prefix based on intensity
   if (intensity > 0.3 && Math.random() < 0.7) {
-    const prefix = pick(phrases.prefix);
-    result = `${prefix} ${result}`;
+    const prefix = pick(phrases.prefix)
+    result = `${prefix} ${result}`
   }
 
   // Add suffix for higher intensity
   if (intensity > 0.5 && Math.random() < 0.5) {
-    const suffix = pick(phrases.suffix);
-    result = `${result} ${suffix}`;
+    const suffix = pick(phrases.suffix)
+    result = `${result} ${suffix}`
   }
 
   // Add interjections for distressed mood (more dramatic)
   if (mood === 'distressed' && Math.random() < 0.4) {
-    const interjection = pick(phrases.interjections.filter((i) => i !== ''));
+    const interjection = pick(phrases.interjections.filter((i) => i !== ''))
     if (interjection) {
-      result = `${interjection} ${result}`;
+      result = `${interjection} ${result}`
     }
   }
 
-  return result;
+  return result
 }
 
 /**
  * Get a mood-appropriate phrase
  */
 export function getMoodPhrase(mood: Mood, type: 'prefix' | 'suffix' | 'interjection'): string {
-  const phrases = moodPhrases[mood];
+  const phrases = moodPhrases[mood]
   if (type === 'interjection') {
-    return pick(phrases.interjections);
+    return pick(phrases.interjections)
   }
-  return pick(type === 'prefix' ? phrases.prefix : phrases.suffix);
+  return pick(type === 'prefix' ? phrases.prefix : phrases.suffix)
 }
 
 /**
@@ -191,13 +191,13 @@ export function getMoodPhrase(mood: Mood, type: 'prefix' | 'suffix' | 'interject
 export function formatMoodStatus(mood: Mood): string {
   switch (mood) {
     case 'confident':
-      return 'CONFIDENT';
+      return 'CONFIDENT'
     case 'stable':
-      return 'STABLE';
+      return 'STABLE'
     case 'anxious':
-      return 'ANXIOUS';
+      return 'ANXIOUS'
     case 'distressed':
-      return 'DISTRESSED';
+      return 'DISTRESSED'
   }
 }
 
@@ -207,13 +207,13 @@ export function formatMoodStatus(mood: Mood): string {
 export function getMoodDescription(mood: Mood): string {
   switch (mood) {
     case 'confident':
-      return 'The codebase is thriving and full of confidence';
+      return 'The codebase is thriving and full of confidence'
     case 'stable':
-      return 'The codebase is in a stable, healthy state';
+      return 'The codebase is in a stable, healthy state'
     case 'anxious':
-      return 'The codebase is showing signs of stress';
+      return 'The codebase is showing signs of stress'
     case 'distressed':
-      return 'The codebase is in critical condition and needs attention';
+      return 'The codebase is in critical condition and needs attention'
   }
 }
 
@@ -221,5 +221,5 @@ export function getMoodDescription(mood: Mood): string {
  * List all available moods
  */
 export function listMoods(): Mood[] {
-  return ['confident', 'stable', 'anxious', 'distressed'];
+  return ['confident', 'stable', 'anxious', 'distressed']
 }

@@ -21,7 +21,7 @@ export {
   table,
   tree,
   wrapText,
-} from './boxes.js';
+} from './boxes.js'
 // Color utilities
 export {
   COMPLEXITY_THRESHOLDS,
@@ -36,7 +36,7 @@ export {
   getInverseRatioColor,
   getRatioColor,
   HEALTH_THRESHOLDS,
-} from './colors.js';
+} from './colors.js'
 // Progress bar utilities
 export {
   coloredSparkline,
@@ -49,4 +49,4 @@ export {
   progressBar,
   sparkline,
   stackedBar,
-} from './progress.js';
+} from './progress.js'

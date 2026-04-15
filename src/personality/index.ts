@@ -21,10 +21,10 @@ export {
   listMoods,
   type Mood,
   type MoodFormatterOptions,
-} from './formatter.js';
-export { getPersonality, listPersonalities, personalities } from './modes.js';
+} from './formatter.js'
+export { getPersonality, listPersonalities, personalities } from './modes.js'
 export {
   formatMoodStatus,
   getMoodPhrase,
-} from './mood.js';
-export type { FormatterOptions, PersonalityConfig, PersonalityMode } from './types.js';
+} from './mood.js'
+export type { FormatterOptions, PersonalityConfig, PersonalityMode } from './types.js'

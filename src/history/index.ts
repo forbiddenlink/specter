@@ -9,7 +9,7 @@ export {
   createSnapshot,
   diffSnapshots,
   percentChange,
-} from './snapshot.js';
+} from './snapshot.js'
 // Storage
 export {
   clearHistory,
@@ -20,17 +20,17 @@ export {
   loadSnapshots,
   loadSnapshotsInRange,
   saveSnapshot,
-} from './storage.js';
+} from './storage.js'
 // Trend analysis
 export {
   analyzeTrends,
   calculateTrend,
   filterByPeriod,
   getTimeSpan,
-} from './trends.js';
+} from './trends.js'
 // Types
 export type {
   HealthSnapshot,
   HealthTrend,
   TrendAnalysis,
-} from './types.js';
+} from './types.js'

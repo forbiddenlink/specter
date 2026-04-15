@@ -5,37 +5,37 @@
  * graph caching, error handling, and timeout management.
  */
 
-import { loadGraph } from '../graph/persistence.js';
-import type { KnowledgeGraph } from '../graph/types.js';
-import { logger } from '../lib/logger.js';
+import { loadGraph } from '../graph/persistence.js'
+import type { KnowledgeGraph } from '../graph/types.js'
+import { logger } from '../lib/logger.js'
 
 // Global graph cache
-let cachedGraph: KnowledgeGraph | null = null;
-let graphLoadError: string | null = null;
+let cachedGraph: KnowledgeGraph | null = null
+let graphLoadError: string | null = null
 
 // Error tracking for monitoring
 interface ErrorMetrics {
-  toolErrors: Map<string, number>;
-  lastError: Date | null;
-  totalErrors: number;
+  toolErrors: Map<string, number>
+  lastError: Date | null
+  totalErrors: number
 }
 
 const errorMetrics: ErrorMetrics = {
   toolErrors: new Map(),
   lastError: null,
   totalErrors: 0,
-};
+}
 
 /**
  * Log error to stderr for debugging
  */
 export function logError(toolName: string, error: Error): void {
-  logger.error({ err: error, tool: toolName }, `MCP tool error: ${toolName}`);
+  logger.error({ err: error, tool: toolName }, `MCP tool error: ${toolName}`)
 
   // Track metrics
-  errorMetrics.totalErrors++;
-  errorMetrics.lastError = new Date();
-  errorMetrics.toolErrors.set(toolName, (errorMetrics.toolErrors.get(toolName) || 0) + 1);
+  errorMetrics.totalErrors++
+  errorMetrics.lastError = new Date()
+  errorMetrics.toolErrors.set(toolName, (errorMetrics.toolErrors.get(toolName) || 0) + 1)
 }
 
 /**
@@ -43,25 +43,25 @@ export function logError(toolName: string, error: Error): void {
  */
 export async function getGraph(): Promise<KnowledgeGraph> {
   if (cachedGraph) {
-    return cachedGraph;
+    return cachedGraph
   }
 
-  const cwd = process.cwd();
+  const cwd = process.cwd()
 
   try {
-    const graph = await loadGraph(cwd);
+    const graph = await loadGraph(cwd)
 
     if (!graph) {
-      graphLoadError = `No knowledge graph found in ${cwd}. Run 'specter scan' first to build the knowledge graph.`;
-      throw new Error(graphLoadError);
+      graphLoadError = `No knowledge graph found in ${cwd}. Run 'specter scan' first to build the knowledge graph.`
+      throw new Error(graphLoadError)
     }
 
-    cachedGraph = graph;
-    return graph;
+    cachedGraph = graph
+    return graph
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error loading graph';
-    logError('getGraph', new Error(message));
-    throw new Error(`Failed to load knowledge graph: ${message}`);
+    const message = error instanceof Error ? error.message : 'Unknown error loading graph'
+    logError('getGraph', new Error(message))
+    throw new Error(`Failed to load knowledge graph: ${message}`)
   }
 }
 
@@ -75,15 +75,15 @@ export async function executeTool<T>(
 ): Promise<T> {
   const timeoutPromise = new Promise<never>((_, reject) => {
     setTimeout(() => {
-      reject(new Error(`Tool execution timed out after ${timeoutMs}ms`));
-    }, timeoutMs);
-  });
+      reject(new Error(`Tool execution timed out after ${timeoutMs}ms`))
+    }, timeoutMs)
+  })
 
   try {
-    return await Promise.race([executor(), timeoutPromise]);
+    return await Promise.race([executor(), timeoutPromise])
   } catch (error) {
-    logError(toolName, error instanceof Error ? error : new Error(String(error)));
-    throw error;
+    logError(toolName, error instanceof Error ? error : new Error(String(error)))
+    throw error
   }
 }
 
@@ -91,13 +91,13 @@ export async function executeTool<T>(
  * Get current error metrics (for diagnostics)
  */
 export function getErrorMetrics(): ErrorMetrics {
-  return errorMetrics;
+  return errorMetrics
 }
 
 /**
  * Clear the cached graph (useful for testing or forced reload)
  */
 export function clearGraphCache(): void {
-  cachedGraph = null;
-  graphLoadError = null;
+  cachedGraph = null
+  graphLoadError = null
 }

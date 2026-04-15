@@ -2,18 +2,18 @@
  * Diagram command - generate architecture diagrams
  */
 
-import path from 'node:path';
-import chalk from 'chalk';
-import type { Command } from 'commander';
+import path from 'node:path'
+import chalk from 'chalk'
+import type { Command } from 'commander'
 import {
   type DiagramFormat,
   formatDiagramOutput,
   generateDiagram,
   saveDiagram,
-} from '../../diagram.js';
-import { loadGraph } from '../../graph/persistence.js';
-import { outputJson, outputJsonError } from '../../json-output.js';
-import { createSpinner } from '../types.js';
+} from '../../diagram.js'
+import { loadGraph } from '../../graph/persistence.js'
+import { outputJson, outputJsonError } from '../../json-output.js'
+import { createSpinner } from '../types.js'
 
 export function register(program: Command): void {
   program
@@ -28,28 +28,28 @@ export function register(program: Command): void {
     .option('-o, --output <file>', 'Save diagram to file')
     .option('--json', 'Output as JSON for CI/CD integration')
     .action(async (options) => {
-      const rootDir = path.resolve(options.dir);
+      const rootDir = path.resolve(options.dir)
 
-      const spinner = options.json ? null : createSpinner('Generating architecture diagram...');
-      spinner?.start();
+      const spinner = options.json ? null : createSpinner('Generating architecture diagram...')
+      spinner?.start()
 
-      const graph = await loadGraph(rootDir);
+      const graph = await loadGraph(rootDir)
 
       if (!graph) {
-        spinner?.fail('No graph found. Run `specter scan` first.');
+        spinner?.fail('No graph found. Run `specter scan` first.')
         if (options.json) {
-          outputJsonError('diagram', 'No graph found. Run `specter scan` first.');
+          outputJsonError('diagram', 'No graph found. Run `specter scan` first.')
         }
-        return;
+        return
       }
 
-      const format = options.format as DiagramFormat;
+      const format = options.format as DiagramFormat
       if (!['mermaid', 'd2', 'ascii'].includes(format)) {
-        spinner?.fail(`Invalid format: ${format}. Use mermaid, d2, or ascii.`);
+        spinner?.fail(`Invalid format: ${format}. Use mermaid, d2, or ascii.`)
         if (options.json) {
-          outputJsonError('diagram', `Invalid format: ${format}. Use mermaid, d2, or ascii.`);
+          outputJsonError('diagram', `Invalid format: ${format}. Use mermaid, d2, or ascii.`)
         }
-        return;
+        return
       }
 
       let result = generateDiagram(graph, {
@@ -58,56 +58,56 @@ export function register(program: Command): void {
         focus: options.focus,
         showComplexity: options.complexity,
         showHealth: options.health,
-      });
+      })
 
       // Save to file if requested
       if (options.output) {
-        const outputPath = path.resolve(options.output);
-        result = await saveDiagram(result, outputPath);
-        spinner?.succeed(`Diagram saved to ${outputPath}`);
+        const outputPath = path.resolve(options.output)
+        result = await saveDiagram(result, outputPath)
+        spinner?.succeed(`Diagram saved to ${outputPath}`)
       } else {
-        spinner?.stop();
+        spinner?.stop()
       }
 
       // JSON output for CI/CD
       if (options.json) {
-        outputJson('diagram', result);
-        return;
+        outputJson('diagram', result)
+        return
       }
 
-      const output = formatDiagramOutput(result);
+      const output = formatDiagramOutput(result)
 
-      console.log();
+      console.log()
       for (const line of output.split('\n')) {
         if (line.includes('┏') || line.includes('┗') || line.includes('┃')) {
-          console.log(chalk.bold.magenta(`  ${line}`));
+          console.log(chalk.bold.magenta(`  ${line}`))
         } else if (
           line.startsWith('Format:') ||
           line.startsWith('Nodes:') ||
           line.startsWith('Edges:')
         ) {
-          console.log(chalk.cyan(`  ${line}`));
+          console.log(chalk.cyan(`  ${line}`))
         } else if (line.startsWith('Saved:')) {
-          console.log(chalk.green(`  ${line}`));
+          console.log(chalk.green(`  ${line}`))
         } else if (line.startsWith('graph TD') || line.startsWith('subgraph')) {
-          console.log(chalk.yellow(`  ${line}`));
+          console.log(chalk.yellow(`  ${line}`))
         } else if (line.includes('-->')) {
-          console.log(chalk.blue(`  ${line}`));
+          console.log(chalk.blue(`  ${line}`))
         } else if (line.startsWith('─') || line.startsWith('━')) {
-          console.log(chalk.dim(`  ${line}`));
+          console.log(chalk.dim(`  ${line}`))
         } else if (line.includes('Paste into') || line.includes('Render with')) {
-          console.log(chalk.dim.italic(`  ${line}`));
+          console.log(chalk.dim.italic(`  ${line}`))
         } else if (
           line.includes('┌') ||
           line.includes('└') ||
           line.includes('│') ||
           line.includes('├')
         ) {
-          console.log(chalk.white(`  ${line}`));
+          console.log(chalk.white(`  ${line}`))
         } else {
-          console.log(chalk.white(`  ${line}`));
+          console.log(chalk.white(`  ${line}`))
         }
       }
-      console.log();
-    });
+      console.log()
+    })
 }

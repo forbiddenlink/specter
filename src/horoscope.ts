@@ -6,7 +6,7 @@
  * it's consistent for the day.
  */
 
-import type { KnowledgeGraph } from './graph/types.js';
+import type { KnowledgeGraph } from './graph/types.js'
 
 // Zodiac signs with codebase-themed descriptions
 const zodiacSigns = [
@@ -22,7 +22,7 @@ const zodiacSigns = [
   { sign: 'Capricorn', emoji: '\u2651', trait: 'pragmatic and production-ready' },
   { sign: 'Aquarius', emoji: '\u2652', trait: 'unconventional but innovative' },
   { sign: 'Pisces', emoji: '\u2653', trait: 'dreamy, sometimes losing itself in abstractions' },
-];
+]
 
 // Mercury retrograde jokes
 const mercuryRetrogrades = [
@@ -32,7 +32,7 @@ const mercuryRetrogrades = [
   'Mercury is refactoring without tests.',
   'Mercury is reviewing your oldest PR.',
   'Mercury is auditing your package-lock.json.',
-];
+]
 
 // Daily suggestions
 const starSuggests = [
@@ -48,7 +48,7 @@ const starSuggests = [
   'Perfect alignment for dependency updates.',
   'The void calls for error handling.',
   'Consider the wisdom of early returns.',
-];
+]
 
 // Lucky/unlucky file patterns
 const _luckyFilePatterns = [
@@ -60,7 +60,7 @@ const _luckyFilePatterns = [
   'lib/core',
   'services/main',
   'components/App',
-];
+]
 
 const unluckyFileComments = [
   'Wherever you last saw a TODO',
@@ -69,7 +69,7 @@ const unluckyFileComments = [
   'Anywhere near your oldest code',
   'The module everyone is afraid to touch',
   'That "temporary" file from 2 years ago',
-];
+]
 
 // Power moves
 const powerMoves = [
@@ -81,7 +81,7 @@ const powerMoves = [
   'Replace magic numbers with named constants',
   'Add error boundaries where none exist',
   'Create a custom hook from duplicated logic',
-];
+]
 
 // Compatibility
 const compatibilities = [
@@ -91,7 +91,7 @@ const compatibilities = [
   'Teams that do code reviews',
   'Repos with clear contribution guidelines',
   'Projects with semantic versioning',
-];
+]
 
 // Things to avoid
 const avoidances = [
@@ -103,7 +103,7 @@ const avoidances = [
   'Circular dependencies',
   'any types masquerading as safety',
   'Code without error handling',
-];
+]
 
 // Affirmations
 const affirmations = [
@@ -117,19 +117,19 @@ const affirmations = [
   'My logs are informative and helpful.',
   'I release my attachment to perfect code.',
   'I trust the process (and the tests).',
-];
+]
 
 /**
  * Simple deterministic hash function
  */
 function simpleHash(str: string): number {
-  let hash = 0;
+  let hash = 0
   for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash = hash & hash; // Convert to 32bit integer
+    const char = str.charCodeAt(i)
+    hash = (hash << 5) - hash + char
+    hash = hash & hash // Convert to 32bit integer
   }
-  return Math.abs(hash);
+  return Math.abs(hash)
 }
 
 /**
@@ -137,62 +137,62 @@ function simpleHash(str: string): number {
  */
 function seededRandom(seed: number): () => number {
   return () => {
-    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
-    return seed / 0x7fffffff;
-  };
+    seed = (seed * 1103515245 + 12345) & 0x7fffffff
+    return seed / 0x7fffffff
+  }
 }
 
 /**
  * Pick random item from array using seeded random
  */
 function pick<T>(arr: T[], random: () => number): T {
-  const index = Math.floor(random() * arr.length);
-  const item = arr[index];
+  const index = Math.floor(random() * arr.length)
+  const item = arr[index]
   if (item === undefined) {
-    throw new Error('Array is empty');
+    throw new Error('Array is empty')
   }
-  return item;
+  return item
 }
 
 export interface HoroscopeReading {
-  date: string;
-  codebaseName: string;
-  zodiac: { sign: string; emoji: string; trait: string };
-  mercury: string;
-  starSuggests: string;
-  luckyFile: string;
-  unluckyFile: string;
-  powerMove: string;
-  compatible: string;
-  avoid: string;
-  affirmation: string;
+  date: string
+  codebaseName: string
+  zodiac: { sign: string; emoji: string; trait: string }
+  mercury: string
+  starSuggests: string
+  luckyFile: string
+  unluckyFile: string
+  powerMove: string
+  compatible: string
+  avoid: string
+  affirmation: string
 }
 
 /**
  * Generate horoscope for a codebase
  */
 export function generateHoroscope(graph: KnowledgeGraph): HoroscopeReading {
-  const today = new Date();
-  const dateStr = today.toISOString().split('T')[0];
-  const codebaseName = graph.metadata.rootDir.split('/').pop() || 'unknown';
+  const today = new Date()
+  const dateStr = today.toISOString().split('T')[0]
+  const codebaseName = graph.metadata.rootDir.split('/').pop() || 'unknown'
 
   // Create deterministic seed from date + codebase name
-  const seed = simpleHash(`${dateStr}-${codebaseName}`);
-  const random = seededRandom(seed);
+  const seed = simpleHash(`${dateStr}-${codebaseName}`)
+  const random = seededRandom(seed)
 
   // Determine zodiac based on codebase characteristics
   // Use creation date hints or fall back to name-based selection
-  const zodiacIndex = simpleHash(codebaseName) % zodiacSigns.length;
-  const zodiac = zodiacSigns[zodiacIndex] ?? zodiacSigns[0]!;
+  const zodiacIndex = simpleHash(codebaseName) % zodiacSigns.length
+  const zodiac = zodiacSigns[zodiacIndex] ?? zodiacSigns[0]!
 
   // Find a "lucky file" - prefer actual files from the codebase
-  const fileNodes = Object.values(graph.nodes).filter((n) => n.type === 'file');
-  let luckyFile = 'src/index.ts';
+  const fileNodes = Object.values(graph.nodes).filter((n) => n.type === 'file')
+  let luckyFile = 'src/index.ts'
   if (fileNodes.length > 0) {
-    const luckyIndex = Math.floor(random() * fileNodes.length);
-    const luckyNode = fileNodes[luckyIndex];
+    const luckyIndex = Math.floor(random() * fileNodes.length)
+    const luckyNode = fileNodes[luckyIndex]
     if (luckyNode) {
-      luckyFile = luckyNode.filePath;
+      luckyFile = luckyNode.filePath
     }
   }
 
@@ -213,34 +213,34 @@ export function generateHoroscope(graph: KnowledgeGraph): HoroscopeReading {
     compatible: pick(compatibilities, random),
     avoid: pick(avoidances, random),
     affirmation: pick(affirmations, random),
-  };
+  }
 }
 
 /**
  * Format horoscope as string output
  */
 export function formatHoroscope(reading: HoroscopeReading): string {
-  const lines: string[] = [];
+  const lines: string[] = []
 
-  lines.push(`\ud83d\udd2e CODEBASE HOROSCOPE - ${reading.date}`);
-  lines.push('');
+  lines.push(`\ud83d\udd2e CODEBASE HOROSCOPE - ${reading.date}`)
+  lines.push('')
   lines.push(
     `${reading.zodiac.emoji} Your codebase is a ${reading.zodiac.sign.toUpperCase()} (${reading.zodiac.trait})`
-  );
-  lines.push('');
-  lines.push("Today's reading:");
-  lines.push('');
-  lines.push(reading.mercury);
-  lines.push(`The stars suggest: ${reading.starSuggests}`);
-  lines.push('');
-  lines.push(`\ud83d\udcab Lucky file: ${reading.luckyFile}`);
-  lines.push(`\u26a0\ufe0f  Unlucky file: ${reading.unluckyFile}`);
-  lines.push(`\ud83c\udfaf Power move: ${reading.powerMove}`);
-  lines.push(`\ud83d\udc95 Compatible with: ${reading.compatible}`);
-  lines.push(`\ud83d\udeab Avoid: ${reading.avoid}`);
-  lines.push('');
-  lines.push("Today's affirmation:");
-  lines.push(`"${reading.affirmation}"`);
+  )
+  lines.push('')
+  lines.push("Today's reading:")
+  lines.push('')
+  lines.push(reading.mercury)
+  lines.push(`The stars suggest: ${reading.starSuggests}`)
+  lines.push('')
+  lines.push(`\ud83d\udcab Lucky file: ${reading.luckyFile}`)
+  lines.push(`\u26a0\ufe0f  Unlucky file: ${reading.unluckyFile}`)
+  lines.push(`\ud83c\udfaf Power move: ${reading.powerMove}`)
+  lines.push(`\ud83d\udc95 Compatible with: ${reading.compatible}`)
+  lines.push(`\ud83d\udeab Avoid: ${reading.avoid}`)
+  lines.push('')
+  lines.push("Today's affirmation:")
+  lines.push(`"${reading.affirmation}"`)
 
-  return lines.join('\n');
+  return lines.join('\n')
 }

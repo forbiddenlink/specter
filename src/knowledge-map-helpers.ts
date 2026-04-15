@@ -6,28 +6,28 @@
  * and knowledge area risk calculations.
  */
 
-import type { DefaultLogFields, LogResult, SimpleGit } from 'simple-git';
-import { calculateContributionScore } from './contribution-helpers.js';
+import type { DefaultLogFields, LogResult, SimpleGit } from 'simple-git'
+import { calculateContributionScore } from './contribution-helpers.js'
 
 export interface ContributorStats {
-  commits: number;
-  linesAdded: number;
-  linesRemoved: number;
-  lastCommit: Date;
+  commits: number
+  linesAdded: number
+  linesRemoved: number
+  lastCommit: Date
 }
 
 export interface ContributorExpertise {
-  contributor: string;
-  areas: Map<string, number>; // directory -> expertise score (0-100)
-  primaryExpertise: string[]; // Top 3 areas
-  totalContributions: number;
+  contributor: string
+  areas: Map<string, number> // directory -> expertise score (0-100)
+  primaryExpertise: string[] // Top 3 areas
+  totalContributions: number
 }
 
 export interface KnowledgeArea {
-  path: string; // Directory or file pattern
-  experts: Array<{ name: string; score: number }>;
-  busFactor: number; // 1 = single person, higher = distributed
-  coverage: 'solo' | 'pair' | 'team' | 'distributed';
+  path: string // Directory or file pattern
+  experts: Array<{ name: string; score: number }>
+  busFactor: number // 1 = single person, higher = distributed
+  coverage: 'solo' | 'pair' | 'team' | 'distributed'
 }
 
 /**
@@ -46,7 +46,7 @@ export async function parseGitLog(
   areaFiles: Map<string, string[]>,
   getAreaForFile: (file: string, areaFiles: Map<string, string[]>) => string | null
 ): Promise<Map<string, Map<string, ContributorStats>>> {
-  const areaContributions = new Map<string, Map<string, ContributorStats>>();
+  const areaContributions = new Map<string, Map<string, ContributorStats>>()
 
   try {
     // Get commit log with numstat for line counts
@@ -54,48 +54,48 @@ export async function parseGitLog(
       maxCount: 500,
       '--numstat': null,
       '--format': '%H|%an|%ae|%aI',
-    });
+    })
 
     // Parse the raw output to get file-level stats
-    const rawLog = await git.raw(['log', '--numstat', '--format=%H|%an|%aI', '-500']);
+    const rawLog = await git.raw(['log', '--numstat', '--format=%H|%an|%aI', '-500'])
 
-    let currentAuthor = '';
-    let currentDate = new Date();
+    let currentAuthor = ''
+    let currentDate = new Date()
 
     for (const line of rawLog.split('\n')) {
       if (line.includes('|')) {
-        const parts = line.split('|');
-        const author = parts[1];
-        const dateStr = parts[2];
+        const parts = line.split('|')
+        const author = parts[1]
+        const dateStr = parts[2]
         if (parts.length >= 3 && author && dateStr) {
-          currentAuthor = author;
-          currentDate = new Date(dateStr);
+          currentAuthor = author
+          currentDate = new Date(dateStr)
         }
       } else if (line.match(/^\d+\s+\d+\s+.+/)) {
-        const match = line.match(/^(\d+)\s+(\d+)\s+(.+)/);
-        const addedStr = match?.[1];
-        const removedStr = match?.[2];
-        const file = match?.[3];
+        const match = line.match(/^(\d+)\s+(\d+)\s+(.+)/)
+        const addedStr = match?.[1]
+        const removedStr = match?.[2]
+        const file = match?.[3]
         if (match && currentAuthor && addedStr && removedStr && file) {
-          const added = parseInt(addedStr, 10) || 0;
-          const removed = parseInt(removedStr, 10) || 0;
+          const added = parseInt(addedStr, 10) || 0
+          const removed = parseInt(removedStr, 10) || 0
 
           // Find which area this file belongs to
-          const area = getAreaForFile(file, areaFiles);
+          const area = getAreaForFile(file, areaFiles)
           if (area) {
             if (!areaContributions.has(area)) {
-              areaContributions.set(area, new Map());
+              areaContributions.set(area, new Map())
             }
 
-            const areaMap = areaContributions.get(area)!;
-            const existing = areaMap.get(currentAuthor);
+            const areaMap = areaContributions.get(area)!
+            const existing = areaMap.get(currentAuthor)
 
             if (existing) {
-              existing.commits++;
-              existing.linesAdded += added;
-              existing.linesRemoved += removed;
+              existing.commits++
+              existing.linesAdded += added
+              existing.linesRemoved += removed
               if (currentDate > existing.lastCommit) {
-                existing.lastCommit = currentDate;
+                existing.lastCommit = currentDate
               }
             } else {
               areaMap.set(currentAuthor, {
@@ -103,7 +103,7 @@ export async function parseGitLog(
                 linesAdded: added,
                 linesRemoved: removed,
                 lastCommit: currentDate,
-              });
+              })
             }
           }
         }
@@ -111,12 +111,12 @@ export async function parseGitLog(
     }
   } catch {
     // Fall back to basic log analysis
-    const log = await git.log({ maxCount: 200 });
+    const log = await git.log({ maxCount: 200 })
 
-    await parseGitLogFallback(git, log, areaFiles, areaContributions, getAreaForFile);
+    await parseGitLogFallback(git, log, areaFiles, areaContributions, getAreaForFile)
   }
 
-  return areaContributions;
+  return areaContributions
 }
 
 /**
@@ -137,32 +137,32 @@ async function parseGitLogFallback(
         '--name-only',
         '-r',
         commit.hash,
-      ]);
+      ])
 
       const files = filesRaw
         .trim()
         .split('\n')
-        .filter((f) => f);
+        .filter((f) => f)
 
       for (const file of files) {
-        const area = getAreaForFile(file, areaFiles);
+        const area = getAreaForFile(file, areaFiles)
         if (area) {
           if (!areaContributions.has(area)) {
-            areaContributions.set(area, new Map());
+            areaContributions.set(area, new Map())
           }
 
-          const areaMap = areaContributions.get(area)!;
-          const existing = areaMap.get(commit.author_name);
+          const areaMap = areaContributions.get(area)!
+          const existing = areaMap.get(commit.author_name)
 
           if (existing) {
-            existing.commits++;
+            existing.commits++
           } else {
             areaMap.set(commit.author_name, {
               commits: 1,
               linesAdded: 0,
               linesRemoved: 0,
               lastCommit: new Date(commit.date),
-            });
+            })
           }
         }
       }
@@ -184,13 +184,13 @@ async function parseGitLogFallback(
 export function buildContributorExpertise(
   areaContributions: Map<string, Map<string, ContributorStats>>
 ): Map<string, ContributorExpertise> {
-  const contributorMap = new Map<string, ContributorExpertise>();
+  const contributorMap = new Map<string, ContributorExpertise>()
 
   for (const [area, contributors] of areaContributions.entries()) {
     const totalContributions = [...contributors.values()].reduce(
       (sum, c) => sum + calculateContributionScore(c.commits, c.linesAdded, c.linesRemoved),
       0
-    );
+    )
 
     for (const [name, stats] of contributors.entries()) {
       if (!contributorMap.has(name)) {
@@ -199,19 +199,19 @@ export function buildContributorExpertise(
           areas: new Map(),
           primaryExpertise: [],
           totalContributions: 0,
-        });
+        })
       }
 
-      const expert = contributorMap.get(name)!;
+      const expert = contributorMap.get(name)!
       const contribution = calculateContributionScore(
         stats.commits,
         stats.linesAdded,
         stats.linesRemoved
-      );
-      const score = Math.min(100, Math.round((contribution / totalContributions) * 100));
+      )
+      const score = Math.min(100, Math.round((contribution / totalContributions) * 100))
 
-      expert.areas.set(area, score);
-      expert.totalContributions += stats.commits;
+      expert.areas.set(area, score)
+      expert.totalContributions += stats.commits
     }
   }
 
@@ -220,11 +220,11 @@ export function buildContributorExpertise(
     const sortedAreas = [...expert.areas.entries()]
       .sort((a, b) => b[1] - a[1])
       .slice(0, 3)
-      .map(([area]) => area);
-    expert.primaryExpertise = sortedAreas;
+      .map(([area]) => area)
+    expert.primaryExpertise = sortedAreas
   }
 
-  return contributorMap;
+  return contributorMap
 }
 
 /**
@@ -239,13 +239,13 @@ export function buildContributorExpertise(
 export function buildKnowledgeAreas(
   areaContributions: Map<string, Map<string, ContributorStats>>
 ): KnowledgeArea[] {
-  const knowledgeAreas: KnowledgeArea[] = [];
+  const knowledgeAreas: KnowledgeArea[] = []
 
   for (const [area, contributors] of areaContributions.entries()) {
     const totalContributions = [...contributors.values()].reduce(
       (sum, c) => sum + calculateContributionScore(c.commits, c.linesAdded, c.linesRemoved),
       0
-    );
+    )
 
     const experts = [...contributors.entries()]
       .map(([name, stats]) => ({
@@ -259,23 +259,23 @@ export function buildKnowledgeAreas(
           )
         ),
       }))
-      .sort((a, b) => b.score - a.score);
+      .sort((a, b) => b.score - a.score)
 
     // Calculate bus factor (significant contributors >= 20% contribution)
-    const significantThreshold = 20;
-    const significantContributors = experts.filter((e) => e.score >= significantThreshold);
-    const busFactor = Math.max(1, significantContributors.length);
+    const significantThreshold = 20
+    const significantContributors = experts.filter((e) => e.score >= significantThreshold)
+    const busFactor = Math.max(1, significantContributors.length)
 
     // Determine coverage
-    let coverage: KnowledgeArea['coverage'];
+    let coverage: KnowledgeArea['coverage']
     if (busFactor === 1) {
-      coverage = 'solo';
+      coverage = 'solo'
     } else if (busFactor === 2) {
-      coverage = 'pair';
+      coverage = 'pair'
     } else if (busFactor <= 4) {
-      coverage = 'team';
+      coverage = 'team'
     } else {
-      coverage = 'distributed';
+      coverage = 'distributed'
     }
 
     knowledgeAreas.push({
@@ -283,11 +283,11 @@ export function buildKnowledgeAreas(
       experts: experts.slice(0, 5),
       busFactor,
       coverage,
-    });
+    })
   }
 
   // Sort areas by risk (lowest bus factor first)
-  knowledgeAreas.sort((a, b) => a.busFactor - b.busFactor);
+  knowledgeAreas.sort((a, b) => a.busFactor - b.busFactor)
 
-  return knowledgeAreas;
+  return knowledgeAreas
 }

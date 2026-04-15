@@ -4,13 +4,13 @@
  * Tests for the roast command which provides comedic analysis of the codebase.
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { KnowledgeGraph } from '../../src/graph/types.js';
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { KnowledgeGraph } from '../../src/graph/types.js'
 
 // Mock dependencies before importing the module
 vi.mock('../../src/graph/persistence.js', () => ({
   loadGraph: vi.fn(),
-}));
+}))
 
 vi.mock('../../src/analyzers/complexity.js', () => ({
   generateComplexityReport: vi.fn(() => ({
@@ -20,14 +20,14 @@ vi.mock('../../src/analyzers/complexity.js', () => ({
     hotspots: [],
     distribution: { low: 10, medium: 5, high: 2, veryHigh: 1 },
   })),
-}));
+}))
 
 vi.mock('../../src/tools/get-dead-code.js', () => ({
   execute: vi.fn(() => ({
     totalCount: 5,
     items: [{ filePath: 'src/unused.ts', name: 'unusedFunc', type: 'function' }],
   })),
-}));
+}))
 
 vi.mock('../../src/tools/get-bus-factor.js', () => ({
   execute: vi.fn(() =>
@@ -38,18 +38,18 @@ vi.mock('../../src/tools/get-bus-factor.js', () => ({
       criticalAreas: [],
     })
   ),
-}));
+}))
 
 vi.mock('../../src/export-png.js', () => ({
   isPngExportAvailable: vi.fn(() => Promise.resolve(false)),
   getRepoUrl: vi.fn(() => Promise.resolve(undefined)),
   exportToPng: vi.fn(),
-}));
+}))
 
 vi.mock('../../src/json-output.js', () => ({
   outputJson: vi.fn(),
   outputJsonError: vi.fn(),
-}));
+}))
 
 vi.mock('chalk', () => ({
   default: {
@@ -66,10 +66,10 @@ vi.mock('chalk', () => ({
     italic: (s: string) => s,
     red: (s: string) => s,
   },
-}));
+}))
 
-import { loadGraph } from '../../src/graph/persistence.js';
-import { outputJson, outputJsonError } from '../../src/json-output.js';
+import { loadGraph } from '../../src/graph/persistence.js'
+import { outputJson, outputJsonError } from '../../src/json-output.js'
 
 /**
  * Helper to create a mock knowledge graph
@@ -119,100 +119,100 @@ function createMockGraph(overrides: Partial<KnowledgeGraph> = {}): KnowledgeGrap
     },
     edges: [],
     ...overrides,
-  };
+  }
 }
 
 describe('Roast Command', () => {
-  let consoleSpy: ReturnType<typeof vi.spyOn>;
+  let consoleSpy: ReturnType<typeof vi.spyOn>
 
   beforeEach(() => {
-    vi.clearAllMocks();
-    consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-  });
+    vi.clearAllMocks()
+    consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+  })
 
   describe('Graph Loading', () => {
     it('should show error when no graph exists', async () => {
-      vi.mocked(loadGraph).mockResolvedValue(null);
+      vi.mocked(loadGraph).mockResolvedValue(null)
 
-      const { register } = await import('../../src/commands/fun/roast.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/fun/roast.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'roast', '-d', '/test']);
+      await program.parseAsync(['node', 'test', 'roast', '-d', '/test'])
 
-      expect(loadGraph).toHaveBeenCalledWith('/test');
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('No graph found'));
-    });
+      expect(loadGraph).toHaveBeenCalledWith('/test')
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('No graph found'))
+    })
 
     it('should output JSON error when no graph exists with --json flag', async () => {
-      vi.mocked(loadGraph).mockResolvedValue(null);
+      vi.mocked(loadGraph).mockResolvedValue(null)
 
-      const { register } = await import('../../src/commands/fun/roast.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/fun/roast.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'roast', '-d', '/test', '--json']);
+      await program.parseAsync(['node', 'test', 'roast', '-d', '/test', '--json'])
 
       expect(outputJsonError).toHaveBeenCalledWith(
         'roast',
         expect.stringContaining('No graph found')
-      );
-    });
-  });
+      )
+    })
+  })
 
   describe('Roast Generation', () => {
     it('should generate roast output for a valid graph', async () => {
-      const mockGraph = createMockGraph();
-      vi.mocked(loadGraph).mockResolvedValue(mockGraph);
+      const mockGraph = createMockGraph()
+      vi.mocked(loadGraph).mockResolvedValue(mockGraph)
 
-      const { register } = await import('../../src/commands/fun/roast.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/fun/roast.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'roast', '-d', '/test']);
+      await program.parseAsync(['node', 'test', 'roast', '-d', '/test'])
 
       // Should have called console.log with roast output
-      expect(consoleSpy).toHaveBeenCalled();
-      const output = consoleSpy.mock.calls.map((c) => c[0]).join('\n');
-      expect(output).toContain('CODEBASE ROAST');
-    });
+      expect(consoleSpy).toHaveBeenCalled()
+      const output = consoleSpy.mock.calls.map((c) => c[0]).join('\n')
+      expect(output).toContain('CODEBASE ROAST')
+    })
 
     it('should include stats roast based on file count', async () => {
-      const mockGraph = createMockGraph();
-      vi.mocked(loadGraph).mockResolvedValue(mockGraph);
+      const mockGraph = createMockGraph()
+      vi.mocked(loadGraph).mockResolvedValue(mockGraph)
 
-      const { register } = await import('../../src/commands/fun/roast.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/fun/roast.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'roast', '-d', '/test']);
+      await program.parseAsync(['node', 'test', 'roast', '-d', '/test'])
 
-      const output = consoleSpy.mock.calls.map((c) => c[0]).join('\n');
-      expect(output).toContain('25 files');
-      expect(output).toContain('opportunities for bugs');
-    });
-  });
+      const output = consoleSpy.mock.calls.map((c) => c[0]).join('\n')
+      expect(output).toContain('25 files')
+      expect(output).toContain('opportunities for bugs')
+    })
+  })
 
   describe('JSON Output', () => {
     it('should output JSON with roast data when --json flag is set', async () => {
-      const mockGraph = createMockGraph();
-      vi.mocked(loadGraph).mockResolvedValue(mockGraph);
+      const mockGraph = createMockGraph()
+      vi.mocked(loadGraph).mockResolvedValue(mockGraph)
 
-      const { register } = await import('../../src/commands/fun/roast.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/fun/roast.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'roast', '-d', '/test', '--json']);
+      await program.parseAsync(['node', 'test', 'roast', '-d', '/test', '--json'])
 
       expect(outputJson).toHaveBeenCalledWith(
         'roast',
@@ -221,15 +221,15 @@ describe('Roast Command', () => {
           totalLines: 5000,
           averageComplexity: expect.any(Number),
         })
-      );
-    });
+      )
+    })
 
     it('should include hotspots in JSON output', async () => {
-      const mockGraph = createMockGraph();
-      vi.mocked(loadGraph).mockResolvedValue(mockGraph);
+      const mockGraph = createMockGraph()
+      vi.mocked(loadGraph).mockResolvedValue(mockGraph)
 
       // Reset the mock to return hotspots
-      const { generateComplexityReport } = await import('../../src/analyzers/complexity.js');
+      const { generateComplexityReport } = await import('../../src/analyzers/complexity.js')
       vi.mocked(generateComplexityReport).mockReturnValue({
         averageComplexity: 8,
         maxComplexity: 25,
@@ -245,15 +245,15 @@ describe('Roast Command', () => {
           },
         ],
         distribution: { low: 10, medium: 5, high: 2, veryHigh: 1 },
-      });
+      })
 
-      const { register } = await import('../../src/commands/fun/roast.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/fun/roast.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'roast', '-d', '/test', '--json']);
+      await program.parseAsync(['node', 'test', 'roast', '-d', '/test', '--json'])
 
       expect(outputJson).toHaveBeenCalledWith(
         'roast',
@@ -265,49 +265,49 @@ describe('Roast Command', () => {
             }),
           ]),
         })
-      );
-    });
+      )
+    })
 
     it('should include dead code info in JSON output', async () => {
-      const mockGraph = createMockGraph();
-      vi.mocked(loadGraph).mockResolvedValue(mockGraph);
+      const mockGraph = createMockGraph()
+      vi.mocked(loadGraph).mockResolvedValue(mockGraph)
 
-      const { register } = await import('../../src/commands/fun/roast.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/fun/roast.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'roast', '-d', '/test', '--json']);
+      await program.parseAsync(['node', 'test', 'roast', '-d', '/test', '--json'])
 
       expect(outputJson).toHaveBeenCalledWith(
         'roast',
         expect.objectContaining({
           deadCode: expect.any(Array),
         })
-      );
-    });
+      )
+    })
 
     it('should include bus factor info in JSON output', async () => {
-      const mockGraph = createMockGraph();
-      vi.mocked(loadGraph).mockResolvedValue(mockGraph);
+      const mockGraph = createMockGraph()
+      vi.mocked(loadGraph).mockResolvedValue(mockGraph)
 
-      const { register } = await import('../../src/commands/fun/roast.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/fun/roast.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'roast', '-d', '/test', '--json']);
+      await program.parseAsync(['node', 'test', 'roast', '-d', '/test', '--json'])
 
       expect(outputJson).toHaveBeenCalledWith(
         'roast',
         expect.objectContaining({
           busFactor: expect.any(Array),
         })
-      );
-    });
-  });
+      )
+    })
+  })
 
   describe('Naming Crimes Detection', () => {
     it('should detect files with suspicious naming patterns', async () => {
@@ -341,122 +341,122 @@ describe('Roast Command', () => {
             exported: true,
           },
         },
-      });
-      vi.mocked(loadGraph).mockResolvedValue(mockGraph);
+      })
+      vi.mocked(loadGraph).mockResolvedValue(mockGraph)
 
-      const { register } = await import('../../src/commands/fun/roast.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/fun/roast.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'roast', '-d', '/test']);
+      await program.parseAsync(['node', 'test', 'roast', '-d', '/test'])
 
-      const output = consoleSpy.mock.calls.map((c) => c[0]).join('\n');
+      const output = consoleSpy.mock.calls.map((c) => c[0]).join('\n')
       // Should detect naming crimes
-      expect(output).toContain('Naming Crimes');
-    });
-  });
+      expect(output).toContain('Naming Crimes')
+    })
+  })
 
   describe('Complexity Crimes Detection', () => {
     it('should call out functions with very high complexity', async () => {
-      const mockGraph = createMockGraph();
-      vi.mocked(loadGraph).mockResolvedValue(mockGraph);
+      const mockGraph = createMockGraph()
+      vi.mocked(loadGraph).mockResolvedValue(mockGraph)
 
       // Reset the mock to return high complexity distribution
-      const { generateComplexityReport } = await import('../../src/analyzers/complexity.js');
+      const { generateComplexityReport } = await import('../../src/analyzers/complexity.js')
       vi.mocked(generateComplexityReport).mockReturnValue({
         averageComplexity: 12,
         maxComplexity: 35,
         totalComplexity: 200,
         hotspots: [],
         distribution: { low: 10, medium: 5, high: 3, veryHigh: 5 },
-      });
+      })
 
-      const { register } = await import('../../src/commands/fun/roast.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/fun/roast.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'roast', '-d', '/test']);
+      await program.parseAsync(['node', 'test', 'roast', '-d', '/test'])
 
-      const output = consoleSpy.mock.calls.map((c) => c[0]).join('\n');
-      expect(output).toContain('Complexity Crimes');
-      expect(output).toContain('5 functions have complexity over 20');
-    });
-  });
+      const output = consoleSpy.mock.calls.map((c) => c[0]).join('\n')
+      expect(output).toContain('Complexity Crimes')
+      expect(output).toContain('5 functions have complexity over 20')
+    })
+  })
 
   describe('Dead Code Roast', () => {
     it('should roast dead code when found', async () => {
-      const mockGraph = createMockGraph();
-      vi.mocked(loadGraph).mockResolvedValue(mockGraph);
+      const mockGraph = createMockGraph()
+      vi.mocked(loadGraph).mockResolvedValue(mockGraph)
 
-      const { register } = await import('../../src/commands/fun/roast.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/fun/roast.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'roast', '-d', '/test']);
+      await program.parseAsync(['node', 'test', 'roast', '-d', '/test'])
 
-      const output = consoleSpy.mock.calls.map((c) => c[0]).join('\n');
-      expect(output).toContain('Dead Code');
-      expect(output).toContain('5 unused exports');
-    });
-  });
+      const output = consoleSpy.mock.calls.map((c) => c[0]).join('\n')
+      expect(output).toContain('Dead Code')
+      expect(output).toContain('5 unused exports')
+    })
+  })
 
   describe('Bus Factor Roast', () => {
     it('should roast bus factor issues', async () => {
-      const mockGraph = createMockGraph();
-      vi.mocked(loadGraph).mockResolvedValue(mockGraph);
+      const mockGraph = createMockGraph()
+      vi.mocked(loadGraph).mockResolvedValue(mockGraph)
 
-      const { register } = await import('../../src/commands/fun/roast.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/fun/roast.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'roast', '-d', '/test']);
+      await program.parseAsync(['node', 'test', 'roast', '-d', '/test'])
 
-      const output = consoleSpy.mock.calls.map((c) => c[0]).join('\n');
-      expect(output).toContain('Bus Factor');
-    });
+      const output = consoleSpy.mock.calls.map((c) => c[0]).join('\n')
+      expect(output).toContain('Bus Factor')
+    })
 
     it('should warn about high ownership concentration', async () => {
-      const mockGraph = createMockGraph();
-      vi.mocked(loadGraph).mockResolvedValue(mockGraph);
+      const mockGraph = createMockGraph()
+      vi.mocked(loadGraph).mockResolvedValue(mockGraph)
 
       // Reset the mock to return high ownership
-      const { execute: getBusFactor } = await import('../../src/tools/get-bus-factor.js');
+      const { execute: getBusFactor } = await import('../../src/tools/get-bus-factor.js')
       vi.mocked(getBusFactor).mockResolvedValue({
         analyzed: true,
         overallBusFactor: 1,
         topOwners: [{ name: 'Solo Dev', percentage: 75, filesOwned: 50 }],
         criticalAreas: [],
-      });
+      })
 
-      const { register } = await import('../../src/commands/fun/roast.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/fun/roast.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'roast', '-d', '/test']);
+      await program.parseAsync(['node', 'test', 'roast', '-d', '/test'])
 
-      const output = consoleSpy.mock.calls.map((c) => c[0]).join('\n');
-      expect(output).toContain('75%');
-      expect(output).toContain('Solo Dev');
-    });
-  });
+      const output = consoleSpy.mock.calls.map((c) => c[0]).join('\n')
+      expect(output).toContain('75%')
+      expect(output).toContain('Solo Dev')
+    })
+  })
 
   describe('Hotspot Roasts', () => {
     it('should roast helper/util files appropriately', async () => {
-      const mockGraph = createMockGraph();
-      vi.mocked(loadGraph).mockResolvedValue(mockGraph);
+      const mockGraph = createMockGraph()
+      vi.mocked(loadGraph).mockResolvedValue(mockGraph)
 
       // Reset the mock to return a helper file hotspot
-      const { generateComplexityReport } = await import('../../src/analyzers/complexity.js');
+      const { generateComplexityReport } = await import('../../src/analyzers/complexity.js')
       vi.mocked(generateComplexityReport).mockReturnValue({
         averageComplexity: 8,
         maxComplexity: 15,
@@ -472,26 +472,26 @@ describe('Roast Command', () => {
           },
         ],
         distribution: { low: 10, medium: 5, high: 2, veryHigh: 0 },
-      });
+      })
 
-      const { register } = await import('../../src/commands/fun/roast.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/fun/roast.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'roast', '-d', '/test']);
+      await program.parseAsync(['node', 'test', 'roast', '-d', '/test'])
 
-      const output = consoleSpy.mock.calls.map((c) => c[0]).join('\n');
-      expect(output).toContain('junk drawer');
-    });
+      const output = consoleSpy.mock.calls.map((c) => c[0]).join('\n')
+      expect(output).toContain('junk drawer')
+    })
 
     it('should roast index files appropriately', async () => {
-      const mockGraph = createMockGraph();
-      vi.mocked(loadGraph).mockResolvedValue(mockGraph);
+      const mockGraph = createMockGraph()
+      vi.mocked(loadGraph).mockResolvedValue(mockGraph)
 
       // Reset the mock to return an index file hotspot
-      const { generateComplexityReport } = await import('../../src/analyzers/complexity.js');
+      const { generateComplexityReport } = await import('../../src/analyzers/complexity.js')
       vi.mocked(generateComplexityReport).mockReturnValue({
         averageComplexity: 8,
         maxComplexity: 15,
@@ -507,26 +507,26 @@ describe('Roast Command', () => {
           },
         ],
         distribution: { low: 10, medium: 5, high: 2, veryHigh: 0 },
-      });
+      })
 
-      const { register } = await import('../../src/commands/fun/roast.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/fun/roast.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'roast', '-d', '/test']);
+      await program.parseAsync(['node', 'test', 'roast', '-d', '/test'])
 
-      const output = consoleSpy.mock.calls.map((c) => c[0]).join('\n');
-      expect(output).toContain('organize this later');
-    });
+      const output = consoleSpy.mock.calls.map((c) => c[0]).join('\n')
+      expect(output).toContain('organize this later')
+    })
 
     it('should roast very high complexity as job security', async () => {
-      const mockGraph = createMockGraph();
-      vi.mocked(loadGraph).mockResolvedValue(mockGraph);
+      const mockGraph = createMockGraph()
+      vi.mocked(loadGraph).mockResolvedValue(mockGraph)
 
       // Reset the mock to return a very high complexity hotspot
-      const { generateComplexityReport } = await import('../../src/analyzers/complexity.js');
+      const { generateComplexityReport } = await import('../../src/analyzers/complexity.js')
       vi.mocked(generateComplexityReport).mockReturnValue({
         averageComplexity: 15,
         maxComplexity: 35,
@@ -542,18 +542,18 @@ describe('Roast Command', () => {
           },
         ],
         distribution: { low: 5, medium: 3, high: 2, veryHigh: 2 },
-      });
+      })
 
-      const { register } = await import('../../src/commands/fun/roast.js');
-      const { Command } = await import('commander');
+      const { register } = await import('../../src/commands/fun/roast.js')
+      const { Command } = await import('commander')
 
-      const program = new Command();
-      register(program);
+      const program = new Command()
+      register(program)
 
-      await program.parseAsync(['node', 'test', 'roast', '-d', '/test']);
+      await program.parseAsync(['node', 'test', 'roast', '-d', '/test'])
 
-      const output = consoleSpy.mock.calls.map((c) => c[0]).join('\n');
-      expect(output).toContain('job security');
-    });
-  });
-});
+      const output = consoleSpy.mock.calls.map((c) => c[0]).join('\n')
+      expect(output).toContain('job security')
+    })
+  })
+})

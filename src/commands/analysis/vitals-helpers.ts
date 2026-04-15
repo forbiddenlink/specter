@@ -3,124 +3,124 @@
  * Extracts metric calculation and display logic
  */
 
-import chalk from 'chalk';
+import chalk from 'chalk'
 
 export interface VitalsMetrics {
-  healthScore: number;
-  avgComplexity: number;
-  busFactorValue: number;
-  deadExports: number;
-  coverageEstimate: number;
-  healthTrend?: number; // health change from previous snapshot
-  fileCount: number;
+  healthScore: number
+  avgComplexity: number
+  busFactorValue: number
+  deadExports: number
+  coverageEstimate: number
+  healthTrend?: number // health change from previous snapshot
+  fileCount: number
 }
 
 /**
  * Determine health status and color
  */
 export function getHealthStatus(healthScore: number): {
-  color: (str: string) => string;
-  status: string;
-  indicator: string;
+  color: (str: string) => string
+  status: string
+  indicator: string
 } {
-  const color = healthScore >= 80 ? chalk.green : healthScore >= 60 ? chalk.yellow : chalk.red;
-  const status = healthScore >= 80 ? 'STABLE' : healthScore >= 60 ? 'ELEVATED' : 'CRITICAL';
-  const indicator = `PULSE: ${status}`;
+  const color = healthScore >= 80 ? chalk.green : healthScore >= 60 ? chalk.yellow : chalk.red
+  const status = healthScore >= 80 ? 'STABLE' : healthScore >= 60 ? 'ELEVATED' : 'CRITICAL'
+  const indicator = `PULSE: ${status}`
 
-  return { color, status, indicator };
+  return { color, status, indicator }
 }
 
 /**
  * Determine complexity status and color
  */
 export function getComplexityStatus(avgComplexity: number): {
-  color: (str: string) => string;
-  status: string;
-  statusText: string;
+  color: (str: string) => string
+  status: string
+  statusText: string
 } {
-  const color = avgComplexity <= 5 ? chalk.green : avgComplexity <= 10 ? chalk.yellow : chalk.red;
-  const status = `${avgComplexity.toFixed(0)}`;
+  const color = avgComplexity <= 5 ? chalk.green : avgComplexity <= 10 ? chalk.yellow : chalk.red
+  const status = `${avgComplexity.toFixed(0)}`
   const statusText =
-    avgComplexity <= 5 ? 'healthy' : avgComplexity <= 10 ? '⚠️  warning' : 'critical';
+    avgComplexity <= 5 ? 'healthy' : avgComplexity <= 10 ? '⚠️  warning' : 'critical'
 
-  return { color, status, statusText };
+  return { color, status, statusText }
 }
 
 /**
  * Determine bus factor status and color
  */
 export function getBusFactorStatus(busFactorValue: number): {
-  color: (str: string) => string;
-  status: string;
-  statusText: string;
+  color: (str: string) => string
+  status: string
+  statusText: string
 } {
-  const color = busFactorValue >= 3 ? chalk.green : busFactorValue >= 2 ? chalk.yellow : chalk.red;
-  const status = busFactorValue.toFixed(1);
+  const color = busFactorValue >= 3 ? chalk.green : busFactorValue >= 2 ? chalk.yellow : chalk.red
+  const status = busFactorValue.toFixed(1)
   const statusText =
-    busFactorValue >= 3 ? 'healthy' : busFactorValue >= 2 ? '😰 at risk' : 'critical';
+    busFactorValue >= 3 ? 'healthy' : busFactorValue >= 2 ? '😰 at risk' : 'critical'
 
-  return { color, status, statusText };
+  return { color, status, statusText }
 }
 
 /**
  * Determine dead exports status and color
  */
 export function getDeadExportsStatus(deadExports: number): {
-  color: (str: string) => string;
-  status: string;
-  statusText: string;
-  barValue: number;
+  color: (str: string) => string
+  status: string
+  statusText: string
+  barValue: number
 } {
-  const color = deadExports === 0 ? chalk.green : deadExports <= 5 ? chalk.yellow : chalk.red;
-  const status = String(deadExports);
-  const statusText = deadExports === 0 ? 'clean' : deadExports <= 5 ? '👻 haunted' : 'infested';
-  const barValue = deadExports === 0 ? 0 : Math.min(deadExports, 20);
+  const color = deadExports === 0 ? chalk.green : deadExports <= 5 ? chalk.yellow : chalk.red
+  const status = String(deadExports)
+  const statusText = deadExports === 0 ? 'clean' : deadExports <= 5 ? '👻 haunted' : 'infested'
+  const barValue = deadExports === 0 ? 0 : Math.min(deadExports, 20)
 
-  return { color, status, statusText, barValue };
+  return { color, status, statusText, barValue }
 }
 
 /**
  * Determine coverage status and color
  */
 export function getCoverageStatus(coverageEstimate: number): {
-  color: (str: string) => string;
-  percent: string;
-  statusText: string;
+  color: (str: string) => string
+  percent: string
+  statusText: string
 } {
   const color =
-    coverageEstimate >= 80 ? chalk.green : coverageEstimate >= 50 ? chalk.yellow : chalk.red;
-  const percent = Math.round(coverageEstimate).toString();
+    coverageEstimate >= 80 ? chalk.green : coverageEstimate >= 50 ? chalk.yellow : chalk.red
+  const percent = Math.round(coverageEstimate).toString()
   const statusText =
-    coverageEstimate >= 80 ? '🛡️  solid' : coverageEstimate >= 50 ? '🛡️  decent' : 'sparse';
+    coverageEstimate >= 80 ? '🛡️  solid' : coverageEstimate >= 50 ? '🛡️  decent' : 'sparse'
 
-  return { color, percent, statusText };
+  return { color, percent, statusText }
 }
 
 /**
  * Generate diagnosis and prescription based on health score
  */
 export function generateDiagnosis(healthScore: number): {
-  diagnosis: string;
-  prescription: string;
+  diagnosis: string
+  prescription: string
 } {
-  let diagnosis = 'Stable with minor concerns';
-  let prescription = 'Consider refactoring top hotspots';
+  let diagnosis = 'Stable with minor concerns'
+  let prescription = 'Consider refactoring top hotspots'
 
   if (healthScore >= 90) {
-    diagnosis = 'Excellent health - keep it up!';
-    prescription = 'Maintain current practices';
+    diagnosis = 'Excellent health - keep it up!'
+    prescription = 'Maintain current practices'
   } else if (healthScore >= 80) {
-    diagnosis = 'Good health with room to improve';
-    prescription = 'Address any complexity warnings';
+    diagnosis = 'Good health with room to improve'
+    prescription = 'Address any complexity warnings'
   } else if (healthScore >= 60) {
-    diagnosis = 'Moderate health - attention needed';
-    prescription = 'Prioritize refactoring hotspots';
+    diagnosis = 'Moderate health - attention needed'
+    prescription = 'Prioritize refactoring hotspots'
   } else {
-    diagnosis = 'Critical - immediate action needed';
-    prescription = 'Emergency complexity reduction';
+    diagnosis = 'Critical - immediate action needed'
+    prescription = 'Emergency complexity reduction'
   }
 
-  return { diagnosis, prescription };
+  return { diagnosis, prescription }
 }
 
 /**
@@ -128,16 +128,16 @@ export function generateDiagnosis(healthScore: number): {
  */
 export function formatHealthIndicator(trend?: number): string {
   if (trend === undefined || trend === 0) {
-    return chalk.dim('--');
+    return chalk.dim('--')
   }
-  return trend > 0 ? chalk.green(`📈 +${trend}`) : chalk.red(`${trend}`);
+  return trend > 0 ? chalk.green(`📈 +${trend}`) : chalk.red(`${trend}`)
 }
 
 /**
  * Create progress bar
  */
 export function makeBar(value: number, max: number, width: number = 10): string {
-  const filled = Math.round((value / max) * width);
-  const empty = width - filled;
-  return '█'.repeat(filled) + '░'.repeat(empty);
+  const filled = Math.round((value / max) * width)
+  const empty = width - filled
+  return '█'.repeat(filled) + '░'.repeat(empty)
 }

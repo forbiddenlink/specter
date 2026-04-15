@@ -2,26 +2,26 @@
  * Search command - semantic code search
  */
 
-import path from 'node:path';
-import chalk from 'chalk';
-import type { Command } from 'commander';
-import { loadEmbeddingIndex } from '../../embeddings.js';
-import { loadGraph } from '../../graph/persistence.js';
-import { outputJson, outputJsonError } from '../../json-output.js';
+import path from 'node:path'
+import chalk from 'chalk'
+import type { Command } from 'commander'
+import { loadEmbeddingIndex } from '../../embeddings.js'
+import { loadGraph } from '../../graph/persistence.js'
+import { outputJson, outputJsonError } from '../../json-output.js'
 import {
   formatSearchWithMode,
   type SearchMode,
   type SearchResponse,
   searchCodebase,
   semanticSearch,
-} from '../../search.js';
-import { createSpinner } from '../types.js';
+} from '../../search.js'
+import { createSpinner } from '../types.js'
 
-type LineFormatter = (line: string) => string;
+type LineFormatter = (line: string) => string
 
 interface FormatRule {
-  match: (line: string) => boolean;
-  format: LineFormatter;
+  match: (line: string) => boolean
+  format: LineFormatter
 }
 
 /**
@@ -92,35 +92,35 @@ const FORMAT_RULES: FormatRule[] = [
     match: (line) => line.includes('... and'),
     format: (line) => chalk.dim(`  ${line}`),
   },
-];
+]
 
 function formatProgressBar(line: string): string {
   if (line.includes('█')) {
-    return chalk.green(`  ${line}`);
+    return chalk.green(`  ${line}`)
   }
   if (line.includes('▓')) {
-    return chalk.yellow(`  ${line}`);
+    return chalk.yellow(`  ${line}`)
   }
-  return chalk.dim(`  ${line}`);
+  return chalk.dim(`  ${line}`)
 }
 
 function formatOutputLine(line: string): string {
   for (const rule of FORMAT_RULES) {
     if (rule.match(line)) {
-      return rule.format(line);
+      return rule.format(line)
     }
   }
-  return chalk.white(`  ${line}`);
+  return chalk.white(`  ${line}`)
 }
 
 function displayResults(response: SearchResponse, limit: number): void {
-  const output = formatSearchWithMode(response, limit);
+  const output = formatSearchWithMode(response, limit)
 
-  console.log();
+  console.log()
   for (const line of output.split('\n')) {
-    console.log(formatOutputLine(line));
+    console.log(formatOutputLine(line))
   }
-  console.log();
+  console.log()
 }
 
 export function register(program: Command): void {
@@ -133,63 +133,63 @@ export function register(program: Command): void {
     .option('-k, --keyword', 'Use pure keyword search')
     .option('--json', 'Output as JSON for CI/CD integration')
     .action(async (query, options) => {
-      const rootDir = path.resolve(options.dir);
-      const limit = parseInt(options.limit, 10);
+      const rootDir = path.resolve(options.dir)
+      const limit = parseInt(options.limit, 10)
 
       // Determine search mode
-      let mode: SearchMode = 'hybrid';
+      let mode: SearchMode = 'hybrid'
       if (options.semantic) {
-        mode = 'semantic';
+        mode = 'semantic'
       } else if (options.keyword) {
-        mode = 'keyword';
+        mode = 'keyword'
       }
 
-      const spinner = options.json ? null : createSpinner('Searching codebase...');
-      spinner?.start();
+      const spinner = options.json ? null : createSpinner('Searching codebase...')
+      spinner?.start()
 
-      const graph = await loadGraph(rootDir);
+      const graph = await loadGraph(rootDir)
 
       if (!graph) {
-        spinner?.fail('No graph found. Run `specter scan` first.');
+        spinner?.fail('No graph found. Run `specter scan` first.')
         if (options.json) {
-          outputJsonError('search', 'No graph found. Run `specter scan` first.');
+          outputJsonError('search', 'No graph found. Run `specter scan` first.')
         }
-        return;
+        return
       }
 
-      let response: SearchResponse;
+      let response: SearchResponse
 
       if (mode === 'keyword') {
         // Pure keyword search (no index needed)
-        response = searchCodebase(query, graph);
-        response.mode = 'keyword';
+        response = searchCodebase(query, graph)
+        response.mode = 'keyword'
       } else {
         // Need embedding index for semantic or hybrid search
-        const index = await loadEmbeddingIndex(rootDir);
+        const index = await loadEmbeddingIndex(rootDir)
 
         if (!index) {
           if (mode === 'semantic') {
             spinner?.fail(
               'No embedding index found. Run `specter index` first for semantic search.'
-            );
+            )
             if (options.json) {
               outputJsonError(
                 'search',
                 'No embedding index found. Run `specter index` first for semantic search.'
-              );
+              )
             }
-            return;
+            return
           }
           // Fall back to keyword search for hybrid mode
-          if (spinner) spinner.text = 'No embedding index found, using keyword search...';
-          response = searchCodebase(query, graph);
-          response.mode = 'keyword';
+          if (spinner) spinner.text = 'No embedding index found, using keyword search...'
+          response = searchCodebase(query, graph)
+          response.mode = 'keyword'
         } else {
-          response = semanticSearch(query, graph, index, { mode, limit: limit * 2 });
+          response = semanticSearch(query, graph, index, { mode, limit: limit * 2 })
         }
       }
 
-      spinner?.stop();
+      spinner?.stop()
 
       // JSON output for CI/CD
       if (options.json) {
@@ -198,10 +198,10 @@ export function register(program: Command): void {
           mode: response.mode,
           totalResults: response.results.length,
           results: response.results.slice(0, limit),
-        });
-        return;
+        })
+        return
       }
 
-      displayResults(response, limit);
-    });
+      displayResults(response, limit)
+    })
 }

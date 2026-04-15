@@ -11,9 +11,9 @@ export {
   getCommitChanges,
   getStagedChanges,
   getUnstagedChanges,
-} from './diff-analyzer.js';
+} from './diff-analyzer.js'
 // Risk scorer
-export { calculateRiskScore } from './scorer.js';
+export { calculateRiskScore } from './scorer.js'
 // Types
 export type {
   DiffFile,
@@ -21,4 +21,4 @@ export type {
   DiffStatus,
   RiskFactor,
   RiskScore,
-} from './types.js';
+} from './types.js'
