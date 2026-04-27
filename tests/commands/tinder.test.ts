@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import type { FileNode, FunctionNode, KnowledgeGraph } from '../../src/graph/types.js';
+import { describe, expect, it } from 'vitest'
+import type { FileNode, FunctionNode, KnowledgeGraph } from '../../src/graph/types.js'
 
 describe('tinder command', () => {
   const apiFileNode: FileNode = {
@@ -16,7 +16,7 @@ describe('tinder command', () => {
     lineCount: 250,
     importCount: 1,
     exportCount: 1,
-  };
+  }
 
   const handleRequestNode: FunctionNode = {
     id: 'func:src/api.ts:handleRequest',
@@ -31,7 +31,7 @@ describe('tinder command', () => {
     returnType: 'void',
     isAsync: false,
     isGenerator: false,
-  };
+  }
 
   const utilsFileNode: FileNode = {
     id: 'file:src/utils.ts',
@@ -47,7 +47,7 @@ describe('tinder command', () => {
     lineCount: 150,
     importCount: 0,
     exportCount: 3,
-  };
+  }
 
   const util1Node: FunctionNode = {
     id: 'func:src/utils.ts:util1',
@@ -62,7 +62,7 @@ describe('tinder command', () => {
     returnType: 'string',
     isAsync: false,
     isGenerator: false,
-  };
+  }
 
   const util2Node: FunctionNode = {
     id: 'func:src/utils.ts:util2',
@@ -77,7 +77,7 @@ describe('tinder command', () => {
     returnType: 'number',
     isAsync: false,
     isGenerator: false,
-  };
+  }
 
   const util3Node: FunctionNode = {
     id: 'func:src/utils.ts:util3',
@@ -92,7 +92,7 @@ describe('tinder command', () => {
     returnType: 'boolean',
     isAsync: false,
     isGenerator: false,
-  };
+  }
 
   const mockGraph: KnowledgeGraph = {
     version: '1.0.0',
@@ -122,75 +122,75 @@ describe('tinder command', () => {
         type: 'imports',
       },
     ],
-  };
+  }
 
   const getFileNodes = (graph: KnowledgeGraph): FileNode[] =>
-    Object.values(graph.nodes).filter((n): n is FileNode => n.type === 'file');
+    Object.values(graph.nodes).filter((n): n is FileNode => n.type === 'file')
 
   it('should generate codebase profile', () => {
-    const files = getFileNodes(mockGraph);
+    const files = getFileNodes(mockGraph)
 
-    expect(files.length).toBeGreaterThan(0);
-    expect(mockGraph.metadata.fileCount).toBe(2);
-  });
+    expect(files.length).toBeGreaterThan(0)
+    expect(mockGraph.metadata.fileCount).toBe(2)
+  })
 
   it('should show green flags (positive attributes)', () => {
-    const apiNode = mockGraph.nodes['file:src/api.ts'] as FileNode;
-    const lastModified = new Date(apiNode.lastModified!).getTime();
-    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const apiNode = mockGraph.nodes['file:src/api.ts'] as FileNode
+    const lastModified = new Date(apiNode.lastModified!).getTime()
+    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
 
     const avgComplexity =
       mockGraph.metadata.totalLines > 0
         ? getFileNodes(mockGraph).reduce((sum, f) => sum + (f.complexity ?? 0), 0) /
           getFileNodes(mockGraph).length
-        : 0;
+        : 0
 
     const greenFlags = {
       goodComplexity: avgComplexity < 10,
       recentActivity: lastModified > thirtyDaysAgo,
       hasTests: false, // Would check for test files
-    };
+    }
 
-    expect(greenFlags.goodComplexity).toBe(true);
-    expect(greenFlags.recentActivity).toBe(false); // More than 30 days ago
-  });
+    expect(greenFlags.goodComplexity).toBe(true)
+    expect(greenFlags.recentActivity).toBe(false) // More than 30 days ago
+  })
 
   it('should show red flags (warning signs)', () => {
-    const utilsNode = mockGraph.nodes['file:src/utils.ts'] as FileNode;
-    const files = getFileNodes(mockGraph);
-    const avgComplexity = files.reduce((sum, f) => sum + (f.complexity ?? 0), 0) / files.length;
+    const utilsNode = mockGraph.nodes['file:src/utils.ts'] as FileNode
+    const files = getFileNodes(mockGraph)
+    const avgComplexity = files.reduce((sum, f) => sum + (f.complexity ?? 0), 0) / files.length
 
     const redFlags = {
       tooManyExports: utilsNode.exportCount > 2,
       highComplexity: avgComplexity > 15,
       lowCoverage: true, // Would calculate from actual coverage
-    };
+    }
 
-    expect(redFlags.tooManyExports).toBe(true); // utils.ts has 3 exports
-  });
+    expect(redFlags.tooManyExports).toBe(true) // utils.ts has 3 exports
+  })
 
   it('should calculate age of codebase', () => {
-    const files = getFileNodes(mockGraph);
-    const dates = files.filter((f) => f.lastModified).map((f) => new Date(f.lastModified!));
+    const files = getFileNodes(mockGraph)
+    const dates = files.filter((f) => f.lastModified).map((f) => new Date(f.lastModified!))
 
-    const oldest = dates.reduce((old, d) => Math.min(old, d.getTime()), Date.now());
+    const oldest = dates.reduce((old, d) => Math.min(old, d.getTime()), Date.now())
 
-    const ageInMonths = Math.floor((Date.now() - oldest) / (1000 * 60 * 60 * 24 * 30));
+    const ageInMonths = Math.floor((Date.now() - oldest) / (1000 * 60 * 60 * 24 * 30))
 
-    expect(ageInMonths).toBeGreaterThanOrEqual(0);
-  });
+    expect(ageInMonths).toBeGreaterThanOrEqual(0)
+  })
 
   it('should show language distribution', () => {
-    const languages = mockGraph.metadata.languages;
-    const total = Object.values(languages).reduce((a, b) => a + b, 0);
-    const tsPercentage = Math.round(((languages.typescript || 0) / total) * 100);
+    const languages = mockGraph.metadata.languages
+    const total = Object.values(languages).reduce((a, b) => a + b, 0)
+    const tsPercentage = Math.round(((languages.typescript || 0) / total) * 100)
 
-    expect(tsPercentage).toBe(100); // All TypeScript
-  });
+    expect(tsPercentage).toBe(100) // All TypeScript
+  })
 
   it('should generate dating profile bio', () => {
-    const files = getFileNodes(mockGraph);
-    const avgComplexity = files.reduce((sum, f) => sum + (f.complexity ?? 0), 0) / files.length;
+    const files = getFileNodes(mockGraph)
+    const avgComplexity = files.reduce((sum, f) => sum + (f.complexity ?? 0), 0) / files.length
 
     const bio = {
       age: 'X months old',
@@ -198,44 +198,44 @@ describe('tinder command', () => {
       files: mockGraph.metadata.fileCount,
       lines: mockGraph.metadata.totalLines,
       complexity: avgComplexity,
-    };
+    }
 
-    expect(bio.files).toBe(2);
-    expect(bio.lines).toBe(400);
-    expect(bio.language).toBe('TypeScript');
-  });
+    expect(bio.files).toBe(2)
+    expect(bio.lines).toBe(400)
+    expect(bio.language).toBe('TypeScript')
+  })
 
   it('should have swipe actions', () => {
     // The tinder command should show [PASS] and [MERGE] options
-    const actions = ['PASS', 'MERGE'];
+    const actions = ['PASS', 'MERGE']
 
-    expect(actions).toContain('PASS');
-    expect(actions).toContain('MERGE');
-  });
+    expect(actions).toContain('PASS')
+    expect(actions).toContain('MERGE')
+  })
 
   it('should support personality modes', () => {
     // Different personalities should generate different bios
-    const personalities = ['default', 'roast', 'flirty'];
+    const personalities = ['default', 'roast', 'flirty']
 
     personalities.forEach((personality) => {
-      expect(personality).toBeTruthy();
-    });
-  });
+      expect(personality).toBeTruthy()
+    })
+  })
 
   it('should calculate health score', () => {
-    const files = getFileNodes(mockGraph);
-    const avgComplexity = files.reduce((sum, f) => sum + (f.complexity ?? 0), 0) / files.length;
+    const files = getFileNodes(mockGraph)
+    const avgComplexity = files.reduce((sum, f) => sum + (f.complexity ?? 0), 0) / files.length
 
     const factors = {
       complexity: avgComplexity < 10 ? 25 : 15,
       size: mockGraph.metadata.fileCount < 100 ? 25 : 15,
       activity: 20, // Would calculate from git history
       coverage: 15, // Would calculate from actual coverage
-    };
+    }
 
-    const healthScore = Object.values(factors).reduce((a, b) => a + b, 0);
+    const healthScore = Object.values(factors).reduce((a, b) => a + b, 0)
 
-    expect(healthScore).toBeGreaterThan(0);
-    expect(healthScore).toBeLessThanOrEqual(100);
-  });
-});
+    expect(healthScore).toBeGreaterThan(0)
+    expect(healthScore).toBeLessThanOrEqual(100)
+  })
+})

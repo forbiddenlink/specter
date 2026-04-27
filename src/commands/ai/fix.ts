@@ -2,10 +2,10 @@
  * Fix command - Suggest actionable fixes for detected issues
  */
 
-import path from 'node:path';
-import chalk from 'chalk';
-import type { Command } from 'commander';
-import { showNextSteps } from '../../cli-utils.js';
+import path from 'node:path'
+import chalk from 'chalk'
+import type { Command } from 'commander'
+import { showNextSteps } from '../../cli-utils.js'
 import {
   type FixResult,
   formatFix,
@@ -13,16 +13,16 @@ import {
   generateFix,
   generateFixAll,
   type SuggestionSeverity,
-} from '../../fix.js';
-import { runInteractiveFix } from '../../fix-interactive.js';
-import { loadGraph } from '../../graph/persistence.js';
-import type { KnowledgeGraph } from '../../graph/types.js';
-import { outputJson, outputJsonError } from '../../json-output.js';
-import { createSpinner } from '../types.js';
+} from '../../fix.js'
+import { runInteractiveFix } from '../../fix-interactive.js'
+import { loadGraph } from '../../graph/persistence.js'
+import type { KnowledgeGraph } from '../../graph/types.js'
+import { outputJson, outputJsonError } from '../../json-output.js'
+import { createSpinner } from '../types.js'
 
 const FIX_LINE_PATTERNS: Array<{
-  test: (line: string) => boolean;
-  style: (line: string) => string;
+  test: (line: string) => boolean
+  style: (line: string) => string
 }> = [
   { test: (l) => l.includes('\u{1F527}'), style: (l) => chalk.bold.cyan(l) },
   { test: (l) => l.includes('\u2550'), style: (l) => chalk.magenta(l) },
@@ -41,17 +41,17 @@ const FIX_LINE_PATTERNS: Array<{
     style: (l) => chalk.cyan(l),
   },
   { test: (l) => l.includes('Expected result:'), style: (l) => chalk.green(l) },
-];
+]
 
 function colorizeOutputLine(line: string): string {
-  const match = FIX_LINE_PATTERNS.find((pattern) => pattern.test(line));
-  return match ? match.style(line) : chalk.white(line);
+  const match = FIX_LINE_PATTERNS.find((pattern) => pattern.test(line))
+  return match ? match.style(line) : chalk.white(line)
 }
 
 function printColorizedOutput(output: string): void {
-  console.log();
+  console.log()
   for (const line of output.split('\n')) {
-    console.log(colorizeOutputLine(line));
+    console.log(colorizeOutputLine(line))
   }
 }
 
@@ -61,7 +61,7 @@ async function handleAllFilesMode(
   severity: SuggestionSeverity,
   options: { json?: boolean }
 ) {
-  const results = await generateFixAll(rootDir, graph, { severity });
+  const results = await generateFixAll(rootDir, graph, { severity })
 
   if (options.json) {
     outputJson('fix', {
@@ -69,11 +69,11 @@ async function handleAllFilesMode(
       results,
       totalFiles: results.length,
       totalSuggestions: results.reduce((sum, r) => sum + r.summary.total, 0),
-    });
-    return;
+    })
+    return
   }
 
-  printColorizedOutput(formatFixAll(results));
+  printColorizedOutput(formatFixAll(results))
 }
 
 async function handleSingleFileMode(
@@ -83,37 +83,37 @@ async function handleSingleFileMode(
   severity: SuggestionSeverity,
   options: { json?: boolean; interactive?: boolean; autoApply?: boolean }
 ): Promise<FixResult | null> {
-  const filePath = path.relative(rootDir, path.resolve(rootDir, file));
+  const filePath = path.relative(rootDir, path.resolve(rootDir, file))
 
   const fileNode = Object.values(graph.nodes).find(
     (n) => n.type === 'file' && (n.filePath === filePath || n.filePath === file)
-  );
+  )
 
   if (!fileNode) {
     if (options.json) {
-      outputJsonError('fix', `File not found in knowledge graph: ${file}`);
+      outputJsonError('fix', `File not found in knowledge graph: ${file}`)
     } else {
-      console.log(chalk.red(`  ✗ File not found in knowledge graph: ${file}`));
-      console.log(chalk.dim('  Make sure the file was scanned. Run `specter scan` to update.'));
+      console.log(chalk.red(`  ✗ File not found in knowledge graph: ${file}`))
+      console.log(chalk.dim('  Make sure the file was scanned. Run `specter scan` to update.'))
     }
-    return null;
+    return null
   }
 
-  const result = await generateFix(fileNode.filePath, rootDir, graph, { severity });
+  const result = await generateFix(fileNode.filePath, rootDir, graph, { severity })
 
   if (options.interactive) {
     const session = await runInteractiveFix(result, {
       autoApply: options.autoApply,
       skipInfo: severity !== 'info',
-    });
+    })
 
     if (session.applied > 0) {
       console.log(
         chalk.cyan('  🔄 Fixes applied! Run `specter scan` to update the knowledge graph.')
-      );
-      console.log();
+      )
+      console.log()
     }
-    return null;
+    return null
   }
 
   if (options.json) {
@@ -121,11 +121,11 @@ async function handleSingleFileMode(
       mode: 'single',
       file: fileNode.filePath,
       result,
-    });
-    return null;
+    })
+    return null
   }
 
-  return result;
+  return result
 }
 
 export function register(program: Command): void {
@@ -151,25 +151,25 @@ Use interactive mode to safely apply suggested refactorings step-by-step.
 `
     )
     .action(async (file, options) => {
-      const rootDir = path.resolve(options.dir);
-      const spinner = options.json ? null : createSpinner('Analyzing for fix suggestions...');
-      spinner?.start();
+      const rootDir = path.resolve(options.dir)
+      const spinner = options.json ? null : createSpinner('Analyzing for fix suggestions...')
+      spinner?.start()
 
-      const graph = await loadGraph(rootDir);
+      const graph = await loadGraph(rootDir)
 
       if (!graph) {
-        spinner?.fail('No graph found. Run `specter scan` first.');
+        spinner?.fail('No graph found. Run `specter scan` first.')
         if (options.json) {
-          outputJsonError('fix', 'No graph found. Run `specter scan` first.');
+          outputJsonError('fix', 'No graph found. Run `specter scan` first.')
         }
-        return;
+        return
       }
 
-      const severity = options.severity as SuggestionSeverity;
+      const severity = options.severity as SuggestionSeverity
 
       if (options.all || !file) {
-        spinner?.stop();
-        await handleAllFilesMode(rootDir, graph, severity, options);
+        spinner?.stop()
+        await handleAllFilesMode(rootDir, graph, severity, options)
 
         // Show next steps suggestions
         if (!options.json) {
@@ -186,14 +186,14 @@ Use interactive mode to safely apply suggested refactorings step-by-step.
               description: 'Analyze coupling between files',
               command: 'specter coupling',
             },
-          ];
-          showNextSteps(suggestions);
+          ]
+          showNextSteps(suggestions)
         }
       } else {
-        spinner?.stop();
-        const result = await handleSingleFileMode(file, rootDir, graph, severity, options);
+        spinner?.stop()
+        const result = await handleSingleFileMode(file, rootDir, graph, severity, options)
         if (result) {
-          printColorizedOutput(formatFix(result));
+          printColorizedOutput(formatFix(result))
 
           // Show next steps suggestions
           if (!options.json) {
@@ -210,10 +210,10 @@ Use interactive mode to safely apply suggested refactorings step-by-step.
                 description: 'View file change history',
                 command: `specter who ${file}`,
               },
-            ];
-            showNextSteps(suggestions);
+            ]
+            showNextSteps(suggestions)
           }
         }
       }
-    });
+    })
 }

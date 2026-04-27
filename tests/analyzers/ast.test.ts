@@ -5,42 +5,42 @@
  * function extraction, class analysis, and complexity calculation.
  */
 
-import * as fs from 'node:fs';
-import * as os from 'node:os';
-import * as path from 'node:path';
-import { Project, type SourceFile } from 'ts-morph';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { analyzeSourceFile, createProject, getSourceFiles } from '../../src/analyzers/ast.js';
-import type { ClassNode, FunctionNode } from '../../src/graph/types.js';
+import * as fs from 'node:fs'
+import * as os from 'node:os'
+import * as path from 'node:path'
+import { Project, type SourceFile } from 'ts-morph'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { analyzeSourceFile, createProject, getSourceFiles } from '../../src/analyzers/ast.js'
+import type { ClassNode, FunctionNode } from '../../src/graph/types.js'
 
 describe('AST Analyzer', () => {
-  let tempDir: string;
-  let project: Project;
+  let tempDir: string
+  let project: Project
 
   beforeAll(() => {
     // Create a temporary directory for test files
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'specter-test-'));
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'specter-test-'))
     project = new Project({
       compilerOptions: {
         target: 99, // ESNext
         module: 99, // ESNext
         strict: true,
       },
-    });
-  });
+    })
+  })
 
   afterAll(() => {
     // Clean up temp directory
-    fs.rmSync(tempDir, { recursive: true, force: true });
-  });
+    fs.rmSync(tempDir, { recursive: true, force: true })
+  })
 
   /**
    * Helper to create a test file and add it to the project
    */
   function createTestFile(filename: string, content: string): SourceFile {
-    const filePath = path.join(tempDir, filename);
-    fs.writeFileSync(filePath, content);
-    return project.addSourceFileAtPath(filePath);
+    const filePath = path.join(tempDir, filename)
+    fs.writeFileSync(filePath, content)
+    return project.addSourceFileAtPath(filePath)
   }
 
   describe('analyzeSourceFile', () => {
@@ -53,17 +53,17 @@ export function sayHello(name: string): string {
   return greeting + ' ' + name;
 }
       `.trim()
-      );
+      )
 
-      const result = analyzeSourceFile(sourceFile, tempDir);
+      const result = analyzeSourceFile(sourceFile, tempDir)
 
-      expect(result.fileNode).toBeDefined();
-      expect(result.fileNode.type).toBe('file');
-      expect(result.fileNode.name).toBe('simple.ts');
-      expect(result.fileNode.language).toBe('typescript');
-      expect(result.fileNode.importCount).toBe(0);
-      expect(result.fileNode.exportCount).toBe(2);
-    });
+      expect(result.fileNode).toBeDefined()
+      expect(result.fileNode.type).toBe('file')
+      expect(result.fileNode.name).toBe('simple.ts')
+      expect(result.fileNode.language).toBe('typescript')
+      expect(result.fileNode.importCount).toBe(0)
+      expect(result.fileNode.exportCount).toBe(2)
+    })
 
     it('should extract function declarations', () => {
       const sourceFile = createTestFile(
@@ -81,27 +81,27 @@ function privateHelper(): void {
   console.log('private');
 }
       `.trim()
-      );
+      )
 
-      const result = analyzeSourceFile(sourceFile, tempDir);
+      const result = analyzeSourceFile(sourceFile, tempDir)
 
-      const functions = result.symbolNodes.filter((n) => n.type === 'function');
-      expect(functions).toHaveLength(3);
+      const functions = result.symbolNodes.filter((n) => n.type === 'function')
+      expect(functions).toHaveLength(3)
 
-      const greet = functions.find((f) => f.name === 'greet') as FunctionNode;
-      expect(greet).toBeDefined();
-      expect(greet.exported).toBe(true);
-      expect(greet.isAsync).toBe(false);
-      expect(greet.parameters).toEqual(['name']);
+      const greet = functions.find((f) => f.name === 'greet') as FunctionNode
+      expect(greet).toBeDefined()
+      expect(greet.exported).toBe(true)
+      expect(greet.isAsync).toBe(false)
+      expect(greet.parameters).toEqual(['name'])
 
-      const fetchData = functions.find((f) => f.name === 'fetchData') as FunctionNode;
-      expect(fetchData).toBeDefined();
-      expect(fetchData.isAsync).toBe(true);
+      const fetchData = functions.find((f) => f.name === 'fetchData') as FunctionNode
+      expect(fetchData).toBeDefined()
+      expect(fetchData.isAsync).toBe(true)
 
-      const privateHelper = functions.find((f) => f.name === 'privateHelper');
-      expect(privateHelper).toBeDefined();
-      expect(privateHelper!.exported).toBe(false);
-    });
+      const privateHelper = functions.find((f) => f.name === 'privateHelper')
+      expect(privateHelper).toBeDefined()
+      expect(privateHelper!.exported).toBe(false)
+    })
 
     it('should extract class declarations', () => {
       const sourceFile = createTestFile(
@@ -129,26 +129,26 @@ class Dog extends Animal {
   }
 }
       `.trim()
-      );
+      )
 
-      const result = analyzeSourceFile(sourceFile, tempDir);
+      const result = analyzeSourceFile(sourceFile, tempDir)
 
-      const classes = result.symbolNodes.filter((n) => n.type === 'class');
-      expect(classes).toHaveLength(3);
+      const classes = result.symbolNodes.filter((n) => n.type === 'class')
+      expect(classes).toHaveLength(3)
 
-      const animal = classes.find((c) => c.name === 'Animal') as ClassNode;
-      expect(animal).toBeDefined();
-      expect(animal.exported).toBe(true);
-      expect(animal.isAbstract).toBe(false);
+      const animal = classes.find((c) => c.name === 'Animal') as ClassNode
+      expect(animal).toBeDefined()
+      expect(animal.exported).toBe(true)
+      expect(animal.isAbstract).toBe(false)
 
-      const shape = classes.find((c) => c.name === 'Shape') as ClassNode;
-      expect(shape).toBeDefined();
-      expect(shape.isAbstract).toBe(true);
+      const shape = classes.find((c) => c.name === 'Shape') as ClassNode
+      expect(shape).toBeDefined()
+      expect(shape.isAbstract).toBe(true)
 
-      const dog = classes.find((c) => c.name === 'Dog') as ClassNode;
-      expect(dog).toBeDefined();
-      expect(dog.extends).toBe('Animal');
-    });
+      const dog = classes.find((c) => c.name === 'Dog') as ClassNode
+      expect(dog).toBeDefined()
+      expect(dog.extends).toBe('Animal')
+    })
 
     it('should extract class methods as function nodes', () => {
       const sourceFile = createTestFile(
@@ -164,23 +164,23 @@ export class Calculator {
   }
 }
       `.trim()
-      );
+      )
 
-      const result = analyzeSourceFile(sourceFile, tempDir);
+      const result = analyzeSourceFile(sourceFile, tempDir)
 
       const methods = result.symbolNodes.filter(
         (n) => n.type === 'function' && n.name.includes('.')
-      );
-      expect(methods).toHaveLength(2);
+      )
+      expect(methods).toHaveLength(2)
 
-      const add = methods.find((m) => m.name === 'Calculator.add') as FunctionNode;
-      expect(add).toBeDefined();
-      expect(add.parameters).toEqual(['a', 'b']);
+      const add = methods.find((m) => m.name === 'Calculator.add') as FunctionNode
+      expect(add).toBeDefined()
+      expect(add.parameters).toEqual(['a', 'b'])
 
-      const multiply = methods.find((m) => m.name === 'Calculator.multiply') as FunctionNode;
-      expect(multiply).toBeDefined();
-      expect(multiply.isAsync).toBe(true);
-    });
+      const multiply = methods.find((m) => m.name === 'Calculator.multiply') as FunctionNode
+      expect(multiply).toBeDefined()
+      expect(multiply.isAsync).toBe(true)
+    })
 
     it('should extract interfaces', () => {
       const sourceFile = createTestFile(
@@ -196,21 +196,21 @@ interface InternalConfig {
   debug: boolean;
 }
       `.trim()
-      );
+      )
 
-      const result = analyzeSourceFile(sourceFile, tempDir);
+      const result = analyzeSourceFile(sourceFile, tempDir)
 
-      const interfaces = result.symbolNodes.filter((n) => n.type === 'interface');
-      expect(interfaces).toHaveLength(2);
+      const interfaces = result.symbolNodes.filter((n) => n.type === 'interface')
+      expect(interfaces).toHaveLength(2)
 
-      const user = interfaces.find((i) => i.name === 'User');
-      expect(user).toBeDefined();
-      expect(user!.exported).toBe(true);
+      const user = interfaces.find((i) => i.name === 'User')
+      expect(user).toBeDefined()
+      expect(user!.exported).toBe(true)
 
-      const config = interfaces.find((i) => i.name === 'InternalConfig');
-      expect(config).toBeDefined();
-      expect(config!.exported).toBe(false);
-    });
+      const config = interfaces.find((i) => i.name === 'InternalConfig')
+      expect(config).toBeDefined()
+      expect(config!.exported).toBe(false)
+    })
 
     it('should extract type aliases', () => {
       const sourceFile = createTestFile(
@@ -224,17 +224,17 @@ type InternalType = {
   value: number;
 };
       `.trim()
-      );
+      )
 
-      const result = analyzeSourceFile(sourceFile, tempDir);
+      const result = analyzeSourceFile(sourceFile, tempDir)
 
-      const types = result.symbolNodes.filter((n) => n.type === 'type');
-      expect(types).toHaveLength(3);
+      const types = result.symbolNodes.filter((n) => n.type === 'type')
+      expect(types).toHaveLength(3)
 
-      const id = types.find((t) => t.name === 'ID');
-      expect(id).toBeDefined();
-      expect(id!.exported).toBe(true);
-    });
+      const id = types.find((t) => t.name === 'ID')
+      expect(id).toBeDefined()
+      expect(id!.exported).toBe(true)
+    })
 
     it('should extract enums', () => {
       const sourceFile = createTestFile(
@@ -253,21 +253,21 @@ enum Direction {
   Right,
 }
       `.trim()
-      );
+      )
 
-      const result = analyzeSourceFile(sourceFile, tempDir);
+      const result = analyzeSourceFile(sourceFile, tempDir)
 
-      const enums = result.symbolNodes.filter((n) => n.type === 'enum');
-      expect(enums).toHaveLength(2);
+      const enums = result.symbolNodes.filter((n) => n.type === 'enum')
+      expect(enums).toHaveLength(2)
 
-      const color = enums.find((e) => e.name === 'Color');
-      expect(color).toBeDefined();
-      expect(color!.exported).toBe(true);
+      const color = enums.find((e) => e.name === 'Color')
+      expect(color).toBeDefined()
+      expect(color!.exported).toBe(true)
 
-      const direction = enums.find((e) => e.name === 'Direction');
-      expect(direction).toBeDefined();
-      expect(direction!.exported).toBe(false);
-    });
+      const direction = enums.find((e) => e.name === 'Direction')
+      expect(direction).toBeDefined()
+      expect(direction!.exported).toBe(false)
+    })
 
     it('should extract exported variables', () => {
       const sourceFile = createTestFile(
@@ -277,14 +277,14 @@ export const API_URL = 'https://api.example.com';
 export const MAX_RETRIES = 3;
 const privateVar = 'secret';
       `.trim()
-      );
+      )
 
-      const result = analyzeSourceFile(sourceFile, tempDir);
+      const result = analyzeSourceFile(sourceFile, tempDir)
 
-      const variables = result.symbolNodes.filter((n) => n.type === 'variable');
-      expect(variables).toHaveLength(2);
-      expect(variables.every((v) => v.exported)).toBe(true);
-    });
+      const variables = result.symbolNodes.filter((n) => n.type === 'variable')
+      expect(variables).toHaveLength(2)
+      expect(variables.every((v) => v.exported)).toBe(true)
+    })
 
     it('should calculate complexity for functions', () => {
       const sourceFile = createTestFile(
@@ -321,21 +321,21 @@ export function highComplexity(items: string[]): number {
   return count;
 }
       `.trim()
-      );
+      )
 
-      const result = analyzeSourceFile(sourceFile, tempDir);
+      const result = analyzeSourceFile(sourceFile, tempDir)
 
-      const functions = result.symbolNodes.filter((n) => n.type === 'function');
+      const functions = result.symbolNodes.filter((n) => n.type === 'function')
 
-      const simple = functions.find((f) => f.name === 'simpleFunction');
-      expect(simple!.complexity).toBe(1);
+      const simple = functions.find((f) => f.name === 'simpleFunction')
+      expect(simple!.complexity).toBe(1)
 
-      const moderate = functions.find((f) => f.name === 'moderateComplexity');
-      expect(moderate!.complexity).toBeGreaterThan(1);
+      const moderate = functions.find((f) => f.name === 'moderateComplexity')
+      expect(moderate!.complexity).toBeGreaterThan(1)
 
-      const high = functions.find((f) => f.name === 'highComplexity');
-      expect(high!.complexity).toBeGreaterThan(moderate!.complexity!);
-    });
+      const high = functions.find((f) => f.name === 'highComplexity')
+      expect(high!.complexity).toBeGreaterThan(moderate!.complexity!)
+    })
 
     it('should aggregate file complexity', () => {
       const sourceFile = createTestFile(
@@ -352,17 +352,17 @@ export function func2(a: boolean, b: boolean): boolean {
   return true;
 }
       `.trim()
-      );
+      )
 
-      const result = analyzeSourceFile(sourceFile, tempDir);
+      const result = analyzeSourceFile(sourceFile, tempDir)
 
       // File complexity should be the sum of function complexities
-      expect(result.fileNode.complexity).toBeGreaterThan(0);
+      expect(result.fileNode.complexity).toBeGreaterThan(0)
 
-      const funcs = result.symbolNodes.filter((n) => n.type === 'function');
-      const totalFuncComplexity = funcs.reduce((sum, f) => sum + (f.complexity || 0), 0);
-      expect(result.fileNode.complexity).toBe(totalFuncComplexity);
-    });
+      const funcs = result.symbolNodes.filter((n) => n.type === 'function')
+      const totalFuncComplexity = funcs.reduce((sum, f) => sum + (f.complexity || 0), 0)
+      expect(result.fileNode.complexity).toBe(totalFuncComplexity)
+    })
 
     it('should handle JSDoc comments', () => {
       const sourceFile = createTestFile(
@@ -378,14 +378,14 @@ export function add(a: number, b: number): number {
   return a + b;
 }
       `.trim()
-      );
+      )
 
-      const result = analyzeSourceFile(sourceFile, tempDir);
+      const result = analyzeSourceFile(sourceFile, tempDir)
 
-      const add = result.symbolNodes.find((n) => n.name === 'add');
-      expect(add).toBeDefined();
-      expect(add!.documentation).toContain('Adds two numbers together');
-    });
+      const add = result.symbolNodes.find((n) => n.name === 'add')
+      expect(add).toBeDefined()
+      expect(add!.documentation).toContain('Adds two numbers together')
+    })
 
     it('should detect generator functions', () => {
       const sourceFile = createTestFile(
@@ -397,14 +397,14 @@ export function* countUp(max: number): Generator<number> {
   }
 }
       `.trim()
-      );
+      )
 
-      const result = analyzeSourceFile(sourceFile, tempDir);
+      const result = analyzeSourceFile(sourceFile, tempDir)
 
-      const generator = result.symbolNodes.find((n) => n.name === 'countUp') as FunctionNode;
-      expect(generator).toBeDefined();
-      expect(generator.isGenerator).toBe(true);
-    });
+      const generator = result.symbolNodes.find((n) => n.name === 'countUp') as FunctionNode
+      expect(generator).toBeDefined()
+      expect(generator.isGenerator).toBe(true)
+    })
 
     it('should handle class inheritance and implements', () => {
       const sourceFile = createTestFile(
@@ -427,137 +427,137 @@ export class Document implements Printable, Serializable {
   }
 }
       `.trim()
-      );
+      )
 
-      const result = analyzeSourceFile(sourceFile, tempDir);
+      const result = analyzeSourceFile(sourceFile, tempDir)
 
-      const doc = result.symbolNodes.find((n) => n.name === 'Document') as ClassNode;
-      expect(doc).toBeDefined();
-      expect(doc.implements).toEqual(['Printable', 'Serializable']);
-    });
-  });
+      const doc = result.symbolNodes.find((n) => n.name === 'Document') as ClassNode
+      expect(doc).toBeDefined()
+      expect(doc.implements).toEqual(['Printable', 'Serializable'])
+    })
+  })
 
   describe('createProject', () => {
     it('should create a project without tsconfig', () => {
-      const emptyDir = fs.mkdtempSync(path.join(os.tmpdir(), 'specter-empty-'));
+      const emptyDir = fs.mkdtempSync(path.join(os.tmpdir(), 'specter-empty-'))
 
       try {
-        const proj = createProject(emptyDir);
-        expect(proj).toBeDefined();
-        expect(proj.getSourceFiles()).toHaveLength(0);
+        const proj = createProject(emptyDir)
+        expect(proj).toBeDefined()
+        expect(proj.getSourceFiles()).toHaveLength(0)
       } finally {
-        fs.rmSync(emptyDir, { recursive: true, force: true });
+        fs.rmSync(emptyDir, { recursive: true, force: true })
       }
-    });
+    })
 
     it('should create a project with tsconfig', () => {
-      const configDir = fs.mkdtempSync(path.join(os.tmpdir(), 'specter-config-'));
+      const configDir = fs.mkdtempSync(path.join(os.tmpdir(), 'specter-config-'))
       const tsconfig = {
         compilerOptions: {
           target: 'ES2022',
           module: 'NodeNext',
           strict: true,
         },
-      };
-      fs.writeFileSync(path.join(configDir, 'tsconfig.json'), JSON.stringify(tsconfig));
+      }
+      fs.writeFileSync(path.join(configDir, 'tsconfig.json'), JSON.stringify(tsconfig))
 
       try {
-        const proj = createProject(configDir);
-        expect(proj).toBeDefined();
+        const proj = createProject(configDir)
+        expect(proj).toBeDefined()
       } finally {
-        fs.rmSync(configDir, { recursive: true, force: true });
+        fs.rmSync(configDir, { recursive: true, force: true })
       }
-    });
-  });
+    })
+  })
 
   describe('getSourceFiles', () => {
     it('should find TypeScript files', () => {
-      const srcDir = fs.mkdtempSync(path.join(os.tmpdir(), 'specter-src-'));
-      fs.writeFileSync(path.join(srcDir, 'main.ts'), 'export const x = 1;');
-      fs.writeFileSync(path.join(srcDir, 'util.ts'), 'export const y = 2;');
+      const srcDir = fs.mkdtempSync(path.join(os.tmpdir(), 'specter-src-'))
+      fs.writeFileSync(path.join(srcDir, 'main.ts'), 'export const x = 1;')
+      fs.writeFileSync(path.join(srcDir, 'util.ts'), 'export const y = 2;')
 
       try {
-        const proj = new Project();
-        const files = getSourceFiles(proj, srcDir, ['**/*.ts']);
-        expect(files.length).toBeGreaterThanOrEqual(2);
+        const proj = new Project()
+        const files = getSourceFiles(proj, srcDir, ['**/*.ts'])
+        expect(files.length).toBeGreaterThanOrEqual(2)
       } finally {
-        fs.rmSync(srcDir, { recursive: true, force: true });
+        fs.rmSync(srcDir, { recursive: true, force: true })
       }
-    });
+    })
 
     it('should exclude node_modules', () => {
-      const srcDir = fs.mkdtempSync(path.join(os.tmpdir(), 'specter-nm-'));
-      fs.mkdirSync(path.join(srcDir, 'node_modules'));
-      fs.writeFileSync(path.join(srcDir, 'main.ts'), 'export const x = 1;');
-      fs.writeFileSync(path.join(srcDir, 'node_modules', 'lib.ts'), 'export const y = 2;');
+      const srcDir = fs.mkdtempSync(path.join(os.tmpdir(), 'specter-nm-'))
+      fs.mkdirSync(path.join(srcDir, 'node_modules'))
+      fs.writeFileSync(path.join(srcDir, 'main.ts'), 'export const x = 1;')
+      fs.writeFileSync(path.join(srcDir, 'node_modules', 'lib.ts'), 'export const y = 2;')
 
       try {
-        const proj = new Project();
-        const files = getSourceFiles(proj, srcDir, ['**/*.ts']);
-        const filePaths = files.map((f) => f.getFilePath());
-        expect(filePaths.some((p) => p.includes('node_modules'))).toBe(false);
+        const proj = new Project()
+        const files = getSourceFiles(proj, srcDir, ['**/*.ts'])
+        const filePaths = files.map((f) => f.getFilePath())
+        expect(filePaths.some((p) => p.includes('node_modules'))).toBe(false)
       } finally {
-        fs.rmSync(srcDir, { recursive: true, force: true });
+        fs.rmSync(srcDir, { recursive: true, force: true })
       }
-    });
+    })
 
     it('should exclude test files', () => {
-      const srcDir = fs.mkdtempSync(path.join(os.tmpdir(), 'specter-test-'));
-      fs.writeFileSync(path.join(srcDir, 'main.ts'), 'export const x = 1;');
-      fs.writeFileSync(path.join(srcDir, 'main.test.ts'), 'test("x", () => {});');
-      fs.writeFileSync(path.join(srcDir, 'main.spec.ts'), 'describe("x", () => {});');
+      const srcDir = fs.mkdtempSync(path.join(os.tmpdir(), 'specter-test-'))
+      fs.writeFileSync(path.join(srcDir, 'main.ts'), 'export const x = 1;')
+      fs.writeFileSync(path.join(srcDir, 'main.test.ts'), 'test("x", () => {});')
+      fs.writeFileSync(path.join(srcDir, 'main.spec.ts'), 'describe("x", () => {});')
 
       try {
-        const proj = new Project();
-        const files = getSourceFiles(proj, srcDir, ['**/*.ts']);
-        const filePaths = files.map((f) => f.getFilePath());
-        expect(filePaths.some((p) => p.includes('.test.ts'))).toBe(false);
-        expect(filePaths.some((p) => p.includes('.spec.ts'))).toBe(false);
+        const proj = new Project()
+        const files = getSourceFiles(proj, srcDir, ['**/*.ts'])
+        const filePaths = files.map((f) => f.getFilePath())
+        expect(filePaths.some((p) => p.includes('.test.ts'))).toBe(false)
+        expect(filePaths.some((p) => p.includes('.spec.ts'))).toBe(false)
       } finally {
-        fs.rmSync(srcDir, { recursive: true, force: true });
+        fs.rmSync(srcDir, { recursive: true, force: true })
       }
-    });
-  });
+    })
+  })
 
   describe('Language detection', () => {
     it('should detect TypeScript files', () => {
-      const sourceFile = createTestFile('app.ts', 'export const x: number = 1;');
-      const result = analyzeSourceFile(sourceFile, tempDir);
-      expect(result.fileNode.language).toBe('typescript');
-    });
+      const sourceFile = createTestFile('app.ts', 'export const x: number = 1;')
+      const result = analyzeSourceFile(sourceFile, tempDir)
+      expect(result.fileNode.language).toBe('typescript')
+    })
 
     it('should detect TSX files', () => {
       const sourceFile = createTestFile(
         'component.tsx',
         'export const App = () => <div>Hello</div>;'
-      );
-      const result = analyzeSourceFile(sourceFile, tempDir);
-      expect(result.fileNode.language).toBe('tsx');
-    });
+      )
+      const result = analyzeSourceFile(sourceFile, tempDir)
+      expect(result.fileNode.language).toBe('tsx')
+    })
 
     it('should detect JavaScript files', () => {
-      const sourceFile = createTestFile('script.js', 'export const x = 1;');
-      const result = analyzeSourceFile(sourceFile, tempDir);
-      expect(result.fileNode.language).toBe('javascript');
-    });
+      const sourceFile = createTestFile('script.js', 'export const x = 1;')
+      const result = analyzeSourceFile(sourceFile, tempDir)
+      expect(result.fileNode.language).toBe('javascript')
+    })
 
     it('should detect JSX files', () => {
       const sourceFile = createTestFile(
         'component.jsx',
         'export const App = () => <div>Hello</div>;'
-      );
-      const result = analyzeSourceFile(sourceFile, tempDir);
-      expect(result.fileNode.language).toBe('jsx');
-    });
-  });
+      )
+      const result = analyzeSourceFile(sourceFile, tempDir)
+      expect(result.fileNode.language).toBe('jsx')
+    })
+  })
 
   describe('Edge cases', () => {
     it('should handle empty files', () => {
-      const sourceFile = createTestFile('empty.ts', '');
-      const result = analyzeSourceFile(sourceFile, tempDir);
-      expect(result.fileNode).toBeDefined();
-      expect(result.symbolNodes).toHaveLength(0);
-    });
+      const sourceFile = createTestFile('empty.ts', '')
+      const result = analyzeSourceFile(sourceFile, tempDir)
+      expect(result.fileNode).toBeDefined()
+      expect(result.symbolNodes).toHaveLength(0)
+    })
 
     it('should handle anonymous functions', () => {
       const sourceFile = createTestFile(
@@ -567,13 +567,13 @@ export default function(): void {
   console.log('anonymous');
 }
       `.trim()
-      );
+      )
 
-      const result = analyzeSourceFile(sourceFile, tempDir);
-      const funcs = result.symbolNodes.filter((n) => n.type === 'function');
-      expect(funcs).toHaveLength(1);
-      expect(funcs[0].name).toBe('<anonymous>');
-    });
+      const result = analyzeSourceFile(sourceFile, tempDir)
+      const funcs = result.symbolNodes.filter((n) => n.type === 'function')
+      expect(funcs).toHaveLength(1)
+      expect(funcs[0].name).toBe('<anonymous>')
+    })
 
     it('should handle files with syntax errors gracefully', () => {
       // ts-morph should still parse partial content
@@ -584,10 +584,10 @@ export function valid(): void {}
 // Missing closing brace below intentionally
 export function broken(): void {
       `.trim()
-      );
+      )
 
       // Should not throw
-      expect(() => analyzeSourceFile(sourceFile, tempDir)).not.toThrow();
-    });
-  });
-});
+      expect(() => analyzeSourceFile(sourceFile, tempDir)).not.toThrow()
+    })
+  })
+})

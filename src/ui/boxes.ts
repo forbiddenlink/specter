@@ -5,25 +5,25 @@
  * for structured output display.
  */
 
-import { visibleLength } from './ansi-utils.js';
-import { colors } from './colors.js';
+import { visibleLength } from './ansi-utils.js'
+import { colors } from './colors.js'
 
 /**
  * Options for customizing box appearance
  */
 export interface BoxOptions {
   /** Title to display at top of box */
-  title?: string;
+  title?: string
   /** Title alignment within the box */
-  titleAlign?: 'left' | 'center' | 'right';
+  titleAlign?: 'left' | 'center' | 'right'
   /** Padding inside the box (default: 1) */
-  padding?: number;
+  padding?: number
   /** Border style (default: 'single') */
-  borderStyle?: 'single' | 'double' | 'rounded' | 'heavy';
+  borderStyle?: 'single' | 'double' | 'rounded' | 'heavy'
   /** Border color function */
-  borderColor?: (s: string) => string;
+  borderColor?: (s: string) => string
   /** Fixed width (auto-calculates if not provided) */
-  width?: number;
+  width?: number
 }
 
 /**
@@ -31,15 +31,15 @@ export interface BoxOptions {
  */
 export interface TableOptions {
   /** Column headers */
-  headers?: string[];
+  headers?: string[]
   /** Column alignments */
-  align?: ('left' | 'right' | 'center')[];
+  align?: ('left' | 'right' | 'center')[]
   /** Minimum column widths */
-  minWidths?: number[];
+  minWidths?: number[]
   /** Add border around table */
-  border?: boolean;
+  border?: boolean
   /** Border style for bordered tables */
-  borderStyle?: 'single' | 'double' | 'rounded';
+  borderStyle?: 'single' | 'double' | 'rounded'
 }
 
 /**
@@ -98,7 +98,7 @@ const borderChars = {
     mb: '\u253B',
     cross: '\u254B',
   },
-};
+}
 
 /**
  * Pad a string to a specific visible width
@@ -108,19 +108,19 @@ function padToWidth(
   width: number,
   align: 'left' | 'right' | 'center' = 'left'
 ): string {
-  const visible = visibleLength(str);
-  const padding = Math.max(0, width - visible);
+  const visible = visibleLength(str)
+  const padding = Math.max(0, width - visible)
 
   switch (align) {
     case 'right':
-      return ' '.repeat(padding) + str;
+      return ' '.repeat(padding) + str
     case 'center': {
-      const leftPad = Math.floor(padding / 2);
-      const rightPad = padding - leftPad;
-      return ' '.repeat(leftPad) + str + ' '.repeat(rightPad);
+      const leftPad = Math.floor(padding / 2)
+      const rightPad = padding - leftPad
+      return ' '.repeat(leftPad) + str + ' '.repeat(rightPad)
     }
     default:
-      return str + ' '.repeat(padding);
+      return str + ' '.repeat(padding)
   }
 }
 
@@ -139,40 +139,40 @@ export function box(content: string | string[], options: BoxOptions = {}): strin
     borderStyle = 'single',
     borderColor = colors.border,
     width,
-  } = options;
+  } = options
 
-  const chars = borderChars[borderStyle];
-  const lines = Array.isArray(content) ? content : content.split('\n');
+  const chars = borderChars[borderStyle]
+  const lines = Array.isArray(content) ? content : content.split('\n')
 
   // Calculate content width
-  const maxLineWidth = Math.max(...lines.map(visibleLength), title ? visibleLength(title) : 0);
-  const innerWidth = width ? width - 2 : maxLineWidth + padding * 2;
+  const maxLineWidth = Math.max(...lines.map(visibleLength), title ? visibleLength(title) : 0)
+  const innerWidth = width ? width - 2 : maxLineWidth + padding * 2
 
-  const result: string[] = [];
+  const result: string[] = []
 
   // Top border with optional title
   if (title) {
-    const titleStr = ` ${title} `;
-    const titlePadded = padToWidth(titleStr, innerWidth, titleAlign);
-    result.push(borderColor(chars.tl + chars.h.repeat(innerWidth) + chars.tr));
-    result.push(borderColor(chars.v) + colors.header(titlePadded) + borderColor(chars.v));
-    result.push(borderColor(chars.lt + chars.h.repeat(innerWidth) + chars.rt));
+    const titleStr = ` ${title} `
+    const titlePadded = padToWidth(titleStr, innerWidth, titleAlign)
+    result.push(borderColor(chars.tl + chars.h.repeat(innerWidth) + chars.tr))
+    result.push(borderColor(chars.v) + colors.header(titlePadded) + borderColor(chars.v))
+    result.push(borderColor(chars.lt + chars.h.repeat(innerWidth) + chars.rt))
   } else {
-    result.push(borderColor(chars.tl + chars.h.repeat(innerWidth) + chars.tr));
+    result.push(borderColor(chars.tl + chars.h.repeat(innerWidth) + chars.tr))
   }
 
   // Content lines
-  const horizontalPadding = ' '.repeat(padding);
+  const horizontalPadding = ' '.repeat(padding)
   for (const line of lines) {
     const paddedContent =
-      horizontalPadding + padToWidth(line, innerWidth - padding * 2) + horizontalPadding;
-    result.push(borderColor(chars.v) + paddedContent + borderColor(chars.v));
+      horizontalPadding + padToWidth(line, innerWidth - padding * 2) + horizontalPadding
+    result.push(borderColor(chars.v) + paddedContent + borderColor(chars.v))
   }
 
   // Bottom border
-  result.push(borderColor(chars.bl + chars.h.repeat(innerWidth) + chars.br));
+  result.push(borderColor(chars.bl + chars.h.repeat(innerWidth) + chars.br))
 
-  return result.join('\n');
+  return result.join('\n')
 }
 
 /**
@@ -188,19 +188,19 @@ export function headerBox(title: string, options: Omit<BoxOptions, 'title'> = {}
     borderStyle = 'double',
     borderColor = colors.border,
     width,
-  } = options;
+  } = options
 
-  const chars = borderChars[borderStyle];
-  const titleWidth = visibleLength(title);
-  const innerWidth = width ? width - 2 : titleWidth + 4;
+  const chars = borderChars[borderStyle]
+  const titleWidth = visibleLength(title)
+  const innerWidth = width ? width - 2 : titleWidth + 4
 
-  const paddedTitle = padToWidth(` ${title} `, innerWidth, titleAlign);
+  const paddedTitle = padToWidth(` ${title} `, innerWidth, titleAlign)
 
   return [
     borderColor(chars.tl + chars.h.repeat(innerWidth) + chars.tr),
     borderColor(chars.v) + colors.header(paddedTitle) + borderColor(chars.v),
     borderColor(chars.bl + chars.h.repeat(innerWidth) + chars.br),
-  ].join('\n');
+  ].join('\n')
 }
 
 /**
@@ -211,14 +211,14 @@ export function headerBox(title: string, options: Omit<BoxOptions, 'title'> = {}
  * @returns Formatted section string
  */
 export function section(title: string, content: string | string[]): string {
-  const lines = Array.isArray(content) ? content : content.split('\n');
-  const result: string[] = [];
+  const lines = Array.isArray(content) ? content : content.split('\n')
+  const result: string[] = []
 
-  result.push(colors.header(title));
-  result.push(colors.muted('\u2500'.repeat(visibleLength(title))));
-  result.push(...lines);
+  result.push(colors.header(title))
+  result.push(colors.muted('\u2500'.repeat(visibleLength(title))))
+  result.push(...lines)
 
-  return result.join('\n');
+  return result.join('\n')
 }
 
 /**
@@ -230,7 +230,7 @@ export function section(title: string, content: string | string[]): string {
  * @returns Divider string
  */
 export function divider(width: number = 40, char: string = '\u2500', color = colors.muted): string {
-  return color(char.repeat(width));
+  return color(char.repeat(width))
 }
 
 /**
@@ -248,8 +248,8 @@ export function keyValue(
   keyWidth: number = 16,
   separator: string = ':'
 ): string {
-  const paddedKey = padToWidth(key, keyWidth);
-  return `${colors.muted(paddedKey)}${separator} ${colors.primary(String(value))}`;
+  const paddedKey = padToWidth(key, keyWidth)
+  return `${colors.muted(paddedKey)}${separator} ${colors.primary(String(value))}`
 }
 
 /**
@@ -263,12 +263,12 @@ export function keyValueList(
   pairs: Record<string, string | number> | Array<[string, string | number]>,
   keyWidth?: number
 ): string {
-  const entries = Array.isArray(pairs) ? pairs : Object.entries(pairs);
+  const entries = Array.isArray(pairs) ? pairs : Object.entries(pairs)
 
   // Auto-calculate key width if not provided
-  const width = keyWidth ?? Math.max(...entries.map(([k]) => visibleLength(k))) + 2;
+  const width = keyWidth ?? Math.max(...entries.map(([k]) => visibleLength(k))) + 2
 
-  return entries.map(([k, v]) => keyValue(k, v, width)).join('\n');
+  return entries.map(([k, v]) => keyValue(k, v, width)).join('\n')
 }
 
 /**
@@ -279,76 +279,76 @@ export function keyValueList(
  * @returns Formatted table string
  */
 export function table(rows: (string | number)[][], options: TableOptions = {}): string {
-  const { headers, align = [], minWidths = [], border = false, borderStyle = 'single' } = options;
+  const { headers, align = [], minWidths = [], border = false, borderStyle = 'single' } = options
 
-  if (rows.length === 0 && !headers) return '';
+  if (rows.length === 0 && !headers) return ''
 
   // Convert all values to strings
-  const stringRows = rows.map((row) => row.map((cell) => String(cell)));
-  const allRows = headers ? [headers, ...stringRows] : stringRows;
+  const stringRows = rows.map((row) => row.map((cell) => String(cell)))
+  const allRows = headers ? [headers, ...stringRows] : stringRows
 
   // Calculate column widths
-  const colCount = Math.max(...allRows.map((r) => r.length));
-  const colWidths: number[] = [];
+  const colCount = Math.max(...allRows.map((r) => r.length))
+  const colWidths: number[] = []
 
   for (let col = 0; col < colCount; col++) {
     const maxWidth = Math.max(
       ...allRows.map((row) => visibleLength(row[col] || '')),
       minWidths[col] || 0
-    );
-    colWidths.push(maxWidth);
+    )
+    colWidths.push(maxWidth)
   }
 
   // Format each row
   const formatRow = (row: string[], isHeader = false): string => {
     const cells = row.map((cell, i) => {
-      const cellAlign = align[i] || 'left';
-      const padded = padToWidth(cell || '', colWidths[i] ?? 0, cellAlign);
-      return isHeader ? colors.header(padded) : padded;
-    });
+      const cellAlign = align[i] || 'left'
+      const padded = padToWidth(cell || '', colWidths[i] ?? 0, cellAlign)
+      return isHeader ? colors.header(padded) : padded
+    })
 
     if (border) {
-      const chars = borderChars[borderStyle];
-      return `${chars.v} ${cells.join(` ${chars.v} `)} ${chars.v}`;
+      const chars = borderChars[borderStyle]
+      return `${chars.v} ${cells.join(` ${chars.v} `)} ${chars.v}`
     }
 
-    return cells.join('  ');
-  };
+    return cells.join('  ')
+  }
 
-  const result: string[] = [];
+  const result: string[] = []
 
   if (border) {
-    const chars = borderChars[borderStyle];
+    const chars = borderChars[borderStyle]
     const topBorder =
-      chars.tl + colWidths.map((w) => chars.h.repeat(w + 2)).join(chars.mt) + chars.tr;
-    result.push(topBorder);
+      chars.tl + colWidths.map((w) => chars.h.repeat(w + 2)).join(chars.mt) + chars.tr
+    result.push(topBorder)
   }
 
   if (headers) {
-    result.push(formatRow(headers, true));
+    result.push(formatRow(headers, true))
 
     if (border) {
-      const chars = borderChars[borderStyle];
+      const chars = borderChars[borderStyle]
       const separator =
-        chars.lt + colWidths.map((w) => chars.h.repeat(w + 2)).join(chars.cross) + chars.rt;
-      result.push(separator);
+        chars.lt + colWidths.map((w) => chars.h.repeat(w + 2)).join(chars.cross) + chars.rt
+      result.push(separator)
     } else {
-      result.push(colWidths.map((w) => '\u2500'.repeat(w)).join('  '));
+      result.push(colWidths.map((w) => '\u2500'.repeat(w)).join('  '))
     }
   }
 
   for (const row of stringRows) {
-    result.push(formatRow(row));
+    result.push(formatRow(row))
   }
 
   if (border) {
-    const chars = borderChars[borderStyle];
+    const chars = borderChars[borderStyle]
     const bottomBorder =
-      chars.bl + colWidths.map((w) => chars.h.repeat(w + 2)).join(chars.mb) + chars.br;
-    result.push(bottomBorder);
+      chars.bl + colWidths.map((w) => chars.h.repeat(w + 2)).join(chars.mb) + chars.br
+    result.push(bottomBorder)
   }
 
-  return result.join('\n');
+  return result.join('\n')
 }
 
 /**
@@ -362,18 +362,18 @@ export function panel(
   sections: Array<{ title: string; content: string | string[] }>,
   options: BoxOptions = {}
 ): string {
-  const allContent: string[] = [];
+  const allContent: string[] = []
 
   sections.forEach((sec, index) => {
     if (index > 0) {
-      allContent.push(''); // Empty line between sections
+      allContent.push('') // Empty line between sections
     }
-    const sectionContent = Array.isArray(sec.content) ? sec.content : sec.content.split('\n');
-    allContent.push(colors.accent(`\u25B6 ${sec.title}`));
-    allContent.push(...sectionContent.map((line) => `  ${line}`));
-  });
+    const sectionContent = Array.isArray(sec.content) ? sec.content : sec.content.split('\n')
+    allContent.push(colors.accent(`\u25B6 ${sec.title}`))
+    allContent.push(...sectionContent.map((line) => `  ${line}`))
+  })
 
-  return box(allContent, { ...options, borderStyle: options.borderStyle || 'rounded' });
+  return box(allContent, { ...options, borderStyle: options.borderStyle || 'rounded' })
 }
 
 /**
@@ -389,9 +389,9 @@ export function indent(
   level: number = 1,
   indentStr: string = '  '
 ): string {
-  const lines = Array.isArray(content) ? content : content.split('\n');
-  const prefix = indentStr.repeat(level);
-  return lines.map((line) => prefix + line).join('\n');
+  const lines = Array.isArray(content) ? content : content.split('\n')
+  const prefix = indentStr.repeat(level)
+  return lines.map((line) => prefix + line).join('\n')
 }
 
 /**
@@ -407,8 +407,8 @@ export function bulletList(
   bullet: string = '\u2022',
   color?: (s: string) => string
 ): string {
-  const coloredBullet = color ? color(bullet) : bullet;
-  return items.map((item) => `${coloredBullet} ${item}`).join('\n');
+  const coloredBullet = color ? color(bullet) : bullet
+  return items.map((item) => `${coloredBullet} ${item}`).join('\n')
 }
 
 /**
@@ -419,15 +419,15 @@ export function bulletList(
  * @returns Formatted numbered list
  */
 export function numberedList(items: string[], startAt: number = 1): string {
-  const maxNum = startAt + items.length - 1;
-  const numWidth = String(maxNum).length;
+  const maxNum = startAt + items.length - 1
+  const numWidth = String(maxNum).length
 
   return items
     .map((item, i) => {
-      const num = String(startAt + i).padStart(numWidth);
-      return `${colors.muted(`${num}.`)} ${item}`;
+      const num = String(startAt + i).padStart(numWidth)
+      return `${colors.muted(`${num}.`)} ${item}`
     })
-    .join('\n');
+    .join('\n')
 }
 
 /**
@@ -441,21 +441,21 @@ export function tree(
   items: Array<{ label: string; children?: Array<{ label: string; children?: unknown[] }> }>,
   prefix: string = ''
 ): string {
-  const result: string[] = [];
+  const result: string[] = []
 
   items.forEach((item, index) => {
-    const isLast = index === items.length - 1;
-    const connector = isLast ? '\u2514\u2500' : '\u251C\u2500';
-    const childPrefix = isLast ? '  ' : '\u2502 ';
+    const isLast = index === items.length - 1
+    const connector = isLast ? '\u2514\u2500' : '\u251C\u2500'
+    const childPrefix = isLast ? '  ' : '\u2502 '
 
-    result.push(`${prefix + colors.muted(connector)} ${item.label}`);
+    result.push(`${prefix + colors.muted(connector)} ${item.label}`)
 
     if (item.children && item.children.length > 0) {
-      result.push(tree(item.children as typeof items, prefix + childPrefix));
+      result.push(tree(item.children as typeof items, prefix + childPrefix))
     }
-  });
+  })
 
-  return result.join('\n');
+  return result.join('\n')
 }
 
 /**
@@ -466,20 +466,20 @@ export function tree(
  * @returns Wrapped text
  */
 export function wrapText(text: string, maxWidth: number): string {
-  const words = text.split(' ');
-  const lines: string[] = [];
-  let currentLine = '';
+  const words = text.split(' ')
+  const lines: string[] = []
+  let currentLine = ''
 
   for (const word of words) {
     if (currentLine.length + word.length + 1 <= maxWidth) {
-      currentLine += (currentLine ? ' ' : '') + word;
+      currentLine += (currentLine ? ' ' : '') + word
     } else {
-      if (currentLine) lines.push(currentLine);
-      currentLine = word;
+      if (currentLine) lines.push(currentLine)
+      currentLine = word
     }
   }
 
-  if (currentLine) lines.push(currentLine);
+  if (currentLine) lines.push(currentLine)
 
-  return lines.join('\n');
+  return lines.join('\n')
 }

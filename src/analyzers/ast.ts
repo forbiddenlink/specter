@@ -5,10 +5,10 @@
  * structural information for the knowledge graph.
  */
 
-import path from 'node:path';
-import fg from 'fast-glob';
-import { type Node, Project, type SourceFile, SyntaxKind } from 'ts-morph';
-import type { ClassNode, FileNode, FunctionNode, GraphNode, NodeType } from '../graph/types.js';
+import path from 'node:path'
+import fg from 'fast-glob'
+import { type Node, Project, type SourceFile, SyntaxKind } from 'ts-morph'
+import type { ClassNode, FileNode, FunctionNode, GraphNode, NodeType } from '../graph/types.js'
 
 /**
  * Safely get return type with timeout to prevent hanging on complex types
@@ -22,31 +22,31 @@ function safeGetReturnType(
     // Use a simple approach: just get the declared return type annotation if present
     // Avoid full type inference which can hang on complex types
     const funcNode = func as unknown as {
-      getReturnTypeNode?: () => { getText: () => string } | undefined;
-    };
+      getReturnTypeNode?: () => { getText: () => string } | undefined
+    }
     if (funcNode.getReturnTypeNode) {
-      const typeNode = funcNode.getReturnTypeNode();
+      const typeNode = funcNode.getReturnTypeNode()
       if (typeNode) {
-        return typeNode.getText();
+        return typeNode.getText()
       }
     }
     // If no explicit return type annotation, skip inference to avoid hanging
-    return undefined;
+    return undefined
   } catch {
-    return undefined;
+    return undefined
   }
 }
 
 export interface ASTAnalysisResult {
-  fileNode: FileNode;
-  symbolNodes: GraphNode[];
+  fileNode: FileNode
+  symbolNodes: GraphNode[]
 }
 
 /**
  * Calculate cyclomatic complexity for a function-like node
  */
 function calculateComplexity(node: Node): number {
-  let complexity = 1; // Base complexity
+  let complexity = 1 // Base complexity
 
   node.forEachDescendant((descendant) => {
     switch (descendant.getKind()) {
@@ -60,35 +60,35 @@ function calculateComplexity(node: Node): number {
       case SyntaxKind.CaseClause:
       case SyntaxKind.CatchClause:
       case SyntaxKind.ConditionalType:
-        complexity++;
-        break;
+        complexity++
+        break
       case SyntaxKind.BinaryExpression: {
-        const text = descendant.getText();
+        const text = descendant.getText()
         if (text.includes('&&') || text.includes('||') || text.includes('??')) {
-          complexity++;
+          complexity++
         }
-        break;
+        break
       }
     }
-  });
+  })
 
-  return complexity;
+  return complexity
 }
 
 /**
  * Get the language type from file extension
  */
 function getLanguage(filePath: string): 'typescript' | 'javascript' | 'jsx' | 'tsx' {
-  const ext = path.extname(filePath).toLowerCase();
+  const ext = path.extname(filePath).toLowerCase()
   switch (ext) {
     case '.ts':
-      return 'typescript';
+      return 'typescript'
     case '.tsx':
-      return 'tsx';
+      return 'tsx'
     case '.jsx':
-      return 'jsx';
+      return 'jsx'
     default:
-      return 'javascript';
+      return 'javascript'
   }
 }
 
@@ -96,17 +96,17 @@ function getLanguage(filePath: string): 'typescript' | 'javascript' | 'jsx' | 't
  * Create a unique ID for a node
  */
 function createNodeId(filePath: string, name: string, type: NodeType, line: number): string {
-  return `${filePath}:${type}:${name}:${line}`;
+  return `${filePath}:${type}:${name}:${line}`
 }
 
 /**
  * Analyze a single source file
  */
 export function analyzeSourceFile(sourceFile: SourceFile, rootDir: string): ASTAnalysisResult {
-  const filePath = path.relative(rootDir, sourceFile.getFilePath());
-  const symbolNodes: GraphNode[] = [];
-  const imports = sourceFile.getImportDeclarations();
-  const exports = sourceFile.getExportedDeclarations();
+  const filePath = path.relative(rootDir, sourceFile.getFilePath())
+  const symbolNodes: GraphNode[] = []
+  const imports = sourceFile.getImportDeclarations()
+  const exports = sourceFile.getExportedDeclarations()
 
   // Create file node
   const fileNode: FileNode = {
@@ -121,14 +121,14 @@ export function analyzeSourceFile(sourceFile: SourceFile, rootDir: string): ASTA
     lineCount: sourceFile.getEndLineNumber(),
     importCount: imports.length,
     exportCount: exports.size,
-  };
+  }
 
   // Analyze functions
-  const functions = sourceFile.getFunctions();
+  const functions = sourceFile.getFunctions()
   for (const func of functions) {
-    const name = func.getName() || '<anonymous>';
-    const lineStart = func.getStartLineNumber();
-    const isExported = func.isExported();
+    const name = func.getName() || '<anonymous>'
+    const lineStart = func.getStartLineNumber()
+    const isExported = func.isExported()
 
     const funcNode: FunctionNode = {
       id: createNodeId(filePath, name, 'function', lineStart),
@@ -148,17 +148,17 @@ export function analyzeSourceFile(sourceFile: SourceFile, rootDir: string): ASTA
           .getJsDocs()
           .map((d) => d.getDescription())
           .join('\n') || undefined,
-    };
+    }
 
-    symbolNodes.push(funcNode);
+    symbolNodes.push(funcNode)
   }
 
   // Analyze classes
-  const classes = sourceFile.getClasses();
+  const classes = sourceFile.getClasses()
   for (const cls of classes) {
-    const name = cls.getName() || '<anonymous>';
-    const lineStart = cls.getStartLineNumber();
-    const isExported = cls.isExported();
+    const name = cls.getName() || '<anonymous>'
+    const lineStart = cls.getStartLineNumber()
+    const isExported = cls.isExported()
 
     const classNode: ClassNode = {
       id: createNodeId(filePath, name, 'class', lineStart),
@@ -178,15 +178,15 @@ export function analyzeSourceFile(sourceFile: SourceFile, rootDir: string): ASTA
           .getJsDocs()
           .map((d) => d.getDescription())
           .join('\n') || undefined,
-    };
+    }
 
-    symbolNodes.push(classNode);
+    symbolNodes.push(classNode)
 
     // Analyze class methods
-    const methods = cls.getMethods();
+    const methods = cls.getMethods()
     for (const method of methods) {
-      const methodName = method.getName();
-      const methodLine = method.getStartLineNumber();
+      const methodName = method.getName()
+      const methodLine = method.getStartLineNumber()
 
       const methodNode: FunctionNode = {
         id: createNodeId(filePath, `${name}.${methodName}`, 'function', methodLine),
@@ -206,17 +206,17 @@ export function analyzeSourceFile(sourceFile: SourceFile, rootDir: string): ASTA
             .getJsDocs()
             .map((d) => d.getDescription())
             .join('\n') || undefined,
-      };
+      }
 
-      symbolNodes.push(methodNode);
+      symbolNodes.push(methodNode)
     }
   }
 
   // Analyze interfaces
-  const interfaces = sourceFile.getInterfaces();
+  const interfaces = sourceFile.getInterfaces()
   for (const iface of interfaces) {
-    const name = iface.getName();
-    const lineStart = iface.getStartLineNumber();
+    const name = iface.getName()
+    const lineStart = iface.getStartLineNumber()
 
     const interfaceNode: GraphNode = {
       id: createNodeId(filePath, name, 'interface', lineStart),
@@ -231,16 +231,16 @@ export function analyzeSourceFile(sourceFile: SourceFile, rootDir: string): ASTA
           .getJsDocs()
           .map((d) => d.getDescription())
           .join('\n') || undefined,
-    };
+    }
 
-    symbolNodes.push(interfaceNode);
+    symbolNodes.push(interfaceNode)
   }
 
   // Analyze type aliases
-  const typeAliases = sourceFile.getTypeAliases();
+  const typeAliases = sourceFile.getTypeAliases()
   for (const typeAlias of typeAliases) {
-    const name = typeAlias.getName();
-    const lineStart = typeAlias.getStartLineNumber();
+    const name = typeAlias.getName()
+    const lineStart = typeAlias.getStartLineNumber()
 
     const typeNode: GraphNode = {
       id: createNodeId(filePath, name, 'type', lineStart),
@@ -255,16 +255,16 @@ export function analyzeSourceFile(sourceFile: SourceFile, rootDir: string): ASTA
           .getJsDocs()
           .map((d) => d.getDescription())
           .join('\n') || undefined,
-    };
+    }
 
-    symbolNodes.push(typeNode);
+    symbolNodes.push(typeNode)
   }
 
   // Analyze enums
-  const enums = sourceFile.getEnums();
+  const enums = sourceFile.getEnums()
   for (const enumDecl of enums) {
-    const name = enumDecl.getName();
-    const lineStart = enumDecl.getStartLineNumber();
+    const name = enumDecl.getName()
+    const lineStart = enumDecl.getStartLineNumber()
 
     const enumNode: GraphNode = {
       id: createNodeId(filePath, name, 'enum', lineStart),
@@ -279,19 +279,19 @@ export function analyzeSourceFile(sourceFile: SourceFile, rootDir: string): ASTA
           .getJsDocs()
           .map((d) => d.getDescription())
           .join('\n') || undefined,
-    };
+    }
 
-    symbolNodes.push(enumNode);
+    symbolNodes.push(enumNode)
   }
 
   // Analyze exported variables/constants
-  const variables = sourceFile.getVariableDeclarations();
+  const variables = sourceFile.getVariableDeclarations()
   for (const variable of variables) {
-    const statement = variable.getVariableStatement();
-    if (!statement?.isExported()) continue;
+    const statement = variable.getVariableStatement()
+    if (!statement?.isExported()) continue
 
-    const name = variable.getName();
-    const lineStart = variable.getStartLineNumber();
+    const name = variable.getName()
+    const lineStart = variable.getStartLineNumber()
 
     const varNode: GraphNode = {
       id: createNodeId(filePath, name, 'variable', lineStart),
@@ -301,18 +301,18 @@ export function analyzeSourceFile(sourceFile: SourceFile, rootDir: string): ASTA
       lineStart,
       lineEnd: variable.getEndLineNumber(),
       exported: true,
-    };
+    }
 
-    symbolNodes.push(varNode);
+    symbolNodes.push(varNode)
   }
 
   // Calculate aggregate file complexity
   const totalComplexity = symbolNodes
     .filter((n) => n.complexity !== undefined)
-    .reduce((sum, n) => sum + (n.complexity || 0), 0);
-  fileNode.complexity = totalComplexity;
+    .reduce((sum, n) => sum + (n.complexity || 0), 0)
+  fileNode.complexity = totalComplexity
 
-  return { fileNode, symbolNodes };
+  return { fileNode, symbolNodes }
 }
 
 /**
@@ -320,13 +320,13 @@ export function analyzeSourceFile(sourceFile: SourceFile, rootDir: string): ASTA
  */
 export function createProject(rootDir: string): Project {
   // Try to find tsconfig.json
-  const tsconfigPath = path.join(rootDir, 'tsconfig.json');
+  const tsconfigPath = path.join(rootDir, 'tsconfig.json')
 
   try {
     return new Project({
       tsConfigFilePath: tsconfigPath,
       skipAddingFilesFromTsConfig: true,
-    });
+    })
   } catch {
     // No tsconfig found, create a basic project
     return new Project({
@@ -338,7 +338,7 @@ export function createProject(rootDir: string): Project {
         strict: false,
         skipLibCheck: true,
       },
-    });
+    })
   }
 }
 
@@ -380,23 +380,23 @@ export function getSourceFiles(
     '**/*.generated.tsx', // Generated TSX
     '**/swagger/**', // Swagger/OpenAPI generated
     '**/prisma/client/**', // Prisma client (complex types)
-  ];
+  ]
 
   // Use glob with ignore to prevent loading excluded files into memory
   const filePaths: string[] = fg.sync(patterns, {
     cwd: rootDir,
     absolute: true,
     ignore: excludePatterns,
-  });
+  })
 
   // Add only the filtered files to the project
   for (const filePath of filePaths) {
     try {
-      project.addSourceFileAtPath(filePath);
+      project.addSourceFileAtPath(filePath)
     } catch {
       // Skip files that can't be parsed
     }
   }
 
-  return project.getSourceFiles();
+  return project.getSourceFiles()
 }

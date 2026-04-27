@@ -2,14 +2,14 @@
  * Anthem command - generates a custom theme song/anthem for a codebase
  */
 
-import path from 'node:path';
-import chalk from 'chalk';
-import type { Command } from 'commander';
-import gradient from 'gradient-string';
-import { getGraphStats } from '../../graph/builder.js';
-import { loadGraph } from '../../graph/persistence.js';
-import { outputJson, outputJsonError } from '../../json-output.js';
-import { createSpinner } from '../types.js';
+import path from 'node:path'
+import chalk from 'chalk'
+import type { Command } from 'commander'
+import gradient from 'gradient-string'
+import { getGraphStats } from '../../graph/builder.js'
+import { loadGraph } from '../../graph/persistence.js'
+import { outputJson, outputJsonError } from '../../json-output.js'
+import { createSpinner } from '../types.js'
 
 type Genre =
   | 'Epic Metal'
@@ -19,12 +19,12 @@ type Genre =
   | 'Blues'
   | 'Pop Hit'
   | 'Punk Rock'
-  | 'Lo-Fi Chill';
+  | 'Lo-Fi Chill'
 
 interface GenreInfo {
-  name: Genre;
-  emoji: string;
-  description: string;
+  name: Genre
+  emoji: string
+  description: string
 }
 
 const GENRES: Record<Genre, GenreInfo> = {
@@ -48,7 +48,7 @@ const GENRES: Record<Genre, GenreInfo> = {
     emoji: '\uD83C\uDFA7',
     description: 'Small, cozy, and relaxed',
   },
-};
+}
 
 const VERSE_TEMPLATES: Record<Genre, string[][]> = {
   'Epic Metal': [
@@ -163,66 +163,66 @@ const VERSE_TEMPLATES: Record<Genre, string[][]> = {
       'A lo-fi repo with a gentle glow. \uD83C\uDFA7',
     ],
   ],
-};
+}
 
 /**
  * Determine the codebase "genre" based on its stats
  */
 function determineGenre(stats: {
-  fileCount: number;
-  totalLines: number;
-  avgComplexity: number;
-  maxComplexity: number;
-  healthScore: number;
-  contributorCount: number;
-  deadExportCount: number;
+  fileCount: number
+  totalLines: number
+  avgComplexity: number
+  maxComplexity: number
+  healthScore: number
+  contributorCount: number
+  deadExportCount: number
 }): Genre {
   // High complexity + many files = Epic Metal
   if (stats.avgComplexity > 8 && stats.fileCount > 20) {
-    return 'Epic Metal';
+    return 'Epic Metal'
   }
 
   // Low health score = Punk Rock
   if (stats.healthScore < 40) {
-    return 'Punk Rock';
+    return 'Punk Rock'
   }
 
   // Many dead exports = Blues
   if (stats.deadExportCount > 10) {
-    return 'Blues';
+    return 'Blues'
   }
 
   // Many contributors = Orchestra
   if (stats.contributorCount >= 5) {
-    return 'Orchestra';
+    return 'Orchestra'
   }
 
   // Solo developer = Acoustic Solo
   if (stats.contributorCount <= 1) {
-    return 'Acoustic Solo';
+    return 'Acoustic Solo'
   }
 
   // Low complexity + clean code = Classical
   if (stats.avgComplexity < 3 && stats.healthScore > 75) {
-    return 'Classical';
+    return 'Classical'
   }
 
   // High health score = Pop Hit
   if (stats.healthScore >= 70) {
-    return 'Pop Hit';
+    return 'Pop Hit'
   }
 
   // Small codebase = Lo-Fi Chill
   if (stats.fileCount < 10 && stats.totalLines < 1000) {
-    return 'Lo-Fi Chill';
+    return 'Lo-Fi Chill'
   }
 
   // Default fallback based on health
   if (stats.healthScore >= 50) {
-    return 'Pop Hit';
+    return 'Pop Hit'
   }
 
-  return 'Lo-Fi Chill';
+  return 'Lo-Fi Chill'
 }
 
 /**
@@ -230,27 +230,27 @@ function determineGenre(stats: {
  */
 function fillTemplate(template: string[], vars: Record<string, string | number>): string[] {
   return template.map((line) => {
-    let filled = line;
+    let filled = line
     for (const [key, value] of Object.entries(vars)) {
-      filled = filled.replaceAll(`{${key}}`, String(value));
+      filled = filled.replaceAll(`{${key}}`, String(value))
     }
-    return filled;
-  });
+    return filled
+  })
 }
 
 /**
  * Count unique contributors across all nodes
  */
 function countContributors(nodes: Record<string, { contributors?: string[] }>): number {
-  const contributors = new Set<string>();
+  const contributors = new Set<string>()
   for (const node of Object.values(nodes)) {
     if (node.contributors) {
       for (const c of node.contributors) {
-        contributors.add(c);
+        contributors.add(c)
       }
     }
   }
-  return contributors.size;
+  return contributors.size
 }
 
 /**
@@ -260,26 +260,26 @@ function countDeadExports(
   nodes: Record<string, { type: string; exported: boolean }>,
   edges: Array<{ type: string; target: string }>
 ): number {
-  const importedTargets = new Set(edges.filter((e) => e.type === 'imports').map((e) => e.target));
+  const importedTargets = new Set(edges.filter((e) => e.type === 'imports').map((e) => e.target))
 
-  let deadCount = 0;
+  let deadCount = 0
   for (const [id, node] of Object.entries(nodes)) {
     if (node.exported && node.type !== 'file' && !importedTargets.has(id)) {
-      deadCount++;
+      deadCount++
     }
   }
-  return deadCount;
+  return deadCount
 }
 
 /**
  * Render the anthem box with gradient borders
  */
 function renderAnthemBox(genre: GenreInfo, verse: string[], projectName: string): string {
-  const purpleGrad = gradient(['#9b59b6', '#6c5ce7', '#a29bfe']);
-  const lines: string[] = [];
+  const purpleGrad = gradient(['#9b59b6', '#6c5ce7', '#a29bfe'])
+  const lines: string[] = []
 
-  const boxWidth = 52;
-  const innerWidth = boxWidth - 4; // account for border chars and spaces
+  const boxWidth = 52
+  const innerWidth = boxWidth - 4 // account for border chars and spaces
 
   function padLine(text: string): string {
     // Strip ANSI for length calculation
@@ -287,56 +287,56 @@ function renderAnthemBox(genre: GenreInfo, verse: string[], projectName: string)
       // eslint-disable-next-line no-control-regex
       /\x1b\[[0-9;]*m/g,
       ''
-    );
-    const padding = Math.max(0, innerWidth - stripped.length);
-    return text + ' '.repeat(padding);
+    )
+    const padding = Math.max(0, innerWidth - stripped.length)
+    return text + ' '.repeat(padding)
   }
 
-  const topBorder = `\u2554${'\u2550'.repeat(boxWidth - 2)}\u2557`;
-  const midBorder = `\u2560${'\u2550'.repeat(boxWidth - 2)}\u2563`;
-  const bottomBorder = `\u255A${'\u2550'.repeat(boxWidth - 2)}\u255D`;
-  const emptyLine = `\u2551${' '.repeat(boxWidth - 2)}\u2551`;
+  const topBorder = `\u2554${'\u2550'.repeat(boxWidth - 2)}\u2557`
+  const midBorder = `\u2560${'\u2550'.repeat(boxWidth - 2)}\u2563`
+  const bottomBorder = `\u255A${'\u2550'.repeat(boxWidth - 2)}\u255D`
+  const emptyLine = `\u2551${' '.repeat(boxWidth - 2)}\u2551`
 
-  lines.push('');
-  lines.push(`  ${purpleGrad(topBorder)}`);
+  lines.push('')
+  lines.push(`  ${purpleGrad(topBorder)}`)
 
   // Header
-  const title = `\uD83C\uDFB5 CODEBASE ANTHEM`;
+  const title = `\uD83C\uDFB5 CODEBASE ANTHEM`
   lines.push(
     `  ${purpleGrad('\u2551')}  ${chalk.bold.magentaBright(padLine(title))}${purpleGrad('\u2551')}`
-  );
+  )
 
-  const genreLine = `Genre: ${genre.name} ${genre.emoji}`;
+  const genreLine = `Genre: ${genre.name} ${genre.emoji}`
   lines.push(
     `  ${purpleGrad('\u2551')}  ${chalk.magenta(padLine(genreLine))}${purpleGrad('\u2551')}`
-  );
+  )
 
-  const descLine = `"${genre.description}"`;
-  lines.push(`  ${purpleGrad('\u2551')}  ${chalk.dim(padLine(descLine))}${purpleGrad('\u2551')}`);
+  const descLine = `"${genre.description}"`
+  lines.push(`  ${purpleGrad('\u2551')}  ${chalk.dim(padLine(descLine))}${purpleGrad('\u2551')}`)
 
-  lines.push(`  ${purpleGrad(midBorder)}`);
-  lines.push(`  ${purpleGrad(emptyLine)}`);
+  lines.push(`  ${purpleGrad(midBorder)}`)
+  lines.push(`  ${purpleGrad(emptyLine)}`)
 
   // Verse lines
   for (const verseLine of verse) {
     lines.push(
       `  ${purpleGrad('\u2551')}  ${chalk.white(padLine(verseLine))}${purpleGrad('\u2551')}`
-    );
+    )
   }
 
-  lines.push(`  ${purpleGrad(emptyLine)}`);
+  lines.push(`  ${purpleGrad(emptyLine)}`)
 
   // Footer
-  const footer = `-- The ${projectName} Anthem`;
+  const footer = `-- The ${projectName} Anthem`
   lines.push(
     `  ${purpleGrad('\u2551')}  ${chalk.dim.italic(padLine(footer))}${purpleGrad('\u2551')}`
-  );
+  )
 
-  lines.push(`  ${purpleGrad(emptyLine)}`);
-  lines.push(`  ${purpleGrad(bottomBorder)}`);
-  lines.push('');
+  lines.push(`  ${purpleGrad(emptyLine)}`)
+  lines.push(`  ${purpleGrad(bottomBorder)}`)
+  lines.push('')
 
-  return lines.join('\n');
+  return lines.join('\n')
 }
 
 export function register(program: Command): void {
@@ -346,28 +346,28 @@ export function register(program: Command): void {
     .option('-d, --dir <path>', 'Directory to analyze', '.')
     .option('--json', 'Output as JSON for CI/CD integration')
     .action(async (options) => {
-      const rootDir = path.resolve(options.dir);
+      const rootDir = path.resolve(options.dir)
 
-      const graph = await loadGraph(rootDir);
+      const graph = await loadGraph(rootDir)
 
       if (!graph) {
         if (options.json) {
-          outputJsonError('anthem', 'No graph found. Run `specter scan` first.');
+          outputJsonError('anthem', 'No graph found. Run `specter scan` first.')
         }
-        console.log(chalk.yellow('No graph found. Run `specter scan` first.'));
-        return;
+        console.log(chalk.yellow('No graph found. Run `specter scan` first.'))
+        return
       }
 
-      const spinner = options.json ? null : createSpinner('Composing your codebase anthem...');
-      spinner?.start();
+      const spinner = options.json ? null : createSpinner('Composing your codebase anthem...')
+      spinner?.start()
 
-      const graphStats = getGraphStats(graph);
-      const projectName = path.basename(rootDir);
-      const healthScore = Math.max(0, 100 - graphStats.avgComplexity * 5);
-      const contributorCount = countContributors(graph.nodes);
-      const deadExportCount = countDeadExports(graph.nodes, graph.edges);
+      const graphStats = getGraphStats(graph)
+      const projectName = path.basename(rootDir)
+      const healthScore = Math.max(0, 100 - graphStats.avgComplexity * 5)
+      const contributorCount = countContributors(graph.nodes)
+      const deadExportCount = countDeadExports(graph.nodes, graph.edges)
 
-      const languageNames = Object.keys(graphStats.languages).join(', ') || 'code';
+      const languageNames = Object.keys(graphStats.languages).join(', ') || 'code'
 
       const genre = determineGenre({
         fileCount: graphStats.fileCount,
@@ -377,20 +377,20 @@ export function register(program: Command): void {
         healthScore,
         contributorCount,
         deadExportCount,
-      });
+      })
 
-      const genreInfo = GENRES[genre];
-      const templates = VERSE_TEMPLATES[genre];
+      const genreInfo = GENRES[genre]
+      const templates = VERSE_TEMPLATES[genre]
       if (!templates) {
-        console.log(chalk.red('No templates found for this genre'));
-        return;
+        console.log(chalk.red('No templates found for this genre'))
+        return
       }
       // Pick a pseudo-random variant based on file count + total lines
-      const variantIndex = (graphStats.fileCount + graphStats.totalLines) % templates.length;
-      const template = templates[variantIndex];
+      const variantIndex = (graphStats.fileCount + graphStats.totalLines) % templates.length
+      const template = templates[variantIndex]
       if (!template) {
-        console.log(chalk.red('No template variant found'));
-        return;
+        console.log(chalk.red('No template variant found'))
+        return
       }
 
       const templateVars: Record<string, string | number> = {
@@ -405,11 +405,11 @@ export function register(program: Command): void {
         contributorCount,
         deadExports: deadExportCount,
         languages: languageNames,
-      };
+      }
 
-      const verse = fillTemplate(template, templateVars);
+      const verse = fillTemplate(template, templateVars)
 
-      spinner?.succeed('Anthem composed!');
+      spinner?.succeed('Anthem composed!')
 
       // JSON output
       if (options.json) {
@@ -429,11 +429,11 @@ export function register(program: Command): void {
             deadExportCount,
             languages: graphStats.languages,
           },
-        });
-        return;
+        })
+        return
       }
 
-      const output = renderAnthemBox(genreInfo, verse, projectName);
-      console.log(output);
-    });
+      const output = renderAnthemBox(genreInfo, verse, projectName)
+      console.log(output)
+    })
 }

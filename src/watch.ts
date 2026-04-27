@@ -5,62 +5,62 @@
  * This makes Specter ACTIVE instead of reactive - a true development companion.
  */
 
-import { existsSync, readdirSync, readFileSync, statSync, watch } from 'node:fs';
-import path from 'node:path';
-import chalk from 'chalk';
-import gradient from 'gradient-string';
-import { loadGraph, saveGraph } from './graph/persistence.js';
-import type { PersonalityMode } from './personality/types.js';
+import { existsSync, readdirSync, readFileSync, statSync, watch } from 'node:fs'
+import path from 'node:path'
+import chalk from 'chalk'
+import gradient from 'gradient-string'
+import { loadGraph, saveGraph } from './graph/persistence.js'
+import type { PersonalityMode } from './personality/types.js'
 
 export interface WatchOptions {
-  rootDir: string;
-  mode?: PersonalityMode;
-  debounceMs?: number;
-  excludePatterns?: string[];
-  showAll?: boolean; // Show all changes, not just significant ones
+  rootDir: string
+  mode?: PersonalityMode
+  debounceMs?: number
+  excludePatterns?: string[]
+  showAll?: boolean // Show all changes, not just significant ones
 }
 
 export interface FileChange {
-  file: string;
-  type: 'added' | 'modified' | 'deleted';
-  timestamp: Date;
-  linesDelta?: number;
-  sizeBytes?: number;
+  file: string
+  type: 'added' | 'modified' | 'deleted'
+  timestamp: Date
+  linesDelta?: number
+  sizeBytes?: number
 }
 
 interface ChangeStats {
-  filesChanged: number;
-  linesAdded: number;
-  linesRemoved: number;
+  filesChanged: number
+  linesAdded: number
+  linesRemoved: number
 }
 
 // Track file sizes for comparison
-const fileSizeCache = new Map<string, number>();
-const lineCountCache = new Map<string, number>();
+const fileSizeCache = new Map<string, number>()
+const lineCountCache = new Map<string, number>()
 
 // Debounce helper
 class Debouncer {
-  private timeouts = new Map<string, NodeJS.Timeout>();
+  private timeouts = new Map<string, NodeJS.Timeout>()
 
   debounce(key: string, fn: () => void, ms: number): void {
-    const existing = this.timeouts.get(key);
+    const existing = this.timeouts.get(key)
     if (existing) {
-      clearTimeout(existing);
+      clearTimeout(existing)
     }
 
     const timeout = setTimeout(() => {
-      this.timeouts.delete(key);
-      fn();
-    }, ms);
+      this.timeouts.delete(key)
+      fn()
+    }, ms)
 
-    this.timeouts.set(key, timeout);
+    this.timeouts.set(key, timeout)
   }
 
   clear(): void {
     for (const timeout of this.timeouts.values()) {
-      clearTimeout(timeout);
+      clearTimeout(timeout)
     }
-    this.timeouts.clear();
+    this.timeouts.clear()
   }
 }
 
@@ -69,10 +69,10 @@ class Debouncer {
  */
 function countLines(filePath: string): number {
   try {
-    const content = readFileSync(filePath, 'utf-8');
-    return content.split('\n').length;
+    const content = readFileSync(filePath, 'utf-8')
+    return content.split('\n').length
   } catch {
-    return 0;
+    return 0
   }
 }
 
@@ -81,11 +81,11 @@ function countLines(filePath: string): number {
  */
 function analyzeChangedFile(filePath: string, rootDir: string): FileChange | null {
   try {
-    const relativePath = path.relative(rootDir, filePath);
+    const relativePath = path.relative(rootDir, filePath)
 
     // Check if file should be excluded
     if (shouldExcludeFile(relativePath)) {
-      return null;
+      return null
     }
 
     // Check if file exists (or was deleted)
@@ -94,28 +94,28 @@ function analyzeChangedFile(filePath: string, rootDir: string): FileChange | nul
         file: relativePath,
         type: 'deleted',
         timestamp: new Date(),
-      };
+      }
 
       // Clean up caches
-      fileSizeCache.delete(relativePath);
-      lineCountCache.delete(relativePath);
+      fileSizeCache.delete(relativePath)
+      lineCountCache.delete(relativePath)
 
-      return change;
+      return change
     }
 
     // Get file stats
-    const stats = statSync(filePath);
-    const previousSize = fileSizeCache.get(relativePath);
-    const isNew = previousSize === undefined;
+    const stats = statSync(filePath)
+    const previousSize = fileSizeCache.get(relativePath)
+    const isNew = previousSize === undefined
 
     // Get line count
-    const currentLines = countLines(filePath);
-    const previousLines = lineCountCache.get(relativePath) ?? 0;
-    const linesDelta = currentLines - previousLines;
+    const currentLines = countLines(filePath)
+    const previousLines = lineCountCache.get(relativePath) ?? 0
+    const linesDelta = currentLines - previousLines
 
     // Update caches
-    fileSizeCache.set(relativePath, stats.size);
-    lineCountCache.set(relativePath, currentLines);
+    fileSizeCache.set(relativePath, stats.size)
+    lineCountCache.set(relativePath, currentLines)
 
     const change: FileChange = {
       file: relativePath,
@@ -123,12 +123,12 @@ function analyzeChangedFile(filePath: string, rootDir: string): FileChange | nul
       timestamp: new Date(),
       linesDelta,
       sizeBytes: stats.size,
-    };
+    }
 
-    return change;
+    return change
   } catch (_error) {
     // File might be temporarily unavailable
-    return null;
+    return null
   }
 }
 
@@ -140,55 +140,55 @@ function formatChangeNotification(
   mode: PersonalityMode,
   showAll: boolean
 ): string | null {
-  const { file, type, linesDelta } = change;
-  const fileName = path.basename(file);
+  const { file, type, linesDelta } = change
+  const fileName = path.basename(file)
 
   // Skip insignificant changes unless showAll is true
   if (!showAll) {
-    const isSignificant = Math.abs(linesDelta ?? 0) > 10 || type === 'added' || type === 'deleted';
+    const isSignificant = Math.abs(linesDelta ?? 0) > 10 || type === 'added' || type === 'deleted'
 
     if (!isSignificant) {
-      return null;
+      return null
     }
   }
 
-  const timestamp = chalk.dim(`[${new Date().toLocaleTimeString()}]`);
-  let emoji = '📝';
-  let message = '';
-  let color = chalk.white;
+  const timestamp = chalk.dim(`[${new Date().toLocaleTimeString()}]`)
+  let emoji = '📝'
+  let message = ''
+  let color = chalk.white
 
   if (type === 'added') {
-    emoji = '✨';
-    message = getMessage(mode, 'added', fileName);
-    color = chalk.green;
+    emoji = '✨'
+    message = getMessage(mode, 'added', fileName)
+    color = chalk.green
   } else if (type === 'deleted') {
-    emoji = '🗑️';
-    message = getMessage(mode, 'deleted', fileName);
-    color = chalk.dim;
+    emoji = '🗑️'
+    message = getMessage(mode, 'deleted', fileName)
+    color = chalk.dim
   } else if (linesDelta && Math.abs(linesDelta) > 10) {
     if (linesDelta > 50) {
-      emoji = '📈';
-      message = getMessage(mode, 'largeGrowth', fileName, linesDelta);
-      color = chalk.yellow;
+      emoji = '📈'
+      message = getMessage(mode, 'largeGrowth', fileName, linesDelta)
+      color = chalk.yellow
     } else if (linesDelta > 0) {
-      emoji = '📊';
-      message = getMessage(mode, 'growth', fileName, linesDelta);
-      color = chalk.cyan;
+      emoji = '📊'
+      message = getMessage(mode, 'growth', fileName, linesDelta)
+      color = chalk.cyan
     } else if (linesDelta < -50) {
-      emoji = '🧹';
-      message = getMessage(mode, 'largeShrink', fileName, Math.abs(linesDelta));
-      color = chalk.green;
+      emoji = '🧹'
+      message = getMessage(mode, 'largeShrink', fileName, Math.abs(linesDelta))
+      color = chalk.green
     } else {
-      emoji = '📉';
-      message = getMessage(mode, 'shrink', fileName, Math.abs(linesDelta));
-      color = chalk.green;
+      emoji = '📉'
+      message = getMessage(mode, 'shrink', fileName, Math.abs(linesDelta))
+      color = chalk.green
     }
   } else {
-    message = `${fileName} updated`;
-    color = chalk.dim;
+    message = `${fileName} updated`
+    color = chalk.dim
   }
 
-  return `${timestamp} ${emoji} ${color(message)}`;
+  return `${timestamp} ${emoji} ${color(message)}`
 }
 
 /**
@@ -281,10 +281,10 @@ function getMessage(
       largeGrowth: `${fileName} going viral! +${delta} lines 🚀`,
       largeShrink: `${fileName} pivoted: -${delta} lines. Ship it!`,
     },
-  };
+  }
 
-  const modeMessages = messages[mode] ?? messages['default'];
-  return modeMessages?.[changeType] ?? `${fileName} changed`;
+  const modeMessages = messages[mode] ?? messages['default']
+  return modeMessages?.[changeType] ?? `${fileName} changed`
 }
 
 /**
@@ -306,48 +306,48 @@ function shouldExcludeFile(relativePath: string): boolean {
     /package-lock\.json$/,
     /yarn\.lock$/,
     /pnpm-lock\.yaml$/,
-  ];
+  ]
 
-  return excludePatterns.some((pattern) => pattern.test(relativePath));
+  return excludePatterns.some((pattern) => pattern.test(relativePath))
 }
 
 /**
  * Start watching for file changes
  */
 export async function startWatch(options: WatchOptions): Promise<void> {
-  const { rootDir, mode = 'default', debounceMs = 500, showAll = false } = options;
+  const { rootDir, mode = 'default', debounceMs = 500, showAll = false } = options
 
   // Load initial graph
-  const graph = await loadGraph(rootDir);
+  const graph = await loadGraph(rootDir)
   if (!graph) {
     console.log(
       chalk.yellow(
         '\n  ⚠️  No knowledge graph found. Run `specter scan` first to build the graph.\n'
       )
-    );
-    return;
+    )
+    return
   }
 
   // Initialize caches with current file states
-  const srcDir = path.join(rootDir, 'src');
+  const srcDir = path.join(rootDir, 'src')
   if (existsSync(srcDir)) {
     const initFiles = (dir: string) => {
       try {
-        const entries = readdirSync(dir, { withFileTypes: true });
+        const entries = readdirSync(dir, { withFileTypes: true })
         for (const entry of entries) {
-          const fullPath = path.join(dir, entry.name);
+          const fullPath = path.join(dir, entry.name)
           if (entry.isDirectory()) {
             if (!shouldExcludeFile(entry.name)) {
-              initFiles(fullPath);
+              initFiles(fullPath)
             }
           } else if (entry.isFile()) {
-            const ext = path.extname(entry.name);
+            const ext = path.extname(entry.name)
             if (['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs'].includes(ext)) {
-              const relativePath = path.relative(rootDir, fullPath);
+              const relativePath = path.relative(rootDir, fullPath)
               if (!shouldExcludeFile(relativePath)) {
-                const stats = statSync(fullPath);
-                fileSizeCache.set(relativePath, stats.size);
-                lineCountCache.set(relativePath, countLines(fullPath));
+                const stats = statSync(fullPath)
+                fileSizeCache.set(relativePath, stats.size)
+                lineCountCache.set(relativePath, countLines(fullPath))
               }
             }
           }
@@ -355,128 +355,128 @@ export async function startWatch(options: WatchOptions): Promise<void> {
       } catch (_error) {
         // Ignore errors during initialization
       }
-    };
-    initFiles(srcDir);
+    }
+    initFiles(srcDir)
   }
 
-  const debouncer = new Debouncer();
+  const debouncer = new Debouncer()
   const stats: ChangeStats = {
     filesChanged: 0,
     linesAdded: 0,
     linesRemoved: 0,
-  };
+  }
 
   // Display header
-  console.log();
-  const g = gradient(['#9b59b6', '#6c5ce7', '#a29bfe']);
-  console.log(g('  ╔═══════════════════════════════════════════╗'));
-  console.log(g('  ║') + chalk.bold.white('          👻 SPECTER WATCHING...           ') + g('║'));
-  console.log(g('  ╚═══════════════════════════════════════════╝'));
-  console.log();
-  console.log(chalk.dim(`  Monitoring: ${rootDir}`));
-  console.log(chalk.dim(`  Personality: ${mode}`));
-  console.log(chalk.dim(`  Press Ctrl+C to stop`));
-  console.log();
+  console.log()
+  const g = gradient(['#9b59b6', '#6c5ce7', '#a29bfe'])
+  console.log(g('  ╔═══════════════════════════════════════════╗'))
+  console.log(g('  ║') + chalk.bold.white('          👻 SPECTER WATCHING...           ') + g('║'))
+  console.log(g('  ╚═══════════════════════════════════════════╝'))
+  console.log()
+  console.log(chalk.dim(`  Monitoring: ${rootDir}`))
+  console.log(chalk.dim(`  Personality: ${mode}`))
+  console.log(chalk.dim(`  Press Ctrl+C to stop`))
+  console.log()
 
   // Start watching recursively
   const watcher = watch(rootDir, { recursive: true }, (_eventType, filename) => {
-    if (!filename) return;
+    if (!filename) return
 
-    const filePath = path.join(rootDir, filename);
-    const ext = path.extname(filename);
+    const filePath = path.join(rootDir, filename)
+    const ext = path.extname(filename)
 
     // Only watch TypeScript/JavaScript files
     if (!['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs'].includes(ext)) {
-      return;
+      return
     }
 
     // Debounce file changes (avoid duplicate events)
     debouncer.debounce(
       filename,
       () => {
-        const change = analyzeChangedFile(filePath, rootDir);
+        const change = analyzeChangedFile(filePath, rootDir)
 
-        if (!change) return;
+        if (!change) return
 
         // Update stats
-        stats.filesChanged++;
+        stats.filesChanged++
         if (change.linesDelta) {
           if (change.linesDelta > 0) {
-            stats.linesAdded += change.linesDelta;
+            stats.linesAdded += change.linesDelta
           } else {
-            stats.linesRemoved += Math.abs(change.linesDelta);
+            stats.linesRemoved += Math.abs(change.linesDelta)
           }
         }
 
         // Display notification
-        const notification = formatChangeNotification(change, mode, showAll);
+        const notification = formatChangeNotification(change, mode, showAll)
         if (notification) {
-          console.log(`  ${notification}`);
+          console.log(`  ${notification}`)
         }
 
         // Periodically save updated graph (every 10 changes)
         if (stats.filesChanged % 10 === 0) {
           saveGraph(graph, rootDir).catch(() => {
             // Silently fail - don't interrupt watch mode
-          });
+          })
         }
       },
       debounceMs
-    );
-  });
+    )
+  })
 
   // Handle graceful shutdown
   process.on('SIGINT', async () => {
-    console.log('\n');
-    const g2 = gradient(['#9b59b6', '#6c5ce7', '#a29bfe']);
-    console.log(g2('  ╔═══════════════════════════════════════════╗'));
+    console.log('\n')
+    const g2 = gradient(['#9b59b6', '#6c5ce7', '#a29bfe'])
+    console.log(g2('  ╔═══════════════════════════════════════════╗'))
     console.log(
       g2('  ║') + chalk.bold.white('        👻 SPECTER SESSION SUMMARY         ') + g2('║')
-    );
-    console.log(g2('  ╚═══════════════════════════════════════════╝'));
-    console.log();
-    console.log(chalk.cyan(`  Files changed: ${stats.filesChanged}`));
-    console.log(chalk.dim(`  Lines added: +${stats.linesAdded}`));
-    console.log(chalk.dim(`  Lines removed: -${stats.linesRemoved}`));
+    )
+    console.log(g2('  ╚═══════════════════════════════════════════╝'))
+    console.log()
+    console.log(chalk.cyan(`  Files changed: ${stats.filesChanged}`))
+    console.log(chalk.dim(`  Lines added: +${stats.linesAdded}`))
+    console.log(chalk.dim(`  Lines removed: -${stats.linesRemoved}`))
 
-    const netLines = stats.linesAdded - stats.linesRemoved;
+    const netLines = stats.linesAdded - stats.linesRemoved
     if (netLines > 100) {
-      console.log();
-      console.log(chalk.yellow(`  📈 Your codebase grew by ${netLines} lines this session`));
-      console.log(chalk.dim(`     Remember: less is often more!`));
+      console.log()
+      console.log(chalk.yellow(`  📈 Your codebase grew by ${netLines} lines this session`))
+      console.log(chalk.dim(`     Remember: less is often more!`))
     } else if (netLines < -50) {
-      console.log();
+      console.log()
       console.log(
         chalk.green(`  🎉 You removed ${Math.abs(netLines)} lines! Clean code is happy code!`)
-      );
+      )
     }
 
-    console.log();
-    console.log(chalk.dim('  See you next time! 👻\n'));
+    console.log()
+    console.log(chalk.dim('  See you next time! 👻\n'))
 
-    debouncer.clear();
-    watcher.close();
-    process.exit(0);
-  });
+    debouncer.clear()
+    watcher.close()
+    process.exit(0)
+  })
 
   // Keep the process alive
   await new Promise(() => {
     // Runs indefinitely
-  });
+  })
 }
 
 /**
  * Format watch output for display
  */
 export function formatWatch(changes: FileChange[], mode: PersonalityMode): string {
-  const output: string[] = [];
+  const output: string[] = []
 
   for (const change of changes) {
-    const notification = formatChangeNotification(change, mode, true);
+    const notification = formatChangeNotification(change, mode, true)
     if (notification) {
-      output.push(notification);
+      output.push(notification)
     }
   }
 
-  return output.join('\n');
+  return output.join('\n')
 }

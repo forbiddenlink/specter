@@ -6,15 +6,15 @@
 
 export interface JsonOutput<T = unknown> {
   /** Command that was run */
-  command: string;
+  command: string
   /** ISO timestamp of when command was run */
-  timestamp: string;
+  timestamp: string
   /** Whether the command succeeded */
-  success: boolean;
+  success: boolean
   /** Command-specific data */
-  data: T;
+  data: T
   /** Optional metadata */
-  meta?: Record<string, unknown>;
+  meta?: Record<string, unknown>
 }
 
 /**
@@ -30,8 +30,8 @@ export function outputJson<T>(command: string, data: T, meta?: Record<string, un
     success: true,
     data,
     ...(meta && { meta }),
-  };
-  console.log(JSON.stringify(output, null, 2));
+  }
+  console.log(JSON.stringify(output, null, 2))
 }
 
 /**
@@ -46,7 +46,7 @@ export function outputJsonError(command: string, error: string): never {
     success: false,
     data: null,
     meta: { error },
-  };
-  console.log(JSON.stringify(output, null, 2));
-  process.exit(1);
+  }
+  console.log(JSON.stringify(output, null, 2))
+  process.exit(1)
 }

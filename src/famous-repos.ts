@@ -5,20 +5,20 @@
  * against well-known open-source projects.
  */
 
-import chalk from 'chalk';
-import gradient from 'gradient-string';
+import chalk from 'chalk'
+import gradient from 'gradient-string'
 
 export interface FamousRepoProfile {
-  name: string;
-  url: string;
-  description: string;
-  fileCount: number;
-  totalLines: number;
-  avgComplexity: number;
-  healthScore: number; // 0-100
-  languagePrimary: string;
-  stars: string; // e.g. "220k"
-  lastUpdated: string; // e.g. "2025"
+  name: string
+  url: string
+  description: string
+  fileCount: number
+  totalLines: number
+  avgComplexity: number
+  healthScore: number // 0-100
+  languagePrimary: string
+  stars: string // e.g. "220k"
+  lastUpdated: string // e.g. "2025"
 }
 
 /**
@@ -194,7 +194,7 @@ export const FAMOUS_REPOS: Record<string, FamousRepoProfile> = {
     stars: '39k',
     lastUpdated: '2025',
   },
-};
+}
 
 /**
  * Find the most similar famous repo based on health score, average complexity,
@@ -205,62 +205,62 @@ export function findClosestMatch(
   avgComplexity: number,
   fileCount: number
 ): FamousRepoProfile {
-  const repos = Object.values(FAMOUS_REPOS);
+  const repos = Object.values(FAMOUS_REPOS)
 
   // Normalization ranges (derived from min/max of famous repos data)
-  const healthMin = 38;
-  const healthMax = 84;
-  const complexityMin = 3.2;
-  const complexityMax = 12.4;
-  const fileMin = 120;
-  const fileMax = 5200;
+  const healthMin = 38
+  const healthMax = 84
+  const complexityMin = 3.2
+  const complexityMax = 12.4
+  const fileMin = 120
+  const fileMax = 5200
 
   function normalize(value: number, min: number, max: number): number {
-    if (max === min) return 0;
-    return (value - min) / (max - min);
+    if (max === min) return 0
+    return (value - min) / (max - min)
   }
 
-  const userHealth = normalize(healthScore, healthMin, healthMax);
-  const userComplexity = normalize(avgComplexity, complexityMin, complexityMax);
-  const userFiles = normalize(fileCount, fileMin, fileMax);
+  const userHealth = normalize(healthScore, healthMin, healthMax)
+  const userComplexity = normalize(avgComplexity, complexityMin, complexityMax)
+  const userFiles = normalize(fileCount, fileMin, fileMax)
 
   // Weights: health score matters most, then complexity, then file count
-  const wHealth = 0.5;
-  const wComplexity = 0.3;
-  const wFiles = 0.2;
+  const wHealth = 0.5
+  const wComplexity = 0.3
+  const wFiles = 0.2
 
-  let bestMatch: FamousRepoProfile | undefined = repos[0];
-  let bestDistance = Infinity;
+  let bestMatch: FamousRepoProfile | undefined = repos[0]
+  let bestDistance = Infinity
 
   for (const repo of repos) {
-    const repoHealth = normalize(repo.healthScore, healthMin, healthMax);
-    const repoComplexity = normalize(repo.avgComplexity, complexityMin, complexityMax);
-    const repoFiles = normalize(repo.fileCount, fileMin, fileMax);
+    const repoHealth = normalize(repo.healthScore, healthMin, healthMax)
+    const repoComplexity = normalize(repo.avgComplexity, complexityMin, complexityMax)
+    const repoFiles = normalize(repo.fileCount, fileMin, fileMax)
 
     const distance = Math.sqrt(
       wHealth * (userHealth - repoHealth) ** 2 +
         wComplexity * (userComplexity - repoComplexity) ** 2 +
         wFiles * (userFiles - repoFiles) ** 2
-    );
+    )
 
     if (distance < bestDistance) {
-      bestDistance = distance;
-      bestMatch = repo;
+      bestDistance = distance
+      bestMatch = repo
     }
   }
 
   if (!bestMatch) {
-    throw new Error('No matching repo found');
+    throw new Error('No matching repo found')
   }
-  return bestMatch;
+  return bestMatch
 }
 
 interface UserStats {
-  fileCount: number;
-  totalLines: number;
-  avgComplexity: number;
-  healthScore: number;
-  projectName: string;
+  fileCount: number
+  totalLines: number
+  avgComplexity: number
+  healthScore: number
+  projectName: string
 }
 
 /**
@@ -272,38 +272,38 @@ export function formatFamousComparison(
   matchedRepo: FamousRepoProfile,
   allRepos: Record<string, FamousRepoProfile>
 ): string {
-  const specterGradient = gradient(['#9b59b6', '#6c5ce7', '#a29bfe']);
-  const lines: string[] = [];
+  const specterGradient = gradient(['#9b59b6', '#6c5ce7', '#a29bfe'])
+  const lines: string[] = []
 
   // Header
-  lines.push('');
-  lines.push(specterGradient('  ================================================================'));
-  lines.push(specterGradient('       FAME CHECK - How Does Your Codebase Stack Up?'));
-  lines.push(specterGradient('  ================================================================'));
-  lines.push('');
+  lines.push('')
+  lines.push(specterGradient('  ================================================================'))
+  lines.push(specterGradient('       FAME CHECK - How Does Your Codebase Stack Up?'))
+  lines.push(specterGradient('  ================================================================'))
+  lines.push('')
 
   // Match announcement
   lines.push(
     chalk.bold.white('  Your closest match: ') +
       chalk.bold.cyan(matchedRepo.name) +
       chalk.dim(` (${matchedRepo.stars} stars)`)
-  );
-  lines.push(chalk.dim(`  ${matchedRepo.url}`));
-  lines.push('');
+  )
+  lines.push(chalk.dim(`  ${matchedRepo.url}`))
+  lines.push('')
 
   // Side-by-side comparison
-  lines.push(specterGradient('  ---- Comparison ------------------------------------------------'));
-  lines.push('');
+  lines.push(specterGradient('  ---- Comparison ------------------------------------------------'))
+  lines.push('')
 
-  const labelWidth = 22;
-  const colWidth = 20;
+  const labelWidth = 22
+  const colWidth = 20
 
   const header =
     chalk.dim(`  ${'Metric'.padEnd(labelWidth)}`) +
     chalk.bold.yellow(userStats.projectName.padEnd(colWidth)) +
-    chalk.bold.cyan(matchedRepo.name.padEnd(colWidth));
-  lines.push(header);
-  lines.push(chalk.dim(`  ${'-'.repeat(labelWidth + colWidth * 2)}`));
+    chalk.bold.cyan(matchedRepo.name.padEnd(colWidth))
+  lines.push(header)
+  lines.push(chalk.dim(`  ${'-'.repeat(labelWidth + colWidth * 2)}`))
 
   // Comparison rows
   const rows: Array<{ label: string; userVal: string; repoVal: string }> = [
@@ -327,28 +327,26 @@ export function formatFamousComparison(
       userVal: `${userStats.healthScore}/100`,
       repoVal: `${matchedRepo.healthScore}/100`,
     },
-  ];
+  ]
 
   for (const row of rows) {
     lines.push(
       chalk.dim(`  ${row.label.padEnd(labelWidth)}`) +
         chalk.white(row.userVal.padEnd(colWidth)) +
         chalk.white(row.repoVal.padEnd(colWidth))
-    );
+    )
   }
 
-  lines.push('');
+  lines.push('')
 
   // Witty comparison line
-  const wittyLine = generateWittyComparison(userStats, matchedRepo);
-  lines.push(chalk.italic.magenta(`  "${wittyLine}"`));
-  lines.push('');
+  const wittyLine = generateWittyComparison(userStats, matchedRepo)
+  lines.push(chalk.italic.magenta(`  "${wittyLine}"`))
+  lines.push('')
 
   // Leaderboard
-  lines.push(
-    specterGradient('  ---- Leaderboard (by Health Score) ------------------------------')
-  );
-  lines.push('');
+  lines.push(specterGradient('  ---- Leaderboard (by Health Score) ------------------------------'))
+  lines.push('')
 
   // Sort all repos + user by health score
   const leaderboard: Array<{ name: string; healthScore: number; isUser: boolean }> = Object.values(
@@ -357,105 +355,105 @@ export function formatFamousComparison(
     name: r.name,
     healthScore: r.healthScore,
     isUser: false,
-  }));
+  }))
 
   leaderboard.push({
     name: userStats.projectName,
     healthScore: userStats.healthScore,
     isUser: true,
-  });
+  })
 
-  leaderboard.sort((a, b) => b.healthScore - a.healthScore);
+  leaderboard.sort((a, b) => b.healthScore - a.healthScore)
 
   for (let i = 0; i < leaderboard.length; i++) {
-    const entry = leaderboard[i];
-    if (!entry) continue;
-    const rank = `  ${String(i + 1).padStart(2)}.`;
-    const name = entry.name.padEnd(24);
-    const score = `${entry.healthScore}/100`;
+    const entry = leaderboard[i]
+    if (!entry) continue
+    const rank = `  ${String(i + 1).padStart(2)}.`
+    const name = entry.name.padEnd(24)
+    const score = `${entry.healthScore}/100`
 
     if (entry.isUser) {
-      lines.push(chalk.bold.yellow(`${rank} ${name} ${score}  <-- YOU ARE HERE`));
+      lines.push(chalk.bold.yellow(`${rank} ${name} ${score}  <-- YOU ARE HERE`))
     } else {
       const scoreColor =
-        entry.healthScore >= 75 ? chalk.green : entry.healthScore >= 60 ? chalk.yellow : chalk.red;
-      lines.push(`${chalk.dim(rank)} ${chalk.white(name)}${scoreColor(score)}`);
+        entry.healthScore >= 75 ? chalk.green : entry.healthScore >= 60 ? chalk.yellow : chalk.red
+      lines.push(`${chalk.dim(rank)} ${chalk.white(name)}${scoreColor(score)}`)
     }
   }
 
-  lines.push('');
+  lines.push('')
 
   // Footer with rank summary
-  const userRank = leaderboard.findIndex((e) => e.isUser) + 1;
-  const total = leaderboard.length;
+  const userRank = leaderboard.findIndex((e) => e.isUser) + 1
+  const total = leaderboard.length
 
   if (userRank === 1) {
-    lines.push(chalk.bold.green('  You outrank every famous repo on the list. Legendary.'));
+    lines.push(chalk.bold.green('  You outrank every famous repo on the list. Legendary.'))
   } else if (userRank <= 3) {
     lines.push(
       chalk.bold.green(`  Top ${userRank} out of ${total}! Your codebase is in elite company.`)
-    );
+    )
   } else if (userRank <= Math.ceil(total / 2)) {
-    lines.push(chalk.bold.yellow(`  Rank ${userRank} of ${total}. Upper half -- not bad at all.`));
+    lines.push(chalk.bold.yellow(`  Rank ${userRank} of ${total}. Upper half -- not bad at all.`))
   } else if (userRank < total) {
     lines.push(
       chalk.bold.yellow(
         `  Rank ${userRank} of ${total}. Room to climb, but you're in good company.`
       )
-    );
+    )
   } else {
     lines.push(
       chalk.bold.red(
         `  Rank ${userRank} of ${total}. Even the TypeScript compiler beat you. Time to refactor.`
       )
-    );
+    )
   }
 
-  lines.push('');
-  lines.push(specterGradient('  ================================================================'));
-  lines.push('');
+  lines.push('')
+  lines.push(specterGradient('  ================================================================'))
+  lines.push('')
 
-  return lines.join('\n');
+  return lines.join('\n')
 }
 
 /**
  * Generate a witty one-liner comparing the user's codebase to the matched repo.
  */
 function generateWittyComparison(userStats: UserStats, matchedRepo: FamousRepoProfile): string {
-  const complexityRatio = userStats.avgComplexity / matchedRepo.avgComplexity;
-  const sizeRatio = userStats.fileCount / matchedRepo.fileCount;
-  const healthDiff = userStats.healthScore - matchedRepo.healthScore;
+  const complexityRatio = userStats.avgComplexity / matchedRepo.avgComplexity
+  const sizeRatio = userStats.fileCount / matchedRepo.fileCount
+  const healthDiff = userStats.healthScore - matchedRepo.healthScore
 
   // Higher complexity than match
   if (complexityRatio > 1.5 && sizeRatio < 0.5) {
-    return `Your codebase has the complexity of ${matchedRepo.name} but the file count of a weekend project.`;
+    return `Your codebase has the complexity of ${matchedRepo.name} but the file count of a weekend project.`
   }
 
   // Much healthier than match
   if (healthDiff > 20) {
-    return `Healthier than ${matchedRepo.name} by ${healthDiff} points -- their maintainers would be jealous.`;
+    return `Healthier than ${matchedRepo.name} by ${healthDiff} points -- their maintainers would be jealous.`
   }
 
   // Much less healthy
   if (healthDiff < -20) {
-    return `${matchedRepo.name} has ${Math.abs(healthDiff)} points on you. Maybe borrow some of their CI config?`;
+    return `${matchedRepo.name} has ${Math.abs(healthDiff)} points on you. Maybe borrow some of their CI config?`
   }
 
   // Tiny but complex
   if (sizeRatio < 0.1 && complexityRatio > 1.0) {
-    return `Somehow you packed ${matchedRepo.name}-level complexity into a fraction of the files. Impressive... or terrifying.`;
+    return `Somehow you packed ${matchedRepo.name}-level complexity into a fraction of the files. Impressive... or terrifying.`
   }
 
   // Larger than match
   if (sizeRatio > 2.0) {
-    return `You have ${sizeRatio.toFixed(1)}x the files of ${matchedRepo.name}. That's either ambition or scope creep.`;
+    return `You have ${sizeRatio.toFixed(1)}x the files of ${matchedRepo.name}. That's either ambition or scope creep.`
   }
 
   // Very similar
   if (Math.abs(healthDiff) <= 5 && Math.abs(complexityRatio - 1) < 0.2) {
-    return `You and ${matchedRepo.name} are practically twins. Same energy, same complexity, same vibe.`;
+    return `You and ${matchedRepo.name} are practically twins. Same energy, same complexity, same vibe.`
   }
 
   // Default
-  return `Your codebase walks in ${matchedRepo.name}'s footsteps -- similar health, similar battle scars.`;
+  return `Your codebase walks in ${matchedRepo.name}'s footsteps -- similar health, similar battle scars.`
 }

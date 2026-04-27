@@ -2,7 +2,7 @@
  * Output formatting utilities for reducing complexity in commands
  */
 
-import chalk from 'chalk';
+import chalk from 'chalk'
 
 /**
  * Color rules for different line patterns
@@ -30,7 +30,7 @@ const DEFAULT_COLOR_RULES: Array<{ pattern: RegExp; color: (text: string) => str
   { pattern: /[\u25B2\u25B6\u2502\u2514]/, color: (t) => chalk.white(`  ${t}`) },
   { pattern: /[\u25CF\u25CB\u25E6]/, color: (t) => chalk.white(`  ${t}`) },
   { pattern: /\.\.\. and/, color: (t) => chalk.dim(`  ${t}`) },
-];
+]
 
 /**
  * Format and colorize output lines based on content patterns
@@ -41,36 +41,36 @@ export function colorizeOutput(
   rules: Array<{ pattern: string | RegExp; color: (text: string) => string }> = []
 ): string[] {
   // Combine default rules with custom rules
-  const allRules = [...DEFAULT_COLOR_RULES, ...rules];
+  const allRules = [...DEFAULT_COLOR_RULES, ...rules]
 
   return lines.map((line) => {
     // Apply rules in order
     for (const rule of allRules) {
-      const pattern = typeof rule.pattern === 'string' ? new RegExp(rule.pattern) : rule.pattern;
+      const pattern = typeof rule.pattern === 'string' ? new RegExp(rule.pattern) : rule.pattern
       if (pattern.test(line)) {
-        return rule.color(line);
+        return rule.color(line)
       }
     }
 
     // Default: white text with left padding
-    return chalk.white(`  ${line}`);
-  });
+    return chalk.white(`  ${line}`)
+  })
 }
 
 /**
  * Print formatted lines to console
  */
 export function printFormatted(lines: string[]): void {
-  console.log();
+  console.log()
   for (const line of lines) {
-    console.log(line);
+    console.log(line)
   }
-  console.log();
+  console.log()
 }
 
 /**
  * Create simple formatter for command output with default styling
  */
 export function createFormatter(defaultColor: (text: string) => string = chalk.white) {
-  return (text: string): string => defaultColor(`  ${text}`);
+  return (text: string): string => defaultColor(`  ${text}`)
 }

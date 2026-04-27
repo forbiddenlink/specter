@@ -5,9 +5,9 @@
  * Configuration can be customized via specter.config.json in project root.
  */
 
-import fs from 'node:fs';
-import path from 'node:path';
-import { z } from 'zod';
+import fs from 'node:fs'
+import path from 'node:path'
+import { z } from 'zod'
 
 /**
  * Complexity thresholds for categorizing functions
@@ -19,7 +19,7 @@ const ComplexityThresholdsSchema = z.object({
   medium: z.number().min(1).max(100).default(10),
   /** Upper bound for "high" complexity (default: 20) */
   high: z.number().min(1).max(200).default(20),
-});
+})
 
 /**
  * Risk scoring weights (should sum to 1.0)
@@ -37,7 +37,7 @@ const RiskWeightsSchema = z.object({
   busFactorRisk: z.number().min(0).max(1).default(0.1),
   /** Weight for test coverage factor (default: 0.1) */
   testCoverage: z.number().min(0).max(1).default(0.1),
-});
+})
 
 /**
  * Risk level thresholds
@@ -49,7 +49,7 @@ const RiskLevelsSchema = z.object({
   medium: z.number().min(0).max(100).default(50),
   /** Max score for "high" risk (default: 75) */
   high: z.number().min(0).max(100).default(75),
-});
+})
 
 /**
  * Files changed thresholds for risk scoring
@@ -61,7 +61,7 @@ const FilesChangedThresholdsSchema = z.object({
   moderate: z.number().min(1).default(10),
   /** Max files for "large" change (default: 20) */
   large: z.number().min(1).default(20),
-});
+})
 
 /**
  * Lines changed thresholds for risk scoring
@@ -75,7 +75,7 @@ const LinesChangedThresholdsSchema = z.object({
   significant: z.number().min(1).default(500),
   /** Max lines for "large" change (default: 1000) */
   large: z.number().min(1).default(1000),
-});
+})
 
 /**
  * Dashboard configuration
@@ -85,7 +85,7 @@ const DashboardSchema = z.object({
   port: z.number().min(1024).max(65535).default(3333),
   /** Default host for dashboard server (default: localhost) */
   host: z.string().default('localhost'),
-});
+})
 
 /**
  * History configuration
@@ -93,7 +93,7 @@ const DashboardSchema = z.object({
 const HistorySchema = z.object({
   /** Maximum number of health snapshots to keep (default: 100) */
   maxSnapshots: z.number().min(1).max(10000).default(100),
-});
+})
 
 /**
  * Git analysis configuration
@@ -109,7 +109,7 @@ const GitSchema = z.object({
   hotFileThreshold: z.number().min(1).default(10),
   /** Batch size for git operations (default: 10) */
   batchSize: z.number().min(1).max(100).default(10),
-});
+})
 
 /**
  * Impact analysis configuration
@@ -127,7 +127,7 @@ const ImpactAnalysisSchema = z.object({
     })
     .optional()
     .default({ dependency: 0.35, coupling: 0.25, complexity: 0.25, churn: 0.15 }),
-});
+})
 
 /**
  * Health scoring configuration
@@ -147,7 +147,7 @@ const HealthSchema = z.object({
     .default({ a: 90, b: 80, c: 70, d: 60 }),
   /** Threshold for trend direction change (default: 2) */
   trendChangeThreshold: z.number().min(0).max(20).default(2),
-});
+})
 
 /**
  * Analysis limits
@@ -159,7 +159,7 @@ const LimitsSchema = z.object({
   maxReportHotspots: z.number().min(1).max(1000).default(20),
   /** Max items to show in risk factor lists (default: 5) */
   maxRiskFactorItems: z.number().min(1).max(50).default(5),
-});
+})
 
 /**
  * Full Specter configuration schema
@@ -234,95 +234,95 @@ const SpecterConfigSchema = z.object({
     maxReportHotspots: 20,
     maxRiskFactorItems: 5,
   }),
-});
+})
 
 /**
  * Type for the full Specter configuration
  */
-export type SpecterConfig = z.infer<typeof SpecterConfigSchema>;
+export type SpecterConfig = z.infer<typeof SpecterConfigSchema>
 
 /**
  * Type for complexity thresholds
  */
-export type ComplexityThresholds = z.infer<typeof ComplexityThresholdsSchema>;
+export type ComplexityThresholds = z.infer<typeof ComplexityThresholdsSchema>
 
 /**
  * Type for risk weights
  */
-export type RiskWeights = z.infer<typeof RiskWeightsSchema>;
+export type RiskWeights = z.infer<typeof RiskWeightsSchema>
 
 /**
  * Type for risk levels
  */
-export type RiskLevels = z.infer<typeof RiskLevelsSchema>;
+export type RiskLevels = z.infer<typeof RiskLevelsSchema>
 
 /**
  * Default configuration (used when no config file exists)
  */
-export const DEFAULT_CONFIG: SpecterConfig = SpecterConfigSchema.parse({});
+export const DEFAULT_CONFIG: SpecterConfig = SpecterConfigSchema.parse({})
 
 // Cached configuration per root directory
-const configCache = new Map<string, SpecterConfig>();
+const configCache = new Map<string, SpecterConfig>()
 
 /**
  * Load configuration from specter.config.json if it exists
  */
 export function loadConfig(rootDir: string): SpecterConfig {
   // Check cache first
-  const cached = configCache.get(rootDir);
+  const cached = configCache.get(rootDir)
   if (cached) {
-    return cached;
+    return cached
   }
 
-  const configPath = path.join(rootDir, 'specter.config.json');
+  const configPath = path.join(rootDir, 'specter.config.json')
 
   try {
     if (fs.existsSync(configPath)) {
-      const configContent = fs.readFileSync(configPath, 'utf-8');
-      const rawConfig = JSON.parse(configContent);
-      const validated = SpecterConfigSchema.parse(rawConfig);
-      configCache.set(rootDir, validated);
-      return validated;
+      const configContent = fs.readFileSync(configPath, 'utf-8')
+      const rawConfig = JSON.parse(configContent)
+      const validated = SpecterConfigSchema.parse(rawConfig)
+      configCache.set(rootDir, validated)
+      return validated
     }
   } catch (error) {
     // Log warning but continue with defaults
     console.warn(
       `Warning: Failed to load specter.config.json: ${error instanceof Error ? error.message : 'Unknown error'}`
-    );
+    )
   }
 
   // Return defaults if no config file or error
-  configCache.set(rootDir, DEFAULT_CONFIG);
-  return DEFAULT_CONFIG;
+  configCache.set(rootDir, DEFAULT_CONFIG)
+  return DEFAULT_CONFIG
 }
 
 /**
  * Get config synchronously, initializing with defaults if needed
  */
 export function getConfig(rootDir: string): SpecterConfig {
-  return loadConfig(rootDir);
+  return loadConfig(rootDir)
 }
 
 /**
  * Clear the config cache (useful for testing or when config changes)
  */
 export function clearConfigCache(): void {
-  configCache.clear();
+  configCache.clear()
 }
 
 /**
  * Validate a partial config object
  */
 export function validateConfig(config: unknown): SpecterConfig {
-  return SpecterConfigSchema.parse(config);
+  return SpecterConfigSchema.parse(config)
 }
 
 /**
  * Get the config schema for documentation purposes
  */
 export function getConfigSchema() {
-  return SpecterConfigSchema;
+  return SpecterConfigSchema
 }
 
 // Re-export the schema for external use
-export { SpecterConfigSchema };
+export { SpecterConfigSchema }

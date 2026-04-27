@@ -4,22 +4,22 @@
  * Generate meme-style text based on codebase metrics.
  */
 
-import type { FileNode, KnowledgeGraph } from './graph/types.js';
+import type { FileNode, KnowledgeGraph } from './graph/types.js'
 
 interface MemeTemplate {
-  top: string;
-  bottom: string;
-  condition: (stats: CodeStats) => boolean;
+  top: string
+  bottom: string
+  condition: (stats: CodeStats) => boolean
 }
 
 interface CodeStats {
-  health: number;
-  complexity: number;
-  files: number;
-  lines: number;
-  hotspots: number;
-  deadCode: number;
-  busFactor: number;
+  health: number
+  complexity: number
+  files: number
+  lines: number
+  hotspots: number
+  deadCode: number
+  busFactor: number
 }
 
 const memeTemplates: MemeTemplate[] = [
@@ -109,30 +109,30 @@ const memeTemplates: MemeTemplate[] = [
     bottom: 'SAID DEVELOPER 6 MONTHS AGO',
     condition: (s) => s.complexity > 15,
   },
-];
+]
 
 function getStats(graph: KnowledgeGraph): CodeStats {
-  const nodes = Object.values(graph.nodes);
-  const fileNodes = nodes.filter((n) => n.type === 'file');
+  const nodes = Object.values(graph.nodes)
+  const fileNodes = nodes.filter((n) => n.type === 'file')
 
-  let totalComplexity = 0;
-  let hotspots = 0;
+  let totalComplexity = 0
+  let hotspots = 0
 
   for (const node of nodes) {
     if (node.complexity) {
-      totalComplexity += node.complexity;
-      if (node.complexity > 15) hotspots++;
+      totalComplexity += node.complexity
+      if (node.complexity > 15) hotspots++
     }
   }
 
-  const avgComplexity = nodes.length > 0 ? totalComplexity / nodes.length : 0;
-  const totalLines = fileNodes.reduce((sum, n) => sum + ((n as FileNode).lineCount || 0), 0);
+  const avgComplexity = nodes.length > 0 ? totalComplexity / nodes.length : 0
+  const totalLines = fileNodes.reduce((sum, n) => sum + ((n as FileNode).lineCount || 0), 0)
 
   // Estimate health (simplified)
-  let health = 100;
-  health -= Math.min(30, hotspots * 2);
-  health -= Math.min(20, Math.max(0, avgComplexity - 5) * 2);
-  health = Math.max(0, Math.min(100, health));
+  let health = 100
+  health -= Math.min(30, hotspots * 2)
+  health -= Math.min(20, Math.max(0, avgComplexity - 5) * 2)
+  health = Math.max(0, Math.min(100, health))
 
   return {
     health: Math.round(health),
@@ -142,22 +142,22 @@ function getStats(graph: KnowledgeGraph): CodeStats {
     hotspots,
     deadCode: Math.floor(Math.random() * 100) + 20, // Approximation
     busFactor: 1, // Usually 1 for personal projects
-  };
+  }
 }
 
 function renderMeme(template: MemeTemplate, stats: CodeStats): string {
   const top = template.top
     .replace('{lines}', stats.lines.toLocaleString())
     .replace('{files}', stats.files.toString())
-    .replace('{complexity}', stats.complexity.toString());
+    .replace('{complexity}', stats.complexity.toString())
 
   const bottom = template.bottom
     .replace('{lines}', stats.lines.toLocaleString())
     .replace('{files}', stats.files.toString())
-    .replace('{complexity}', stats.complexity.toString());
+    .replace('{complexity}', stats.complexity.toString())
 
-  const width = Math.max(top.length, bottom.length) + 4;
-  const border = '═'.repeat(width);
+  const width = Math.max(top.length, bottom.length) + 4
+  const border = '═'.repeat(width)
 
   return `
   ╔${border}╗
@@ -168,32 +168,32 @@ function renderMeme(template: MemeTemplate, stats: CodeStats): string {
   ║${' '.repeat(width)}║
   ╠${border}╣
   ║${' '.repeat(Math.floor((width - bottom.length) / 2))}${bottom}${' '.repeat(Math.ceil((width - bottom.length) / 2))}║
-  ╚${border}╝`;
+  ╚${border}╝`
 }
 
 export function generateMeme(graph: KnowledgeGraph): string {
-  const stats = getStats(graph);
+  const stats = getStats(graph)
 
   // Find matching templates
-  const matching = memeTemplates.filter((t) => t.condition(stats));
+  const matching = memeTemplates.filter((t) => t.condition(stats))
 
   // Pick a random one, or fallback
-  const matchingTemplate = matching[Math.floor(Math.random() * matching.length)];
-  const fallbackTemplate = memeTemplates[Math.floor(Math.random() * memeTemplates.length)];
-  const template = matchingTemplate ?? fallbackTemplate ?? memeTemplates[0]!;
+  const matchingTemplate = matching[Math.floor(Math.random() * matching.length)]
+  const fallbackTemplate = memeTemplates[Math.floor(Math.random() * memeTemplates.length)]
+  const template = matchingTemplate ?? fallbackTemplate ?? memeTemplates[0]!
 
-  const lines: string[] = [];
-  lines.push('');
-  lines.push('  🎭 CODEBASE MEME GENERATOR 🎭');
-  lines.push('');
-  lines.push(renderMeme(template, stats));
-  lines.push('');
-  lines.push('  📊 Based on your stats:');
-  lines.push(`     Health: ${stats.health}/100 | Complexity: ${stats.complexity} avg`);
-  lines.push(`     Files: ${stats.files} | Hotspots: ${stats.hotspots}`);
-  lines.push('');
-  lines.push('  💡 Run again for a different meme!');
-  lines.push('');
+  const lines: string[] = []
+  lines.push('')
+  lines.push('  🎭 CODEBASE MEME GENERATOR 🎭')
+  lines.push('')
+  lines.push(renderMeme(template, stats))
+  lines.push('')
+  lines.push('  📊 Based on your stats:')
+  lines.push(`     Health: ${stats.health}/100 | Complexity: ${stats.complexity} avg`)
+  lines.push(`     Files: ${stats.files} | Hotspots: ${stats.hotspots}`)
+  lines.push('')
+  lines.push('  💡 Run again for a different meme!')
+  lines.push('')
 
-  return lines.join('\n');
+  return lines.join('\n')
 }

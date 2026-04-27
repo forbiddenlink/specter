@@ -6,29 +6,29 @@
  * and computed statistics.
  */
 
-import type { KnowledgeGraph } from './graph/types.js';
+import type { KnowledgeGraph } from './graph/types.js'
 
 export interface CodebaseStats {
-  fileCount: number;
-  totalLines: number;
-  avgComplexity: number;
-  maxComplexity: number;
-  hotspots: number;
-  deadExports: number;
-  busFactor: number;
-  tsPercentage: number;
-  health: number;
-  functionCount: number;
-  classCount: number;
-  contributors: number;
+  fileCount: number
+  totalLines: number
+  avgComplexity: number
+  maxComplexity: number
+  hotspots: number
+  deadExports: number
+  busFactor: number
+  tsPercentage: number
+  health: number
+  functionCount: number
+  classCount: number
+  contributors: number
 }
 
 export interface Achievement {
-  id: string;
-  name: string;
-  emoji: string;
-  description: string;
-  check: (graph: KnowledgeGraph, stats: CodebaseStats) => boolean;
+  id: string
+  name: string
+  emoji: string
+  description: string
+  check: (graph: KnowledgeGraph, stats: CodebaseStats) => boolean
 }
 
 export const achievements: Achievement[] = [
@@ -173,7 +173,7 @@ export const achievements: Achievement[] = [
     description: 'Under 100 lines of code',
     check: (_g, s) => s.totalLines < 100,
   },
-];
+]
 
 /**
  * Calculate codebase statistics from the knowledge graph
@@ -183,38 +183,38 @@ export function calculateStats(
   deadExportCount?: number,
   busFactorValue?: number
 ): CodebaseStats {
-  const nodes = Object.values(graph.nodes);
+  const nodes = Object.values(graph.nodes)
 
   // Count by type
-  const fileNodes = nodes.filter((n) => n.type === 'file');
-  const functionNodes = nodes.filter((n) => n.type === 'function');
-  const classNodes = nodes.filter((n) => n.type === 'class');
+  const fileNodes = nodes.filter((n) => n.type === 'file')
+  const functionNodes = nodes.filter((n) => n.type === 'function')
+  const classNodes = nodes.filter((n) => n.type === 'class')
 
   // Language distribution
-  const languages = graph.metadata.languages;
-  const tsFiles = (languages['typescript'] || 0) + (languages['tsx'] || 0);
-  const jsFiles = (languages['javascript'] || 0) + (languages['jsx'] || 0);
-  const totalLangFiles = tsFiles + jsFiles;
-  const tsPercentage = totalLangFiles > 0 ? Math.round((tsFiles / totalLangFiles) * 100) : 0;
+  const languages = graph.metadata.languages
+  const tsFiles = (languages['typescript'] || 0) + (languages['tsx'] || 0)
+  const jsFiles = (languages['javascript'] || 0) + (languages['jsx'] || 0)
+  const totalLangFiles = tsFiles + jsFiles
+  const tsPercentage = totalLangFiles > 0 ? Math.round((tsFiles / totalLangFiles) * 100) : 0
 
   // Complexity stats
-  const complexities = nodes.filter((n) => n.complexity !== undefined).map((n) => n.complexity!);
+  const complexities = nodes.filter((n) => n.complexity !== undefined).map((n) => n.complexity!)
   const avgComplexity =
-    complexities.length > 0 ? complexities.reduce((a, b) => a + b, 0) / complexities.length : 0;
-  const maxComplexity = complexities.length > 0 ? Math.max(...complexities) : 0;
+    complexities.length > 0 ? complexities.reduce((a, b) => a + b, 0) / complexities.length : 0
+  const maxComplexity = complexities.length > 0 ? Math.max(...complexities) : 0
 
   // Hotspots (complexity > 10)
-  const hotspots = complexities.filter((c) => c > 10).length;
+  const hotspots = complexities.filter((c) => c > 10).length
 
   // Health score (inverse of complexity, capped at 100)
-  const health = Math.max(0, Math.min(100, Math.round(100 - avgComplexity * 5)));
+  const health = Math.max(0, Math.min(100, Math.round(100 - avgComplexity * 5)))
 
   // Contributors (unique)
-  const contributorSet = new Set<string>();
+  const contributorSet = new Set<string>()
   for (const node of nodes) {
     if (node.contributors) {
       for (const c of node.contributors) {
-        contributorSet.add(c);
+        contributorSet.add(c)
       }
     }
   }
@@ -232,7 +232,7 @@ export function calculateStats(
     functionCount: functionNodes.length,
     classCount: classNodes.length,
     contributors: contributorSet.size,
-  };
+  }
 }
 
 /**
@@ -242,16 +242,16 @@ export function checkAchievements(
   graph: KnowledgeGraph,
   stats: CodebaseStats
 ): { unlocked: Achievement[]; locked: Achievement[] } {
-  const unlocked: Achievement[] = [];
-  const locked: Achievement[] = [];
+  const unlocked: Achievement[] = []
+  const locked: Achievement[] = []
 
   for (const achievement of achievements) {
     if (achievement.check(graph, stats)) {
-      unlocked.push(achievement);
+      unlocked.push(achievement)
     } else {
-      locked.push(achievement);
+      locked.push(achievement)
     }
   }
 
-  return { unlocked, locked };
+  return { unlocked, locked }
 }

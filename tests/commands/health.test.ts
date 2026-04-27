@@ -14,7 +14,7 @@ vi.mock('../../src/graph/persistence.js', () => ({
   loadMetadata: vi.fn(),
 }))
 
-vi.mock('../../src/auto-scan.js', async (importOriginal) => {
+vi.mock('../../src/auto-scan.js', async (_importOriginal) => {
   const { loadGraph } = await import('../../src/graph/persistence.js')
   return {
     ensureGraph: vi.fn(async () => loadGraph('')),
@@ -64,7 +64,7 @@ vi.mock('chalk', () => ({
 import type { ComplexityReport } from '../../src/analyzers/complexity.js'
 import { generateComplexityReport } from '../../src/analyzers/complexity.js'
 import { loadGraph } from '../../src/graph/persistence.js'
-import { outputJson, outputJsonError } from '../../src/json-output.js'
+import { outputJson } from '../../src/json-output.js'
 
 /**
  * Helper to create a mock knowledge graph

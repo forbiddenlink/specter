@@ -5,23 +5,23 @@
  * Each tool exposes a specific analysis capability.
  */
 
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
-import * as getArchaeology from '../tools/get-archaeology.js';
-import * as getArchitecture from '../tools/get-architecture.js';
-import * as getBusFactor from '../tools/get-bus-factor.js';
-import * as getCallChain from '../tools/get-call-chain.js';
-import * as getChangeCoupling from '../tools/get-change-coupling.js';
-import * as getCodebaseSummary from '../tools/get-codebase-summary.js';
-import * as getComplexityHotspots from '../tools/get-complexity-hotspots.js';
-import * as getDeadCode from '../tools/get-dead-code.js';
-import * as getFileHistory from '../tools/get-file-history.js';
-import * as getFileRelationships from '../tools/get-file-relationships.js';
-import * as getHealthTrends from '../tools/get-health-trends.js';
-import * as getImpactAnalysis from '../tools/get-impact-analysis.js';
-import * as getRiskScore from '../tools/get-risk-score.js';
-import * as searchSymbols from '../tools/search-symbols.js';
-import { executeTool, getGraph } from './core.js';
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import { z } from 'zod'
+import * as getArchaeology from '../tools/get-archaeology.js'
+import * as getArchitecture from '../tools/get-architecture.js'
+import * as getBusFactor from '../tools/get-bus-factor.js'
+import * as getCallChain from '../tools/get-call-chain.js'
+import * as getChangeCoupling from '../tools/get-change-coupling.js'
+import * as getCodebaseSummary from '../tools/get-codebase-summary.js'
+import * as getComplexityHotspots from '../tools/get-complexity-hotspots.js'
+import * as getDeadCode from '../tools/get-dead-code.js'
+import * as getFileHistory from '../tools/get-file-history.js'
+import * as getFileRelationships from '../tools/get-file-relationships.js'
+import * as getHealthTrends from '../tools/get-health-trends.js'
+import * as getImpactAnalysis from '../tools/get-impact-analysis.js'
+import * as getRiskScore from '../tools/get-risk-score.js'
+import * as searchSymbols from '../tools/search-symbols.js'
+import { executeTool, getGraph } from './core.js'
 
 /**
  * Register all tools with the MCP server
@@ -36,15 +36,15 @@ export function registerTools(server: McpServer): void {
     },
     async (args) => {
       try {
-        const graph = await getGraph();
+        const graph = await getGraph()
         const result = await executeTool('get_file_relationships', async () =>
           getFileRelationships.execute(graph, args)
-        );
+        )
         return {
           content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
-        };
+        }
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unknown error';
+        const message = error instanceof Error ? error.message : 'Unknown error'
         return {
           content: [
             {
@@ -53,10 +53,10 @@ export function registerTools(server: McpServer): void {
             },
           ],
           isError: true,
-        };
+        }
       }
     }
-  );
+  )
 
   // Tool: get_complexity_hotspots
   server.tool(
@@ -74,13 +74,13 @@ export function registerTools(server: McpServer): void {
         .describe('Include file-level complexity (default: false)'),
     },
     async (args) => {
-      const graph = await getGraph();
-      const result = getComplexityHotspots.execute(graph, args);
+      const graph = await getGraph()
+      const result = getComplexityHotspots.execute(graph, args)
       return {
         content: [{ type: 'text', text: result.summary }],
-      };
+      }
     }
-  );
+  )
 
   // Tool: get_codebase_summary
   server.tool(
@@ -88,13 +88,13 @@ export function registerTools(server: McpServer): void {
     'Get high-level statistics and overview of the entire codebase including file count, lines of code, languages, complexity metrics, and top directories.',
     {},
     async () => {
-      const graph = await getGraph();
-      const result = getCodebaseSummary.execute(graph);
+      const graph = await getGraph()
+      const result = getCodebaseSummary.execute(graph)
       return {
         content: [{ type: 'text', text: `${result.personality}\n\n${result.summary}` }],
-      };
+      }
     }
-  );
+  )
 
   // Tool: get_file_history
   server.tool(
@@ -104,13 +104,13 @@ export function registerTools(server: McpServer): void {
       filePath: z.string().describe('Path to the file to analyze (relative to project root)'),
     },
     async (args) => {
-      const graph = await getGraph();
-      const result = getFileHistory.execute(graph, args);
+      const graph = await getGraph()
+      const result = getFileHistory.execute(graph, args)
       return {
         content: [{ type: 'text', text: result.summary }],
-      };
+      }
     }
-  );
+  )
 
   // Tool: get_dead_code
   server.tool(
@@ -121,13 +121,13 @@ export function registerTools(server: McpServer): void {
       limit: z.number().optional().describe('Maximum number of results (default: 20)'),
     },
     async (args) => {
-      const graph = await getGraph();
-      const result = getDeadCode.execute(graph, args);
+      const graph = await getGraph()
+      const result = getDeadCode.execute(graph, args)
       return {
         content: [{ type: 'text', text: result.summary }],
-      };
+      }
     }
-  );
+  )
 
   // Tool: search_symbols
   server.tool(
@@ -143,13 +143,13 @@ export function registerTools(server: McpServer): void {
       exportedOnly: z.boolean().optional().describe('Only show exported symbols (default: false)'),
     },
     async (args) => {
-      const graph = await getGraph();
-      const result = searchSymbols.execute(graph, args);
+      const graph = await getGraph()
+      const result = searchSymbols.execute(graph, args)
       return {
         content: [{ type: 'text', text: result.summary }],
-      };
+      }
     }
-  );
+  )
 
   // Tool: get_call_chain
   server.tool(
@@ -161,13 +161,13 @@ export function registerTools(server: McpServer): void {
       maxDepth: z.number().optional().describe('Maximum chain length to search (default: 5)'),
     },
     async (args) => {
-      const graph = await getGraph();
-      const result = getCallChain.execute(graph, args);
+      const graph = await getGraph()
+      const result = getCallChain.execute(graph, args)
       return {
         content: [{ type: 'text', text: result.summary }],
-      };
+      }
     }
-  );
+  )
 
   // Tool: get_architecture
   server.tool(
@@ -183,13 +183,13 @@ export function registerTools(server: McpServer): void {
       maxDepth: z.number().optional().describe('Maximum directory depth to show (default: 3)'),
     },
     async (args) => {
-      const graph = await getGraph();
-      const result = getArchitecture.execute(graph, args);
+      const graph = await getGraph()
+      const result = getArchitecture.execute(graph, args)
       return {
         content: [{ type: 'text', text: `\`\`\`\n${result.diagram}\n\`\`\`\n\n${result.summary}` }],
-      };
+      }
     }
-  );
+  )
 
   // Tool: get_change_coupling
   server.tool(
@@ -207,13 +207,13 @@ export function registerTools(server: McpServer): void {
         .describe('Maximum number of coupled files to return (default: 10)'),
     },
     async (args) => {
-      const graph = await getGraph();
-      const result = await getChangeCoupling.execute(graph, args);
+      const graph = await getGraph()
+      const result = await getChangeCoupling.execute(graph, args)
       return {
         content: [{ type: 'text', text: result.summary }],
-      };
+      }
     }
-  );
+  )
 
   // Tool: get_impact_analysis
   server.tool(
@@ -229,13 +229,13 @@ export function registerTools(server: McpServer): void {
         .describe('Include indirect dependencies 2-3 hops away (default: true)'),
     },
     async (args) => {
-      const graph = await getGraph();
-      const result = await getImpactAnalysis.execute(graph, args);
+      const graph = await getGraph()
+      const result = await getImpactAnalysis.execute(graph, args)
       return {
         content: [{ type: 'text', text: result.summary }],
-      };
+      }
     }
-  );
+  )
 
   // Tool: get_bus_factor
   server.tool(
@@ -246,13 +246,13 @@ export function registerTools(server: McpServer): void {
       limit: z.number().optional().describe('Maximum number of risk areas to return (default: 15)'),
     },
     async (args) => {
-      const graph = await getGraph();
-      const result = await getBusFactor.execute(graph, args);
+      const graph = await getGraph()
+      const result = await getBusFactor.execute(graph, args)
       return {
         content: [{ type: 'text', text: result.summary }],
-      };
+      }
     }
-  );
+  )
 
   // Tool: get_archaeology
   server.tool(
@@ -266,13 +266,13 @@ export function registerTools(server: McpServer): void {
         .describe('Specific function to focus on (searches commit messages)'),
     },
     async (args) => {
-      const graph = await getGraph();
-      const result = await getArchaeology.execute(graph, args);
+      const graph = await getGraph()
+      const result = await getArchaeology.execute(graph, args)
       return {
         content: [{ type: 'text', text: result.summary }],
-      };
+      }
     }
-  );
+  )
 
   // Tool: get_health_trends
   server.tool(
@@ -285,13 +285,13 @@ export function registerTools(server: McpServer): void {
         .describe('Time period to analyze: day, week, month, or all (default: all)'),
     },
     async (args) => {
-      const graph = await getGraph();
-      const result = await getHealthTrends.execute(graph, args);
+      const graph = await getGraph()
+      const result = await getHealthTrends.execute(graph, args)
       return {
         content: [{ type: 'text', text: result.summary }],
-      };
+      }
     }
-  );
+  )
 
   // Tool: get_risk_score
   server.tool(
@@ -303,11 +303,11 @@ export function registerTools(server: McpServer): void {
       commit: z.string().optional().describe('Analyze a specific commit hash'),
     },
     async (args) => {
-      const graph = await getGraph();
-      const result = await getRiskScore.execute(graph, args);
+      const graph = await getGraph()
+      const result = await getRiskScore.execute(graph, args)
       return {
         content: [{ type: 'text', text: result.summary }],
-      };
+      }
     }
-  );
+  )
 }

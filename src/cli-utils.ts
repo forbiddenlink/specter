@@ -2,22 +2,22 @@
  * Global CLI utilities for consistent behavior across commands
  */
 
-import chalk from 'chalk';
+import chalk from 'chalk'
 
 interface GlobalOptions {
-  quiet: boolean;
-  noEmoji: boolean;
-  accessible: boolean;
+  quiet: boolean
+  noEmoji: boolean
+  accessible: boolean
 }
 
 export let globalOptions: GlobalOptions = {
   quiet: false,
   noEmoji: false,
   accessible: process.env['SPECTER_ACCESSIBLE'] === 'true',
-};
+}
 
 export function setGlobalOptions(opts: Partial<GlobalOptions>): void {
-  globalOptions = { ...globalOptions, ...opts };
+  globalOptions = { ...globalOptions, ...opts }
 }
 
 /**
@@ -25,7 +25,7 @@ export function setGlobalOptions(opts: Partial<GlobalOptions>): void {
  */
 export function log(message: string, force = false): void {
   if (force || !globalOptions.quiet) {
-    console.log(message);
+    console.log(message)
   }
 }
 
@@ -33,21 +33,21 @@ export function log(message: string, force = false): void {
  * Log error (always shown, even in quiet mode)
  */
 export function logError(message: string): void {
-  console.error(chalk.red(message));
+  console.error(chalk.red(message))
 }
 
 /**
  * Log warning (always shown, even in quiet mode)
  */
 export function logWarning(message: string): void {
-  console.warn(chalk.yellow(message));
+  console.warn(chalk.yellow(message))
 }
 
 /**
  * Get emoji if not disabled
  */
 export function emoji(char: string): string {
-  return globalOptions.noEmoji ? '' : char;
+  return globalOptions.noEmoji ? '' : char
 }
 
 /**
@@ -61,26 +61,26 @@ export function accessibleColor(
     // Standard colors
     switch (type) {
       case 'success':
-        return chalk.green(text);
+        return chalk.green(text)
       case 'warning':
-        return chalk.yellow(text);
+        return chalk.yellow(text)
       case 'error':
-        return chalk.red(text);
+        return chalk.red(text)
       case 'info':
-        return chalk.cyan(text);
+        return chalk.cyan(text)
     }
   }
 
   // Accessible colors (colorblind-friendly)
   switch (type) {
     case 'success':
-      return chalk.blue(text); // Blue instead of green
+      return chalk.blue(text) // Blue instead of green
     case 'warning':
-      return chalk.hex('#FFA500')(text); // Orange instead of yellow
+      return chalk.hex('#FFA500')(text) // Orange instead of yellow
     case 'error':
-      return chalk.magenta(text); // Magenta instead of red
+      return chalk.magenta(text) // Magenta instead of red
     case 'info':
-      return chalk.cyan(text); // Cyan is fine
+      return chalk.cyan(text) // Cyan is fine
   }
 }
 
@@ -98,8 +98,8 @@ export function accessibleProgressBar(
       success: chalk.green,
       warning: chalk.yellow,
       error: chalk.red,
-    };
-    return colors[type]('█'.repeat(filled)) + chalk.dim('░'.repeat(empty));
+    }
+    return colors[type]('█'.repeat(filled)) + chalk.dim('░'.repeat(empty))
   }
 
   // Accessible version with patterns
@@ -107,30 +107,30 @@ export function accessibleProgressBar(
     success: { filled: '▓', empty: '░', color: chalk.blue },
     warning: { filled: '▒', empty: '░', color: chalk.hex('#FFA500') },
     error: { filled: '▓', empty: '░', color: chalk.magenta },
-  };
+  }
 
-  const pattern = patterns[type];
-  return pattern.color(pattern.filled.repeat(filled)) + chalk.dim(pattern.empty.repeat(empty));
+  const pattern = patterns[type]
+  return pattern.color(pattern.filled.repeat(filled)) + chalk.dim(pattern.empty.repeat(empty))
 }
 
 /**
  * Show "Next Steps" suggestions after a command
  */
 export function showNextSteps(suggestions: Array<{ description: string; command: string }>): void {
-  if (globalOptions.quiet || suggestions.length === 0) return;
+  if (globalOptions.quiet || suggestions.length === 0) return
 
-  console.log();
-  console.log(chalk.bold("🔮 WHAT'S NEXT?"));
+  console.log()
+  console.log(chalk.bold("🔮 WHAT'S NEXT?"))
   for (const suggestion of suggestions) {
-    console.log(chalk.dim(`  → ${suggestion.description}`));
-    console.log(chalk.cyan(`    ${suggestion.command}`));
+    console.log(chalk.dim(`  → ${suggestion.description}`))
+    console.log(chalk.cyan(`    ${suggestion.command}`))
   }
 
   // Occasionally hint about Copilot CLI integration (don't show every time)
   if (Math.random() < 0.15) {
-    console.log();
-    console.log(chalk.dim('  💡 Tip: Use with GitHub Copilot CLI:'));
-    console.log(chalk.dim('     gh copilot suggest "what should I do next with specter?"'));
+    console.log()
+    console.log(chalk.dim('  💡 Tip: Use with GitHub Copilot CLI:'))
+    console.log(chalk.dim('     gh copilot suggest "what should I do next with specter?"'))
   }
 }
 
@@ -138,9 +138,9 @@ export function showNextSteps(suggestions: Array<{ description: string; command:
  * Format file path as clickable terminal link
  */
 export function fileLink(filePath: string, lineNumber?: number): string {
-  const link = lineNumber ? `${filePath}:${lineNumber}` : filePath;
+  const link = lineNumber ? `${filePath}:${lineNumber}` : filePath
   // Terminal links work in most modern terminals
-  return chalk.cyan(link);
+  return chalk.cyan(link)
 }
 
 /**
@@ -157,9 +157,9 @@ export function getRelatedCommands(currentCommand: string): string[] {
     morning: ['standup', 'precommit', 'achievements'],
     wrapped: ['origin', 'leaderboard', 'achievements'],
     roast: ['health', 'hotspots', 'wrapped'],
-  };
+  }
 
-  return related[currentCommand] || [];
+  return related[currentCommand] || []
 }
 
 /**
@@ -167,39 +167,39 @@ export function getRelatedCommands(currentCommand: string): string[] {
  * Used for finding similar command names
  */
 export function levenshteinDistance(str1: string, str2: string): number {
-  const m = str1.length;
-  const n = str2.length;
+  const m = str1.length
+  const n = str2.length
   const dp: number[][] = Array(m + 1)
     .fill(null)
-    .map(() => Array(n + 1).fill(0));
+    .map(() => Array(n + 1).fill(0))
 
   for (let i = 0; i <= m; i++) {
-    const row = dp[i];
-    if (row) row[0] = i;
+    const row = dp[i]
+    if (row) row[0] = i
   }
   for (let j = 0; j <= n; j++) {
-    const row = dp[0];
-    if (row) row[j] = j;
+    const row = dp[0]
+    if (row) row[j] = j
   }
 
   for (let i = 1; i <= m; i++) {
     for (let j = 1; j <= n; j++) {
-      const currentRow = dp[i];
-      const prevRow = dp[i - 1];
-      if (!currentRow || !prevRow) continue;
+      const currentRow = dp[i]
+      const prevRow = dp[i - 1]
+      if (!currentRow || !prevRow) continue
 
       if (str1[i - 1] === str2[j - 1]) {
-        currentRow[j] = prevRow[j - 1] ?? 0;
+        currentRow[j] = prevRow[j - 1] ?? 0
       } else {
-        const del = prevRow[j] ?? 0;
-        const ins = currentRow[j - 1] ?? 0;
-        const sub = prevRow[j - 1] ?? 0;
-        currentRow[j] = 1 + Math.min(del, ins, sub);
+        const del = prevRow[j] ?? 0
+        const ins = currentRow[j - 1] ?? 0
+        const sub = prevRow[j - 1] ?? 0
+        currentRow[j] = 1 + Math.min(del, ins, sub)
       }
     }
   }
 
-  return dp[m]?.[n] ?? 0;
+  return dp[m]?.[n] ?? 0
 }
 
 /**
@@ -207,15 +207,15 @@ export function levenshteinDistance(str1: string, str2: string): number {
  * Returns the closest match if distance <= 2
  */
 export function suggestCommand(input: string, allCommands: string[]): string | null {
-  let bestMatch: { command: string; distance: number } | null = null;
+  let bestMatch: { command: string; distance: number } | null = null
 
   for (const cmd of allCommands) {
-    const distance = levenshteinDistance(input.toLowerCase(), cmd.toLowerCase());
+    const distance = levenshteinDistance(input.toLowerCase(), cmd.toLowerCase())
     // Only suggest if reasonably close (distance <= 2) and better than current best
     if (distance <= 2 && (!bestMatch || distance < bestMatch.distance)) {
-      bestMatch = { command: cmd, distance };
+      bestMatch = { command: cmd, distance }
     }
   }
 
-  return bestMatch?.command ?? null;
+  return bestMatch?.command ?? null
 }

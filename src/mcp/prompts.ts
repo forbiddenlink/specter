@@ -5,16 +5,16 @@
  * Prompts provide pre-built interaction patterns for AI assistants.
  */
 
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
-import * as getArchitecture from '../tools/get-architecture.js';
-import * as getBusFactor from '../tools/get-bus-factor.js';
-import * as getCodebaseSummary from '../tools/get-codebase-summary.js';
-import * as getComplexityHotspots from '../tools/get-complexity-hotspots.js';
-import * as getDeadCode from '../tools/get-dead-code.js';
-import * as getFileRelationships from '../tools/get-file-relationships.js';
-import * as getHealthTrends from '../tools/get-health-trends.js';
-import { getGraph } from './core.js';
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import { z } from 'zod'
+import * as getArchitecture from '../tools/get-architecture.js'
+import * as getBusFactor from '../tools/get-bus-factor.js'
+import * as getCodebaseSummary from '../tools/get-codebase-summary.js'
+import * as getComplexityHotspots from '../tools/get-complexity-hotspots.js'
+import * as getDeadCode from '../tools/get-dead-code.js'
+import * as getFileRelationships from '../tools/get-file-relationships.js'
+import * as getHealthTrends from '../tools/get-health-trends.js'
+import { getGraph } from './core.js'
 
 /**
  * Register all prompts with the MCP server
@@ -27,8 +27,8 @@ export function registerPrompts(server: McpServer): void {
     {},
     async () => {
       try {
-        const graph = await getGraph();
-        const summary = getCodebaseSummary.execute(graph);
+        const graph = await getGraph()
+        const summary = getCodebaseSummary.execute(graph)
         return {
           messages: [
             {
@@ -39,7 +39,7 @@ export function registerPrompts(server: McpServer): void {
               },
             },
           ],
-        };
+        }
       } catch {
         return {
           messages: [
@@ -51,10 +51,10 @@ export function registerPrompts(server: McpServer): void {
               },
             },
           ],
-        };
+        }
       }
     }
-  );
+  )
 
   // Prompt: specter:review
   server.prompt(
@@ -65,14 +65,14 @@ export function registerPrompts(server: McpServer): void {
     },
     async ({ files }) => {
       try {
-        const graph = await getGraph();
-        const filePaths = files.split(',').map((f: string) => f.trim());
+        const graph = await getGraph()
+        const filePaths = files.split(',').map((f: string) => f.trim())
 
         // Gather context for each file
         const fileContexts = filePaths.map((filePath: string) => {
-          const relationships = getFileRelationships.execute(graph, { filePath });
-          return `File: ${filePath}\n${JSON.stringify(relationships, null, 2)}`;
-        });
+          const relationships = getFileRelationships.execute(graph, { filePath })
+          return `File: ${filePath}\n${JSON.stringify(relationships, null, 2)}`
+        })
 
         return {
           messages: [
@@ -84,7 +84,7 @@ export function registerPrompts(server: McpServer): void {
               },
             },
           ],
-        };
+        }
       } catch {
         return {
           messages: [
@@ -96,10 +96,10 @@ export function registerPrompts(server: McpServer): void {
               },
             },
           ],
-        };
+        }
       }
     }
-  );
+  )
 
   // Prompt: specter:onboard
   server.prompt(
@@ -115,15 +115,15 @@ export function registerPrompts(server: McpServer): void {
     },
     async ({ focusArea }) => {
       try {
-        const graph = await getGraph();
-        const summary = getCodebaseSummary.execute(graph);
-        const architecture = getArchitecture.execute(graph, { style: 'tree', maxDepth: 3 });
-        const hotspots = getComplexityHotspots.execute(graph, { limit: 5 });
-        const deadCode = getDeadCode.execute(graph, { limit: 5 });
+        const graph = await getGraph()
+        const summary = getCodebaseSummary.execute(graph)
+        const architecture = getArchitecture.execute(graph, { style: 'tree', maxDepth: 3 })
+        const hotspots = getComplexityHotspots.execute(graph, { limit: 5 })
+        const deadCode = getDeadCode.execute(graph, { limit: 5 })
 
         const focusClause = focusArea
           ? `\n\nThe developer is specifically interested in the "${focusArea}" area. Prioritize information about files, modules, and patterns related to "${focusArea}".`
-          : '';
+          : ''
 
         return {
           messages: [
@@ -159,7 +159,7 @@ Structure your response as:
               },
             },
           ],
-        };
+        }
       } catch {
         return {
           messages: [
@@ -171,10 +171,10 @@ Structure your response as:
               },
             },
           ],
-        };
+        }
       }
     }
-  );
+  )
 
   // Prompt: specter:refactor-plan
   server.prompt(
@@ -192,25 +192,25 @@ Structure your response as:
     },
     async ({ directory, maxFiles }) => {
       try {
-        const graph = await getGraph();
-        const limit = maxFiles ? Number(maxFiles) : 5;
+        const graph = await getGraph()
+        const limit = maxFiles ? Number(maxFiles) : 5
         const hotspots = getComplexityHotspots.execute(graph, {
           limit,
           threshold: 8,
           includeFiles: true,
-        });
-        const busFactor = await getBusFactor.execute(graph, { directory, limit });
+        })
+        const busFactor = await getBusFactor.execute(graph, { directory, limit })
 
         // Gather relationships for top hotspot files to understand coupling
-        const hotspotFiles = [...new Set(hotspots.hotspots.map((h) => h.filePath))].slice(0, limit);
+        const hotspotFiles = [...new Set(hotspots.hotspots.map((h) => h.filePath))].slice(0, limit)
         const relationshipDetails = hotspotFiles.map((filePath) => {
-          const relationships = getFileRelationships.execute(graph, { filePath });
-          return `**${filePath}**:\n${JSON.stringify(relationships, null, 2)}`;
-        });
+          const relationships = getFileRelationships.execute(graph, { filePath })
+          return `**${filePath}**:\n${JSON.stringify(relationships, null, 2)}`
+        })
 
         const dirClause = directory
           ? `Focus the plan only on files within the "${directory}" directory.`
-          : 'Consider the entire codebase.';
+          : 'Consider the entire codebase.'
 
         return {
           messages: [
@@ -241,7 +241,7 @@ Order the plan by priority. Include a summary at the top with total estimated ef
               },
             },
           ],
-        };
+        }
       } catch {
         return {
           messages: [
@@ -253,10 +253,10 @@ Order the plan by priority. Include a summary at the top with total estimated ef
               },
             },
           ],
-        };
+        }
       }
     }
-  );
+  )
 
   // Prompt: specter:standup-summary
   server.prompt(
@@ -271,12 +271,12 @@ Order the plan by priority. Include a summary at the top with total estimated ef
     },
     async ({ period, author }) => {
       try {
-        const graph = await getGraph();
-        const timePeriod = period || 'day';
-        const healthTrends = await getHealthTrends.execute(graph, { period: timePeriod });
-        const summary = getCodebaseSummary.execute(graph);
+        const graph = await getGraph()
+        const timePeriod = period || 'day'
+        const healthTrends = await getHealthTrends.execute(graph, { period: timePeriod })
+        const summary = getCodebaseSummary.execute(graph)
 
-        const authorClause = author ? `\n\nFocus specifically on changes made by "${author}".` : '';
+        const authorClause = author ? `\n\nFocus specifically on changes made by "${author}".` : ''
 
         return {
           messages: [
@@ -303,7 +303,7 @@ Keep it concise - this should be readable in under 2 minutes. Use bullet points.
               },
             },
           ],
-        };
+        }
       } catch {
         return {
           messages: [
@@ -315,10 +315,10 @@ Keep it concise - this should be readable in under 2 minutes. Use bullet points.
               },
             },
           ],
-        };
+        }
       }
     }
-  );
+  )
 
   // Prompt: specter:health-check
   server.prompt(
@@ -334,21 +334,21 @@ Keep it concise - this should be readable in under 2 minutes. Use bullet points.
     },
     async ({ severity }) => {
       try {
-        const graph = await getGraph();
-        const filter = severity || 'actionable';
-        const summary = getCodebaseSummary.execute(graph);
-        const hotspots = getComplexityHotspots.execute(graph, { limit: 10, threshold: 8 });
-        const deadCode = getDeadCode.execute(graph, { limit: 10 });
-        const busFactor = await getBusFactor.execute(graph, { limit: 10 });
-        const healthTrends = await getHealthTrends.execute(graph, { period: 'all' });
-        const architecture = getArchitecture.execute(graph, { style: 'compact', maxDepth: 2 });
+        const graph = await getGraph()
+        const filter = severity || 'actionable'
+        const summary = getCodebaseSummary.execute(graph)
+        const hotspots = getComplexityHotspots.execute(graph, { limit: 10, threshold: 8 })
+        const deadCode = getDeadCode.execute(graph, { limit: 10 })
+        const busFactor = await getBusFactor.execute(graph, { limit: 10 })
+        const healthTrends = await getHealthTrends.execute(graph, { period: 'all' })
+        const architecture = getArchitecture.execute(graph, { style: 'compact', maxDepth: 2 })
 
         const severityClause =
           filter === 'critical'
             ? 'Only report critical issues that need immediate attention - ignore minor concerns.'
             : filter === 'actionable'
               ? 'Focus on issues that have clear, actionable fixes. Skip vague or low-impact concerns.'
-              : 'Report all findings regardless of severity.';
+              : 'Report all findings regardless of severity.'
 
         return {
           messages: [
@@ -397,7 +397,7 @@ Be direct and specific. Reference actual file names and metrics from the data ab
               },
             },
           ],
-        };
+        }
       } catch {
         return {
           messages: [
@@ -409,8 +409,8 @@ Be direct and specific. Reference actual file names and metrics from the data ab
               },
             },
           ],
-        };
+        }
       }
     }
-  );
+  )
 }

@@ -3,8 +3,8 @@
  * Each function handles a single concern in the wrapped data gathering process
  */
 
-import type { DefaultLogFields, SimpleGit } from 'simple-git';
-import type { KnowledgeGraph } from './graph/types.js';
+import type { DefaultLogFields, SimpleGit } from 'simple-git'
+import type { KnowledgeGraph } from './graph/types.js'
 
 /**
  * Fetch commits for the given period
@@ -14,33 +14,33 @@ export async function fetchPeriodCommits(
   range: { start: Date; end: Date }
 ): Promise<
   Array<{
-    hash: string;
-    date: string;
-    author: string;
-    message: string;
+    hash: string
+    date: string
+    author: string
+    message: string
   }>
 > {
-  const afterDate = new Date(range.start);
-  afterDate.setDate(afterDate.getDate() - 1);
-  const beforeDate = new Date(range.end);
-  beforeDate.setDate(beforeDate.getDate() + 1);
+  const afterDate = new Date(range.start)
+  afterDate.setDate(afterDate.getDate() - 1)
+  const beforeDate = new Date(range.end)
+  beforeDate.setDate(beforeDate.getDate() + 1)
 
-  const afterStr = afterDate.toISOString().split('T')[0] ?? '';
-  const beforeStr = beforeDate.toISOString().split('T')[0] ?? '';
+  const afterStr = afterDate.toISOString().split('T')[0] ?? ''
+  const beforeStr = beforeDate.toISOString().split('T')[0] ?? ''
   const log = await git.log({
     '--after': afterStr,
     '--before': beforeStr,
-  } as Parameters<typeof git.log>[0]);
+  } as Parameters<typeof git.log>[0])
 
   return log.all.map((c) => {
-    const commit = c as DefaultLogFields;
+    const commit = c as DefaultLogFields
     return {
       hash: commit.hash,
       date: commit.date,
       author: commit.author_name,
       message: commit.message,
-    };
-  });
+    }
+  })
 }
 
 /**
@@ -49,9 +49,9 @@ export async function fetchPeriodCommits(
 export function analyzeContributors(
   commits: Array<{ author: string }>
 ): Array<{ name: string; commits: number; percentage: number }> {
-  const contributorCounts = new Map<string, number>();
+  const contributorCounts = new Map<string, number>()
   for (const commit of commits) {
-    contributorCounts.set(commit.author, (contributorCounts.get(commit.author) || 0) + 1);
+    contributorCounts.set(commit.author, (contributorCounts.get(commit.author) || 0) + 1)
   }
 
   return [...contributorCounts.entries()]
@@ -61,7 +61,7 @@ export function analyzeContributors(
       name,
       commits: count,
       percentage: Math.round((count / commits.length) * 100),
-    }));
+    }))
 }
 
 /**
@@ -72,18 +72,18 @@ export async function analyzeFileChanges(
   commits: Array<{ hash: string }>,
   getFileNickname: (path: string) => string
 ): Promise<{
-  topFiles: Array<{ path: string; commits: number; nickname: string }>;
-  totalFilesChanged: number;
+  topFiles: Array<{ path: string; commits: number; nickname: string }>
+  totalFilesChanged: number
 }> {
-  const fileCounts = new Map<string, number>();
+  const fileCounts = new Map<string, number>()
 
   for (const commit of commits.slice(0, 500)) {
     // Limit to avoid too many git calls
     try {
-      const diff = await git.raw(['diff-tree', '--no-commit-id', '--name-only', '-r', commit.hash]);
-      const files = diff.trim().split('\n').filter(Boolean);
+      const diff = await git.raw(['diff-tree', '--no-commit-id', '--name-only', '-r', commit.hash])
+      const files = diff.trim().split('\n').filter(Boolean)
       for (const file of files) {
-        fileCounts.set(file, (fileCounts.get(file) || 0) + 1);
+        fileCounts.set(file, (fileCounts.get(file) || 0) + 1)
       }
     } catch {
       // Ignore individual commit errors
@@ -97,43 +97,43 @@ export async function analyzeFileChanges(
       path,
       commits: count,
       nickname: getFileNickname(path),
-    }));
+    }))
 
   return {
     topFiles,
     totalFilesChanged: fileCounts.size,
-  };
+  }
 }
 
 /**
  * Analyze time-based commit patterns
  */
 export function analyzeTimePatterns(commits: Array<{ date: string }>): {
-  monthCounts: Map<string, number>;
-  dayCounts: Map<string, number>;
-  hourCounts: Map<number, number>;
-  lateNightCommits: number;
-  weekendCommits: number;
+  monthCounts: Map<string, number>
+  dayCounts: Map<string, number>
+  hourCounts: Map<number, number>
+  lateNightCommits: number
+  weekendCommits: number
 } {
-  const monthCounts = new Map<string, number>();
-  const dayCounts = new Map<string, number>();
-  const hourCounts = new Map<number, number>();
-  let lateNightCommits = 0;
-  let weekendCommits = 0;
+  const monthCounts = new Map<string, number>()
+  const dayCounts = new Map<string, number>()
+  const hourCounts = new Map<number, number>()
+  let lateNightCommits = 0
+  let weekendCommits = 0
 
   for (const commit of commits) {
-    const date = new Date(commit.date);
-    const month = date.toLocaleDateString('en-US', { month: 'long' });
-    const dayOfWeek = date.getDay();
-    const hour = date.getHours();
+    const date = new Date(commit.date)
+    const month = date.toLocaleDateString('en-US', { month: 'long' })
+    const dayOfWeek = date.getDay()
+    const hour = date.getHours()
 
-    monthCounts.set(month, (monthCounts.get(month) || 0) + 1);
-    const dayStr = date.toISOString().split('T')[0] ?? '';
-    dayCounts.set(dayStr, (dayCounts.get(dayStr) || 0) + 1);
-    hourCounts.set(hour, (hourCounts.get(hour) || 0) + 1);
+    monthCounts.set(month, (monthCounts.get(month) || 0) + 1)
+    const dayStr = date.toISOString().split('T')[0] ?? ''
+    dayCounts.set(dayStr, (dayCounts.get(dayStr) || 0) + 1)
+    hourCounts.set(hour, (hourCounts.get(hour) || 0) + 1)
 
-    if (hour >= 0 && hour < 5) lateNightCommits++;
-    if (dayOfWeek === 0 || dayOfWeek === 6) weekendCommits++;
+    if (hour >= 0 && hour < 5) lateNightCommits++
+    if (dayOfWeek === 0 || dayOfWeek === 6) weekendCommits++
   }
 
   return {
@@ -142,16 +142,16 @@ export function analyzeTimePatterns(commits: Array<{ date: string }>): {
     hourCounts,
     lateNightCommits,
     weekendCommits,
-  };
+  }
 }
 
 /**
  * Get top entry from counts map
  */
 export function getTopEntry<K>(counts: Map<K, number>): [K, number] | null {
-  const entries = [...counts.entries()].sort((a, b) => b[1] - a[1]);
-  const first = entries[0];
-  return first ?? null;
+  const entries = [...counts.entries()].sort((a, b) => b[1] - a[1])
+  const first = entries[0]
+  return first ?? null
 }
 
 /**
@@ -161,8 +161,8 @@ export async function analyzeLinesChanged(
   git: SimpleGit,
   targetYear: number
 ): Promise<{ added: number; removed: number }> {
-  let totalLinesAdded = 0;
-  let totalLinesRemoved = 0;
+  let totalLinesAdded = 0
+  let totalLinesRemoved = 0
 
   try {
     const stats = await git.raw([
@@ -171,13 +171,13 @@ export async function analyzeLinesChanged(
       '--format=',
       `--after=${targetYear - 1}-12-31`,
       `--before=${targetYear + 1}-01-01`,
-    ]);
+    ])
 
     for (const line of stats.split('\n')) {
-      const match = line.match(/^(\d+)\s+(\d+)/);
+      const match = line.match(/^(\d+)\s+(\d+)/)
       if (match?.[1] && match[2]) {
-        totalLinesAdded += parseInt(match[1], 10) || 0;
-        totalLinesRemoved += parseInt(match[2], 10) || 0;
+        totalLinesAdded += parseInt(match[1], 10) || 0
+        totalLinesRemoved += parseInt(match[2], 10) || 0
       }
     }
   } catch {
@@ -187,7 +187,7 @@ export async function analyzeLinesChanged(
   return {
     added: totalLinesAdded,
     removed: totalLinesRemoved,
-  };
+  }
 }
 
 /**
@@ -198,11 +198,11 @@ export function analyzeLanguages(
 ): Array<{ lang: string; percentage: number }> {
   const langEntries = Object.entries(graph.metadata.languages as Record<string, number>).sort(
     (a, b) => (b[1] as number) - (a[1] as number)
-  );
-  const totalLangFiles = langEntries.reduce((sum, [, count]) => sum + (count as number), 0);
+  )
+  const totalLangFiles = langEntries.reduce((sum, [, count]) => sum + (count as number), 0)
 
   return langEntries.slice(0, 3).map(([lang, count]) => ({
     lang,
     percentage: Math.round(((count as number) / totalLangFiles) * 100),
-  }));
+  }))
 }

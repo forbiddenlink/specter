@@ -22,5 +22,5 @@ export function calculateContributionScore(
   linesAdded: number,
   linesRemoved: number
 ): number {
-  return commits + (linesAdded + linesRemoved) / 10;
+  return commits + (linesAdded + linesRemoved) / 10
 }

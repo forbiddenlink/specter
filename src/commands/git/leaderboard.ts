@@ -2,14 +2,14 @@
  * Leaderboard command - Team gamification stats
  */
 
-import path from 'node:path';
-import chalk from 'chalk';
-import type { Command } from 'commander';
-import { exportToPng, getRepoUrl, isPngExportAvailable } from '../../export-png.js';
-import { loadGraph } from '../../graph/persistence.js';
-import { outputJson, outputJsonError } from '../../json-output.js';
-import { formatLeaderboard, generateLeaderboard } from '../../leaderboard.js';
-import { createSpinner, showShareLinks } from '../types.js';
+import path from 'node:path'
+import chalk from 'chalk'
+import type { Command } from 'commander'
+import { exportToPng, getRepoUrl, isPngExportAvailable } from '../../export-png.js'
+import { loadGraph } from '../../graph/persistence.js'
+import { outputJson, outputJsonError } from '../../json-output.js'
+import { formatLeaderboard, generateLeaderboard } from '../../leaderboard.js'
+import { createSpinner, showShareLinks } from '../types.js'
 
 export function register(program: Command): void {
   program
@@ -22,27 +22,27 @@ export function register(program: Command): void {
     .option('--qr', 'Add QR code linking to repo (with --png)')
     .option('--json', 'Output as JSON for CI/CD integration')
     .action(async (options) => {
-      const rootDir = path.resolve(options.dir);
+      const rootDir = path.resolve(options.dir)
 
-      const graph = await loadGraph(rootDir);
+      const graph = await loadGraph(rootDir)
 
       if (!graph) {
         if (options.json) {
-          outputJsonError('leaderboard', 'No graph found. Run `specter scan` first.');
+          outputJsonError('leaderboard', 'No graph found. Run `specter scan` first.')
         }
-        console.log(chalk.yellow('No graph found. Run `specter scan` first.'));
-        return;
+        console.log(chalk.yellow('No graph found. Run `specter scan` first.'))
+        return
       }
 
-      const spinner = options.json ? null : createSpinner('Analyzing contributor impact...');
-      spinner?.start();
+      const spinner = options.json ? null : createSpinner('Analyzing contributor impact...')
+      spinner?.start()
 
       try {
         const result = await generateLeaderboard(rootDir, graph, {
           since: options.since,
           limit: parseInt(options.limit, 10),
-        });
-        spinner?.stop();
+        })
+        spinner?.stop()
 
         // JSON output for CI/CD
         if (options.json) {
@@ -50,73 +50,73 @@ export function register(program: Command): void {
             entries: result.entries,
             teamStats: result.teamStats,
             timeRange: result.timeRange,
-          });
-          return;
+          })
+          return
         }
 
-        const output = formatLeaderboard(result);
+        const output = formatLeaderboard(result)
 
         // PNG export
         if (options.png) {
-          const pngAvailable = await isPngExportAvailable();
+          const pngAvailable = await isPngExportAvailable()
           if (!pngAvailable) {
             console.log(
               chalk.red('PNG export requires the canvas package. Install with: npm install canvas')
-            );
-            return;
+            )
+            return
           }
 
-          const pngSpinner = createSpinner('Generating shareable image...');
-          pngSpinner.start();
+          const pngSpinner = createSpinner('Generating shareable image...')
+          pngSpinner.start()
 
-          const qrUrl = options.qr ? await getRepoUrl(rootDir) : undefined;
-          const outputPath = await exportToPng(output, options.png, { qrUrl: qrUrl || undefined });
+          const qrUrl = options.qr ? await getRepoUrl(rootDir) : undefined
+          const outputPath = await exportToPng(output, options.png, { qrUrl: qrUrl || undefined })
 
-          pngSpinner.succeed(`Image saved to ${outputPath}`);
-          showShareLinks('leaderboard', qrUrl);
-          return;
+          pngSpinner.succeed(`Image saved to ${outputPath}`)
+          showShareLinks('leaderboard', qrUrl)
+          return
         }
 
         // Console output with colors
-        console.log();
+        console.log()
         for (const line of output.split('\n')) {
           if (line.includes('\uD83C\uDFC6')) {
-            console.log(chalk.bold.yellow(`${line}`));
+            console.log(chalk.bold.yellow(`${line}`))
           } else if (line.includes('\uD83E\uDD47')) {
-            console.log(chalk.bold.yellow(`${line}`));
+            console.log(chalk.bold.yellow(`${line}`))
           } else if (line.includes('\uD83E\uDD48')) {
-            console.log(chalk.hex('#C0C0C0')(`${line}`));
+            console.log(chalk.hex('#C0C0C0')(`${line}`))
           } else if (line.includes('\uD83E\uDD49')) {
-            console.log(chalk.hex('#CD7F32')(`${line}`));
+            console.log(chalk.hex('#CD7F32')(`${line}`))
           } else if (line.includes('Health Hero')) {
-            console.log(chalk.green(`${line}`));
+            console.log(chalk.green(`${line}`))
           } else if (line.includes('Code Guardian')) {
-            console.log(chalk.cyan(`${line}`));
+            console.log(chalk.cyan(`${line}`))
           } else if (line.includes('Hotspot Hunter')) {
-            console.log(chalk.blue(`${line}`));
+            console.log(chalk.blue(`${line}`))
           } else if (line.includes('Rising Star')) {
-            console.log(chalk.magenta(`${line}`));
+            console.log(chalk.magenta(`${line}`))
           } else if (line.includes('\u2550') || line.includes('\u2500')) {
-            console.log(chalk.dim(`${line}`));
+            console.log(chalk.dim(`${line}`))
           } else if (line.includes('\uD83D\uDCCA')) {
-            console.log(chalk.bold.white(`${line}`));
+            console.log(chalk.bold.white(`${line}`))
           } else if (line.includes('improving!')) {
-            console.log(chalk.green(`${line}`));
+            console.log(chalk.green(`${line}`))
           } else if (line.includes('needs attention')) {
-            console.log(chalk.yellow(`${line}`));
+            console.log(chalk.yellow(`${line}`))
           } else if (line.includes('commits') && line.includes('\u2502')) {
-            console.log(chalk.dim(`${line}`));
+            console.log(chalk.dim(`${line}`))
           } else {
-            console.log(chalk.white(`${line}`));
+            console.log(chalk.white(`${line}`))
           }
         }
-        console.log();
+        console.log()
       } catch (error) {
         if (options.json) {
-          outputJsonError('leaderboard', error instanceof Error ? error.message : String(error));
+          outputJsonError('leaderboard', error instanceof Error ? error.message : String(error))
         }
-        spinner?.fail('Failed to generate leaderboard');
-        console.error(chalk.red(error instanceof Error ? error.message : String(error)));
+        spinner?.fail('Failed to generate leaderboard')
+        console.error(chalk.red(error instanceof Error ? error.message : String(error)))
       }
-    });
+    })
 }

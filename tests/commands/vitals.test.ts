@@ -15,7 +15,7 @@ vi.mock('../../src/graph/persistence.js', () => ({
   loadMetadata: vi.fn(),
 }))
 
-vi.mock('../../src/auto-scan.js', async (importOriginal) => {
+vi.mock('../../src/auto-scan.js', async (_importOriginal) => {
   const { loadGraph } = await import('../../src/graph/persistence.js')
   return {
     ensureGraph: vi.fn(async () => loadGraph('')),
@@ -66,7 +66,7 @@ import { generateComplexityReport } from '../../src/analyzers/complexity.js'
 import { analyzeKnowledgeDistribution } from '../../src/analyzers/knowledge.js'
 import { loadGraph } from '../../src/graph/persistence.js'
 import { loadSnapshots } from '../../src/history/storage.js'
-import { outputJson, outputJsonError } from '../../src/json-output.js'
+import { outputJson } from '../../src/json-output.js'
 
 function createMockGraph(overrides: Partial<KnowledgeGraph> = {}): KnowledgeGraph {
   return {

@@ -2,28 +2,28 @@
  * AI Review command - AI-powered PR review using Claude
  */
 
-import { spawnSync } from 'node:child_process';
-import chalk from 'chalk';
-import type { Command } from 'commander';
-import ora from 'ora';
-import { isAIEnabled, reasonAboutCode } from '../../ai/claude-client.js';
+import { spawnSync } from 'node:child_process'
+import chalk from 'chalk'
+import type { Command } from 'commander'
+import ora from 'ora'
+import { isAIEnabled, reasonAboutCode } from '../../ai/claude-client.js'
 
 interface ReviewOptions {
-  output?: 'markdown' | 'text';
-  verbose?: boolean;
+  output?: 'markdown' | 'text'
+  verbose?: boolean
 }
 
 interface PRDetails {
-  title: string;
-  body: string;
+  title: string
+  body: string
 }
 
 /**
  * Check if gh CLI is installed and authenticated
  */
 function checkGhCLI(): boolean {
-  const result = spawnSync('gh', ['--version'], { stdio: 'ignore' });
-  return result.status === 0;
+  const result = spawnSync('gh', ['--version'], { stdio: 'ignore' })
+  return result.status === 0
 }
 
 /**
@@ -34,13 +34,13 @@ function getPRDiff(prNumber: string): string | null {
     encoding: 'utf-8',
     stdio: ['pipe', 'pipe', 'pipe'],
     timeout: 30000,
-  });
+  })
 
   if (result.error || result.status !== 0) {
-    return null;
+    return null
   }
 
-  return result.stdout;
+  return result.stdout
 }
 
 /**
@@ -51,16 +51,16 @@ function getPRDetails(prNumber: string): PRDetails | null {
     encoding: 'utf-8',
     stdio: ['pipe', 'pipe', 'pipe'],
     timeout: 30000,
-  });
+  })
 
   if (result.error || result.status !== 0) {
-    return null;
+    return null
   }
 
   try {
-    return JSON.parse(result.stdout) as PRDetails;
+    return JSON.parse(result.stdout) as PRDetails
   } catch {
-    return null;
+    return null
   }
 }
 
@@ -69,9 +69,9 @@ function getPRDetails(prNumber: string): PRDetails | null {
  */
 function truncateDiff(diff: string, maxLength: number = 8000): string {
   if (diff.length <= maxLength) {
-    return diff;
+    return diff
   }
-  return `${diff.slice(0, maxLength)}\n\n... (diff truncated, ${diff.length - maxLength} more characters)`;
+  return `${diff.slice(0, maxLength)}\n\n... (diff truncated, ${diff.length - maxLength} more characters)`
 }
 
 /**
@@ -114,78 +114,78 @@ A brief 1-2 sentence summary of what this PR does.
 ### Approval Recommendation
 [APPROVE / REQUEST_CHANGES / COMMENT] with brief reasoning
 
-## Diff to Review`;
+## Diff to Review`
 }
 
 /**
  * Perform AI-powered PR review
  */
 export async function reviewPR(prNumber: string, options: ReviewOptions): Promise<void> {
-  const spinner = ora('Starting PR review...').start();
+  const spinner = ora('Starting PR review...').start()
 
   // Check if gh CLI is available
   if (!checkGhCLI()) {
-    spinner.fail('GitHub CLI not found');
-    console.log(chalk.yellow('\nGitHub CLI (gh) is required for PR reviews.'));
-    console.log(chalk.white('Install it from: https://cli.github.com/'));
-    console.log(chalk.white('Then authenticate with: gh auth login\n'));
-    process.exit(1);
+    spinner.fail('GitHub CLI not found')
+    console.log(chalk.yellow('\nGitHub CLI (gh) is required for PR reviews.'))
+    console.log(chalk.white('Install it from: https://cli.github.com/'))
+    console.log(chalk.white('Then authenticate with: gh auth login\n'))
+    process.exit(1)
   }
 
   // Check if AI is enabled
   if (!isAIEnabled()) {
-    spinner.fail('AI features not available');
-    console.log(chalk.yellow('\nAI features require an Anthropic API key.'));
-    console.log(chalk.white('Set the ANTHROPIC_API_KEY environment variable to enable.\n'));
-    process.exit(1);
+    spinner.fail('AI features not available')
+    console.log(chalk.yellow('\nAI features require an Anthropic API key.'))
+    console.log(chalk.white('Set the ANTHROPIC_API_KEY environment variable to enable.\n'))
+    process.exit(1)
   }
 
   // Fetch PR details
-  spinner.text = 'Fetching PR details...';
-  const prDetails = getPRDetails(prNumber);
+  spinner.text = 'Fetching PR details...'
+  const prDetails = getPRDetails(prNumber)
   if (!prDetails) {
-    spinner.fail('Failed to fetch PR details');
-    console.log(chalk.yellow(`\nCould not fetch PR #${prNumber}.`));
-    console.log(chalk.white('Make sure the PR exists and you have access to the repository.\n'));
-    process.exit(1);
+    spinner.fail('Failed to fetch PR details')
+    console.log(chalk.yellow(`\nCould not fetch PR #${prNumber}.`))
+    console.log(chalk.white('Make sure the PR exists and you have access to the repository.\n'))
+    process.exit(1)
   }
 
   // Fetch PR diff
-  spinner.text = 'Fetching PR diff...';
-  const diff = getPRDiff(prNumber);
+  spinner.text = 'Fetching PR diff...'
+  const diff = getPRDiff(prNumber)
   if (!diff) {
-    spinner.fail('Failed to fetch PR diff');
-    console.log(chalk.yellow(`\nCould not fetch diff for PR #${prNumber}.`));
-    console.log(chalk.white('Make sure the PR exists and you have access to the repository.\n'));
-    process.exit(1);
+    spinner.fail('Failed to fetch PR diff')
+    console.log(chalk.yellow(`\nCould not fetch diff for PR #${prNumber}.`))
+    console.log(chalk.white('Make sure the PR exists and you have access to the repository.\n'))
+    process.exit(1)
   }
 
   if (options.verbose) {
-    spinner.info(`PR #${prNumber}: ${prDetails.title}`);
-    console.log(chalk.dim(`Diff size: ${diff.length} characters\n`));
-    spinner.start('Analyzing changes with AI...');
+    spinner.info(`PR #${prNumber}: ${prDetails.title}`)
+    console.log(chalk.dim(`Diff size: ${diff.length} characters\n`))
+    spinner.start('Analyzing changes with AI...')
   } else {
-    spinner.text = 'Analyzing changes with AI...';
+    spinner.text = 'Analyzing changes with AI...'
   }
 
   // Build prompt and analyze with AI
-  const prompt = buildReviewPrompt(prDetails, '');
-  const truncatedDiff = truncateDiff(diff);
+  const prompt = buildReviewPrompt(prDetails, '')
+  const truncatedDiff = truncateDiff(diff)
 
   try {
-    const analysis = await reasonAboutCode(prompt, truncatedDiff);
+    const analysis = await reasonAboutCode(prompt, truncatedDiff)
 
-    spinner.succeed('Review complete');
+    spinner.succeed('Review complete')
 
     // Output the review
-    console.log(`\n${chalk.bold.cyan(`PR Review: #${prNumber}\n`)}`);
+    console.log(`\n${chalk.bold.cyan(`PR Review: #${prNumber}\n`)}`)
 
     if (options.output === 'text') {
       // Strip markdown formatting for plain text output
-      console.log(analysis);
+      console.log(analysis)
     } else {
       // Markdown output (default) - suitable for PR comments
-      console.log(analysis);
+      console.log(analysis)
     }
 
     console.log(
@@ -193,13 +193,13 @@ export async function reviewPR(prNumber: string, options: ReviewOptions): Promis
         '\nTo post this as a PR comment, copy the output above or pipe to gh:\n' +
           `  specter review ${prNumber} | gh pr comment ${prNumber} --body-file -\n`
       )
-    );
+    )
   } catch (error) {
-    spinner.fail('Review failed');
+    spinner.fail('Review failed')
     if (error instanceof Error) {
-      console.error(chalk.red(`Error: ${error.message}`));
+      console.error(chalk.red(`Error: ${error.message}`))
     }
-    process.exit(1);
+    process.exit(1)
   }
 }
 
@@ -215,9 +215,9 @@ export function register(program: Command): void {
     .action(async (prNumber: string, options: ReviewOptions) => {
       // Validate PR number is numeric
       if (!/^\d+$/.test(prNumber)) {
-        console.error(chalk.red('Error: PR number must be a positive integer.'));
-        process.exit(1);
+        console.error(chalk.red('Error: PR number must be a positive integer.'))
+        process.exit(1)
       }
-      await reviewPR(prNumber, options);
-    });
+      await reviewPR(prNumber, options)
+    })
 }

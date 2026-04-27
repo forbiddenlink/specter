@@ -5,21 +5,21 @@
  * Stores streak data in `.specter/streaks.json` in the project root.
  */
 
-import fs from 'node:fs';
-import path from 'node:path';
-import chalk from 'chalk';
+import fs from 'node:fs'
+import path from 'node:path'
+import chalk from 'chalk'
 
 export interface StreakData {
   /** Current consecutive days of usage */
-  currentStreak: number;
+  currentStreak: number
   /** Longest streak ever recorded */
-  longestStreak: number;
+  longestStreak: number
   /** ISO date string (YYYY-MM-DD) of last active day */
-  lastActiveDate: string;
+  lastActiveDate: string
   /** Total number of unique days with activity */
-  totalDays: number;
+  totalDays: number
   /** Map of command name to invocation count */
-  commandCounts: Record<string, number>;
+  commandCounts: Record<string, number>
 }
 
 const DEFAULT_STREAK_DATA: StreakData = {
@@ -28,24 +28,24 @@ const DEFAULT_STREAK_DATA: StreakData = {
   lastActiveDate: '',
   totalDays: 0,
   commandCounts: {},
-};
+}
 
 /**
  * Get the path to the streaks JSON file for a given project root.
  */
 function getStreakPath(rootDir: string): string {
-  return path.join(rootDir, '.specter', 'streaks.json');
+  return path.join(rootDir, '.specter', 'streaks.json')
 }
 
 /**
  * Get today's date as a YYYY-MM-DD string in local time.
  */
 function getTodayDate(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 /**
@@ -53,27 +53,27 @@ function getTodayDate(): string {
  * Returns the absolute difference in days.
  */
 function daysBetween(dateA: string, dateB: string): number {
-  const a = new Date(`${dateA}T00:00:00`);
-  const b = new Date(`${dateB}T00:00:00`);
-  const diffMs = Math.abs(a.getTime() - b.getTime());
-  return Math.round(diffMs / (1000 * 60 * 60 * 24));
+  const a = new Date(`${dateA}T00:00:00`)
+  const b = new Date(`${dateB}T00:00:00`)
+  const diffMs = Math.abs(a.getTime() - b.getTime())
+  return Math.round(diffMs / (1000 * 60 * 60 * 24))
 }
 
 /**
  * Load streak data from disk. Returns default data if file doesn't exist.
  */
 function loadStreakData(rootDir: string): StreakData {
-  const filePath = getStreakPath(rootDir);
+  const filePath = getStreakPath(rootDir)
   try {
-    const raw = fs.readFileSync(filePath, 'utf-8');
-    const parsed = JSON.parse(raw) as Partial<StreakData>;
+    const raw = fs.readFileSync(filePath, 'utf-8')
+    const parsed = JSON.parse(raw) as Partial<StreakData>
     return {
       ...DEFAULT_STREAK_DATA,
       ...parsed,
       commandCounts: { ...parsed.commandCounts },
-    };
+    }
   } catch {
-    return { ...DEFAULT_STREAK_DATA, commandCounts: {} };
+    return { ...DEFAULT_STREAK_DATA, commandCounts: {} }
   }
 }
 
@@ -81,12 +81,12 @@ function loadStreakData(rootDir: string): StreakData {
  * Save streak data to disk, creating the .specter directory if needed.
  */
 function saveStreakData(rootDir: string, data: StreakData): void {
-  const dirPath = path.join(rootDir, '.specter');
+  const dirPath = path.join(rootDir, '.specter')
   if (!fs.existsSync(dirPath)) {
-    fs.mkdirSync(dirPath, { recursive: true });
+    fs.mkdirSync(dirPath, { recursive: true })
   }
-  const filePath = getStreakPath(rootDir);
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+  const filePath = getStreakPath(rootDir)
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8')
 }
 
 /**
@@ -97,39 +97,39 @@ function saveStreakData(rootDir: string, data: StreakData): void {
  * @param command - Name of the command that was invoked
  */
 export function recordActivity(rootDir: string, command: string): void {
-  const data = loadStreakData(rootDir);
-  const today = getTodayDate();
+  const data = loadStreakData(rootDir)
+  const today = getTodayDate()
 
   if (data.lastActiveDate === today) {
     // Already recorded activity today - just increment command count
-    data.commandCounts[command] = (data.commandCounts[command] ?? 0) + 1;
-    saveStreakData(rootDir, data);
-    return;
+    data.commandCounts[command] = (data.commandCounts[command] ?? 0) + 1
+    saveStreakData(rootDir, data)
+    return
   }
 
   // New day of activity
-  const gap = data.lastActiveDate ? daysBetween(data.lastActiveDate, today) : 0;
+  const gap = data.lastActiveDate ? daysBetween(data.lastActiveDate, today) : 0
 
   if (gap === 1) {
     // Consecutive day - extend streak
-    data.currentStreak += 1;
+    data.currentStreak += 1
   } else if (gap === 0 && data.lastActiveDate === '') {
     // First ever activity
-    data.currentStreak = 1;
+    data.currentStreak = 1
   } else {
     // Streak broken (gap > 1) or first activity
-    data.currentStreak = 1;
+    data.currentStreak = 1
   }
 
-  data.totalDays += 1;
-  data.lastActiveDate = today;
-  data.commandCounts[command] = (data.commandCounts[command] ?? 0) + 1;
+  data.totalDays += 1
+  data.lastActiveDate = today
+  data.commandCounts[command] = (data.commandCounts[command] ?? 0) + 1
 
   if (data.currentStreak > data.longestStreak) {
-    data.longestStreak = data.currentStreak;
+    data.longestStreak = data.currentStreak
   }
 
-  saveStreakData(rootDir, data);
+  saveStreakData(rootDir, data)
 }
 
 /**
@@ -139,18 +139,18 @@ export function recordActivity(rootDir: string, command: string): void {
  * @returns Current streak data
  */
 export function getStreakInfo(rootDir: string): StreakData {
-  const data = loadStreakData(rootDir);
-  const today = getTodayDate();
+  const data = loadStreakData(rootDir)
+  const today = getTodayDate()
 
   // If the last active date is more than 1 day ago, the streak is broken
   if (data.lastActiveDate && daysBetween(data.lastActiveDate, today) > 1) {
     return {
       ...data,
       currentStreak: 0,
-    };
+    }
   }
 
-  return data;
+  return data
 }
 
 /**
@@ -162,11 +162,11 @@ export function getStreakInfo(rootDir: string): StreakData {
  * - 15+ days: lightning fire combo
  */
 export function getStreakEmoji(days: number): string {
-  if (days <= 0) return '';
-  if (days <= 3) return '\u{1F525}';
-  if (days <= 7) return '\u{1F525}\u{1F525}';
-  if (days <= 14) return '\u{1F525}\u{1F525}\u{1F525}';
-  return '\u{26A1}\u{1F525}\u{26A1}';
+  if (days <= 0) return ''
+  if (days <= 3) return '\u{1F525}'
+  if (days <= 7) return '\u{1F525}\u{1F525}'
+  if (days <= 14) return '\u{1F525}\u{1F525}\u{1F525}'
+  return '\u{26A1}\u{1F525}\u{26A1}'
 }
 
 /**
@@ -176,12 +176,12 @@ export function getStreakEmoji(days: number): string {
  */
 export function formatStreakBanner(info: StreakData): string {
   if (info.currentStreak <= 0) {
-    return 'No active streak. Run a command to start one!';
+    return 'No active streak. Run a command to start one!'
   }
 
-  const emoji = getStreakEmoji(info.currentStreak);
-  const dayLabel = info.currentStreak === 1 ? 'day' : 'days';
-  return `${emoji} ${info.currentStreak}-${dayLabel} streak! (longest: ${info.longestStreak})`;
+  const emoji = getStreakEmoji(info.currentStreak)
+  const dayLabel = info.currentStreak === 1 ? 'day' : 'days'
+  return `${emoji} ${info.currentStreak}-${dayLabel} streak! (longest: ${info.longestStreak})`
 }
 
 /**
@@ -192,12 +192,12 @@ export function formatStreakBanner(info: StreakData): string {
  */
 
 export interface DailyChallenge {
-  id: string;
-  title: string;
-  description: string;
-  emoji: string;
-  command: string;
-  difficulty: 'easy' | 'medium' | 'hard';
+  id: string
+  title: string
+  description: string
+  emoji: string
+  command: string
+  difficulty: 'easy' | 'medium' | 'hard'
 }
 
 const CHALLENGE_POOL: DailyChallenge[] = [
@@ -321,7 +321,7 @@ const CHALLENGE_POOL: DailyChallenge[] = [
     command: 'confess',
     difficulty: 'easy',
   },
-];
+]
 
 /**
  * Get the daily challenge for today.
@@ -331,20 +331,20 @@ const CHALLENGE_POOL: DailyChallenge[] = [
  * @returns The challenge for today
  */
 export function getDailyChallenge(_rootDir: string): DailyChallenge {
-  const today = getTodayDate();
+  const today = getTodayDate()
   // Simple deterministic hash from date string
-  let hash = 0;
+  let hash = 0
   for (let i = 0; i < today.length; i++) {
-    const ch = today.charCodeAt(i);
-    hash = ((hash << 5) - hash + ch) | 0;
+    const ch = today.charCodeAt(i)
+    hash = ((hash << 5) - hash + ch) | 0
   }
-  const index = Math.abs(hash) % CHALLENGE_POOL.length;
-  const challenge = CHALLENGE_POOL[index];
+  const index = Math.abs(hash) % CHALLENGE_POOL.length
+  const challenge = CHALLENGE_POOL[index]
   // CHALLENGE_POOL is non-empty and index is always valid, but TypeScript needs this guard
   if (!challenge) {
-    throw new Error('Challenge pool is empty');
+    throw new Error('Challenge pool is empty')
   }
-  return challenge;
+  return challenge
 }
 
 /**
@@ -355,16 +355,16 @@ export function formatDailyChallenge(challenge: DailyChallenge): string {
     easy: chalk.green,
     medium: chalk.yellow,
     hard: chalk.red,
-  };
+  }
 
-  const colorFn = difficultyColors[challenge.difficulty];
+  const colorFn = difficultyColors[challenge.difficulty]
   const lines = [
     '',
     `  ${challenge.emoji} ${chalk.bold.white('Daily Challenge:')} ${chalk.bold.cyan(challenge.title)}`,
     `     ${chalk.white(challenge.description)}`,
     `     ${chalk.dim('Run:')} ${chalk.white(`specter ${challenge.command}`)}`,
     `     ${chalk.dim('Difficulty:')} ${colorFn(challenge.difficulty)}`,
-  ];
+  ]
 
-  return lines.join('\n');
+  return lines.join('\n')
 }

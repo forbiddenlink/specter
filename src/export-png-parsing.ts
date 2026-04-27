@@ -10,30 +10,30 @@
 // =============================================================================
 
 export interface TextSegment {
-  text: string;
-  color: string;
-  bold: boolean;
-  italic: boolean;
-  dim: boolean;
+  text: string
+  color: string
+  bold: boolean
+  italic: boolean
+  dim: boolean
 }
 
 export interface ParsedLine {
-  segments: TextSegment[];
+  segments: TextSegment[]
 }
 
 export interface ContentConfig {
-  type: 'wrapped' | 'achievements' | 'dna' | 'generic';
-  emoji: string;
-  title: string;
-  subtitle: string;
-  gradient: [string, string];
+  type: 'wrapped' | 'achievements' | 'dna' | 'generic'
+  emoji: string
+  title: string
+  subtitle: string
+  gradient: [string, string]
 }
 
 export interface AnsiParserState {
-  currentColor: string;
-  bold: boolean;
-  italic: boolean;
-  dim: boolean;
+  currentColor: string
+  bold: boolean
+  italic: boolean
+  dim: boolean
 }
 
 // =============================================================================
@@ -61,7 +61,7 @@ const ansiColorsDark: Record<string, string> = {
   '95': '#d98aff', // bright magenta
   '96': '#8affff', // bright cyan
   '97': '#ffffff', // bright white
-};
+}
 
 // Light theme color overrides
 const ansiColorsLight: Record<string, string> = {
@@ -81,7 +81,7 @@ const ansiColorsLight: Record<string, string> = {
   '95': '#aa00aa', // bright magenta
   '96': '#00aaaa', // bright cyan
   '97': '#000000', // bright white (black for contrast)
-};
+}
 
 // =============================================================================
 // Helper Functions
@@ -91,22 +91,22 @@ const ansiColorsLight: Record<string, string> = {
  * Adjust color for dim effect (reduce brightness by 40%)
  */
 export function adjustColorForDim(hex: string): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
 
-  const dimR = Math.floor(r * 0.6);
-  const dimG = Math.floor(g * 0.6);
-  const dimB = Math.floor(b * 0.6);
+  const dimR = Math.floor(r * 0.6)
+  const dimG = Math.floor(g * 0.6)
+  const dimB = Math.floor(b * 0.6)
 
-  return `#${dimR.toString(16).padStart(2, '0')}${dimG.toString(16).padStart(2, '0')}${dimB.toString(16).padStart(2, '0')}`;
+  return `#${dimR.toString(16).padStart(2, '0')}${dimG.toString(16).padStart(2, '0')}${dimB.toString(16).padStart(2, '0')}`
 }
 
 /**
  * Strip ANSI codes from text (for measuring)
  */
 export function stripAnsi(text: string): string {
-  return text.replace(/\x1b\[[0-9;]*m/g, '');
+  return text.replace(/\x1b\[[0-9;]*m/g, '')
 }
 
 /**
@@ -119,7 +119,7 @@ export function createTextSegment(text: string, state: AnsiParserState): TextSeg
     bold: state.bold,
     italic: state.italic,
     dim: state.dim,
-  };
+  }
 }
 
 // =============================================================================
@@ -130,12 +130,12 @@ export function createTextSegment(text: string, state: AnsiParserState): TextSeg
  * Initialize ANSI parser state for a given theme
  */
 export function setupAnsiParser(theme: 'dark' | 'light'): {
-  colorMap: Record<string, string>;
-  defaultColor: string;
-  initialState: AnsiParserState;
+  colorMap: Record<string, string>
+  defaultColor: string
+  initialState: AnsiParserState
 } {
-  const colorMap = theme === 'dark' ? ansiColorsDark : ansiColorsLight;
-  const defaultColor = theme === 'dark' ? '#e0e0e0' : '#333333';
+  const colorMap = theme === 'dark' ? ansiColorsDark : ansiColorsLight
+  const defaultColor = theme === 'dark' ? '#e0e0e0' : '#333333'
 
   return {
     colorMap,
@@ -146,7 +146,7 @@ export function setupAnsiParser(theme: 'dark' | 'light'): {
       italic: false,
       dim: false,
     },
-  };
+  }
 }
 
 /**
@@ -160,27 +160,27 @@ function processAnsiCode(
 ): void {
   if (code === 0) {
     // Reset all attributes
-    state.currentColor = defaultColor;
-    state.bold = false;
-    state.italic = false;
-    state.dim = false;
+    state.currentColor = defaultColor
+    state.bold = false
+    state.italic = false
+    state.dim = false
   } else if (code === 1) {
-    state.bold = true;
+    state.bold = true
   } else if (code === 2) {
-    state.dim = true;
+    state.dim = true
   } else if (code === 3) {
-    state.italic = true;
+    state.italic = true
   } else if (code === 22) {
-    state.bold = false;
-    state.dim = false;
+    state.bold = false
+    state.dim = false
   } else if (code === 23) {
-    state.italic = false;
+    state.italic = false
   } else if (colorMap[code.toString()]) {
-    state.currentColor = colorMap[code.toString()] ?? defaultColor;
+    state.currentColor = colorMap[code.toString()] ?? defaultColor
   } else if (code >= 30 && code <= 37) {
-    state.currentColor = colorMap[code.toString()] ?? defaultColor;
+    state.currentColor = colorMap[code.toString()] ?? defaultColor
   } else if (code >= 90 && code <= 97) {
-    state.currentColor = colorMap[code.toString()] ?? defaultColor;
+    state.currentColor = colorMap[code.toString()] ?? defaultColor
   }
 }
 
@@ -192,46 +192,46 @@ function processAnsiCode(
  * Parse ANSI escape codes from text into styled segments
  */
 export function parseAnsiCodes(text: string, theme: 'dark' | 'light'): ParsedLine[] {
-  const lines: ParsedLine[] = [];
-  const { colorMap, defaultColor, initialState } = setupAnsiParser(theme);
-  const rawLines = text.split('\n');
+  const lines: ParsedLine[] = []
+  const { colorMap, defaultColor, initialState } = setupAnsiParser(theme)
+  const rawLines = text.split('\n')
 
   for (const rawLine of rawLines) {
-    const segments: TextSegment[] = [];
-    const state: AnsiParserState = { ...initialState };
+    const segments: TextSegment[] = []
+    const state: AnsiParserState = { ...initialState }
 
     // ANSI escape code regex
-    const ansiRegex = /\x1b\[([0-9;]+)m/g;
-    let lastIndex = 0;
-    let match: RegExpExecArray | null = ansiRegex.exec(rawLine);
+    const ansiRegex = /\x1b\[([0-9;]+)m/g
+    let lastIndex = 0
+    let match: RegExpExecArray | null = ansiRegex.exec(rawLine)
 
     while (match !== null) {
       // Add text before this escape code
       if (match.index > lastIndex) {
-        const textBefore = rawLine.substring(lastIndex, match.index);
+        const textBefore = rawLine.substring(lastIndex, match.index)
         if (textBefore) {
-          segments.push(createTextSegment(textBefore, state));
+          segments.push(createTextSegment(textBefore, state))
         }
       }
 
       // Parse the escape code
-      const matchGroup = match[1];
+      const matchGroup = match[1]
       if (matchGroup) {
-        const codes = matchGroup.split(';').map(Number);
+        const codes = matchGroup.split(';').map(Number)
         for (const code of codes) {
-          processAnsiCode(code, state, colorMap, defaultColor);
+          processAnsiCode(code, state, colorMap, defaultColor)
         }
       }
 
-      lastIndex = ansiRegex.lastIndex;
-      match = ansiRegex.exec(rawLine);
+      lastIndex = ansiRegex.lastIndex
+      match = ansiRegex.exec(rawLine)
     }
 
     // Add remaining text after last escape code
     if (lastIndex < rawLine.length) {
-      const remaining = rawLine.substring(lastIndex);
+      const remaining = rawLine.substring(lastIndex)
       if (remaining) {
-        segments.push(createTextSegment(remaining, state));
+        segments.push(createTextSegment(remaining, state))
       }
     }
 
@@ -243,13 +243,13 @@ export function parseAnsiCodes(text: string, theme: 'dark' | 'light'): ParsedLin
         bold: false,
         italic: false,
         dim: false,
-      });
+      })
     }
 
-    lines.push({ segments });
+    lines.push({ segments })
   }
 
-  return lines;
+  return lines
 }
 
 // =============================================================================
@@ -262,18 +262,18 @@ export function parseAnsiCodes(text: string, theme: 'dark' | 'light'): ParsedLin
  */
 export function getContentConfig(content: string): ContentConfig {
   // Detect content type
-  let type: ContentConfig['type'] = 'generic';
+  let type: ContentConfig['type'] = 'generic'
 
   if (content.includes('WRAPPED') || content.includes('#SpecterWrapped')) {
-    type = 'wrapped';
+    type = 'wrapped'
   } else if (content.includes('ACHIEVEMENTS') || content.includes('UNLOCKED')) {
-    type = 'achievements';
+    type = 'achievements'
   } else if (
     content.includes('DNA PROFILE') ||
     content.includes('DOUBLE HELIX') ||
     content.includes('Sequence:')
   ) {
-    type = 'dna';
+    type = 'dna'
   }
 
   // Return config based on type
@@ -285,7 +285,7 @@ export function getContentConfig(content: string): ContentConfig {
         title: 'Specter Wrapped',
         subtitle: 'Your Year in Code',
         gradient: ['#1a1a2e', '#16213e'],
-      };
+      }
     case 'achievements':
       return {
         type,
@@ -293,7 +293,7 @@ export function getContentConfig(content: string): ContentConfig {
         title: 'Specter Achievements',
         subtitle: 'Your Coding Badges',
         gradient: ['#1a1a2e', '#2d132c'],
-      };
+      }
     case 'dna':
       return {
         type,
@@ -301,7 +301,7 @@ export function getContentConfig(content: string): ContentConfig {
         title: 'Codebase DNA',
         subtitle: 'Your Unique Fingerprint',
         gradient: ['#1a1a2e', '#0a3d62'],
-      };
+      }
     default:
       return {
         type: 'generic',
@@ -309,6 +309,6 @@ export function getContentConfig(content: string): ContentConfig {
         title: 'Specter',
         subtitle: 'Code Intelligence',
         gradient: ['#1a1a2e', '#1a1a2e'],
-      };
+      }
   }
 }

@@ -5,30 +5,30 @@
  * for displaying numeric data in a visual format.
  */
 
-import chalk from 'chalk';
-import gradient from 'gradient-string';
-import logUpdate from 'log-update';
-import terminalLink from 'terminal-link';
-import { colors, getComplexityColor, getHealthColor } from './colors.js';
+import chalk from 'chalk'
+import gradient from 'gradient-string'
+import logUpdate from 'log-update'
+import terminalLink from 'terminal-link'
+import { colors, getComplexityColor, getHealthColor } from './colors.js'
 
 /**
  * Options for customizing progress bar appearance
  */
 export interface ProgressBarOptions {
   /** Width of the bar in characters (default: 20) */
-  width?: number;
+  width?: number
   /** Character for filled portion (default: '\u2588') */
-  filled?: string;
+  filled?: string
   /** Character for empty portion (default: '\u2591') */
-  empty?: string;
+  empty?: string
   /** Show percentage after bar (default: false) */
-  showPercent?: boolean;
+  showPercent?: boolean
   /** Show value/max after bar (default: false) */
-  showValue?: boolean;
+  showValue?: boolean
   /** Maximum value for scaling (default: same as max parameter) */
-  maxValue?: number;
+  maxValue?: number
   /** Custom color function (default: none) */
-  color?: (s: string) => string;
+  color?: (s: string) => string
 }
 
 /**
@@ -43,7 +43,7 @@ const SPARKLINE_CHARS = [
   '\u2586',
   '\u2587',
   '\u2588',
-];
+]
 
 /**
  * Create a basic progress bar
@@ -66,33 +66,33 @@ export function progressBar(value: number, max: number, options: ProgressBarOpti
     showValue = false,
     maxValue,
     color,
-  } = options;
+  } = options
 
   // Handle edge cases
-  if (max <= 0) return empty.repeat(width);
-  if (value < 0) value = 0;
-  if (value > max) value = max;
+  if (max <= 0) return empty.repeat(width)
+  if (value < 0) value = 0
+  if (value > max) value = max
 
-  const ratio = value / max;
-  const filledCount = Math.round(ratio * width);
-  const emptyCount = width - filledCount;
+  const ratio = value / max
+  const filledCount = Math.round(ratio * width)
+  const emptyCount = width - filledCount
 
-  let bar = filled.repeat(filledCount) + chalk.dim(empty.repeat(emptyCount));
+  let bar = filled.repeat(filledCount) + chalk.dim(empty.repeat(emptyCount))
 
   if (color) {
-    bar = color(filled.repeat(filledCount)) + chalk.dim(empty.repeat(emptyCount));
+    bar = color(filled.repeat(filledCount)) + chalk.dim(empty.repeat(emptyCount))
   }
 
-  const suffix: string[] = [];
+  const suffix: string[] = []
   if (showPercent) {
-    suffix.push(`${Math.round(ratio * 100)}%`);
+    suffix.push(`${Math.round(ratio * 100)}%`)
   }
   if (showValue) {
-    const displayMax = maxValue ?? max;
-    suffix.push(`${value}/${displayMax}`);
+    const displayMax = maxValue ?? max
+    suffix.push(`${value}/${displayMax}`)
   }
 
-  return suffix.length > 0 ? `${bar} ${suffix.join(' ')}` : bar;
+  return suffix.length > 0 ? `${bar} ${suffix.join(' ')}` : bar
 }
 
 /**
@@ -104,8 +104,8 @@ export function progressBar(value: number, max: number, options: ProgressBarOpti
  * @returns Colored progress bar string
  */
 export function healthBar(score: number, width: number = 20): string {
-  const color = getHealthColor(score);
-  return progressBar(score, 100, { width, color, showPercent: true });
+  const color = getHealthColor(score)
+  return progressBar(score, 100, { width, color, showPercent: true })
 }
 
 /**
@@ -122,9 +122,9 @@ export function complexityMeter(
   maxComplexity: number = 30,
   width: number = 20
 ): string {
-  const color = getComplexityColor(complexity);
-  const clampedComplexity = Math.min(complexity, maxComplexity);
-  return progressBar(clampedComplexity, maxComplexity, { width, color });
+  const color = getComplexityColor(complexity)
+  const clampedComplexity = Math.min(complexity, maxComplexity)
+  return progressBar(clampedComplexity, maxComplexity, { width, color })
 }
 
 /**
@@ -139,20 +139,20 @@ export function complexityMeter(
  * // Returns: "\u2581\u2583\u2585\u2587\u2585\u2583\u2581"
  */
 export function sparkline(values: number[]): string {
-  if (values.length === 0) return '';
-  if (values.length === 1) return SPARKLINE_CHARS[4] ?? '\u2585'; // middle height
+  if (values.length === 0) return ''
+  if (values.length === 1) return SPARKLINE_CHARS[4] ?? '\u2585' // middle height
 
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const range = max - min || 1; // Avoid division by zero
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  const range = max - min || 1 // Avoid division by zero
 
   return values
     .map((v) => {
-      const normalized = (v - min) / range;
-      const index = Math.round(normalized * (SPARKLINE_CHARS.length - 1));
-      return SPARKLINE_CHARS[index];
+      const normalized = (v - min) / range
+      const index = Math.round(normalized * (SPARKLINE_CHARS.length - 1))
+      return SPARKLINE_CHARS[index]
     })
-    .join('');
+    .join('')
 }
 
 /**
@@ -163,20 +163,20 @@ export function sparkline(values: number[]): string {
  * @returns Colored sparkline string
  */
 export function coloredSparkline(values: number[], higherIsBetter: boolean = true): string {
-  if (values.length < 2) return sparkline(values);
+  if (values.length < 2) return sparkline(values)
 
-  const line = sparkline(values);
-  const first = values[0];
-  const last = values[values.length - 1];
-  if (first === undefined || last === undefined) return line;
-  const trend = last - first;
+  const line = sparkline(values)
+  const first = values[0]
+  const last = values[values.length - 1]
+  if (first === undefined || last === undefined) return line
+  const trend = last - first
 
-  const isPositiveTrend = higherIsBetter ? trend > 0 : trend < 0;
-  const isNegativeTrend = higherIsBetter ? trend < 0 : trend > 0;
+  const isPositiveTrend = higherIsBetter ? trend > 0 : trend < 0
+  const isNegativeTrend = higherIsBetter ? trend < 0 : trend > 0
 
-  if (isPositiveTrend) return colors.healthy(line);
-  if (isNegativeTrend) return colors.critical(line);
-  return colors.warning(line);
+  if (isPositiveTrend) return colors.healthy(line)
+  if (isNegativeTrend) return colors.critical(line)
+  return colors.warning(line)
 }
 
 /**
@@ -199,20 +199,20 @@ export function compareBar(
   max: number,
   width: number = 20
 ): string {
-  if (max <= 0) return ' '.repeat(width);
+  if (max <= 0) return ' '.repeat(width)
 
-  const ratio1 = Math.min(value1 / max, 1);
-  const ratio2 = Math.min(value2 / max, 1);
+  const ratio1 = Math.min(value1 / max, 1)
+  const ratio2 = Math.min(value2 / max, 1)
 
-  const filled1 = Math.round(ratio1 * width);
-  const filled2 = Math.round(ratio2 * width);
+  const filled1 = Math.round(ratio1 * width)
+  const filled2 = Math.round(ratio2 * width)
 
-  const bar1 = colors.primary('\u2588'.repeat(filled1));
-  const bar2 = colors.secondary('\u2588'.repeat(filled2));
-  const empty1 = chalk.dim('\u2591'.repeat(width - filled1));
-  const empty2 = chalk.dim('\u2591'.repeat(width - filled2));
+  const bar1 = colors.primary('\u2588'.repeat(filled1))
+  const bar2 = colors.secondary('\u2588'.repeat(filled2))
+  const empty1 = chalk.dim('\u2591'.repeat(width - filled1))
+  const empty2 = chalk.dim('\u2591'.repeat(width - filled2))
 
-  return `${bar1}${empty1} vs ${bar2}${empty2}`;
+  return `${bar1}${empty1} vs ${bar2}${empty2}`
 }
 
 /**
@@ -229,28 +229,28 @@ export function stackedBar(
   width: number = 30
 ): string {
   if (total <= 0 || segments.length === 0) {
-    return chalk.dim('\u2591'.repeat(width));
+    return chalk.dim('\u2591'.repeat(width))
   }
 
-  const defaultColors = [colors.healthy, colors.warning, colors.danger, colors.critical];
-  let result = '';
-  let usedWidth = 0;
+  const defaultColors = [colors.healthy, colors.warning, colors.danger, colors.critical]
+  let result = ''
+  let usedWidth = 0
 
   segments.forEach((segment, index) => {
-    const ratio = segment.value / total;
-    const segmentWidth = Math.round(ratio * width);
-    const color = segment.color ?? defaultColors[index % defaultColors.length] ?? chalk.white;
+    const ratio = segment.value / total
+    const segmentWidth = Math.round(ratio * width)
+    const color = segment.color ?? defaultColors[index % defaultColors.length] ?? chalk.white
 
-    result += color('\u2588'.repeat(segmentWidth));
-    usedWidth += segmentWidth;
-  });
+    result += color('\u2588'.repeat(segmentWidth))
+    usedWidth += segmentWidth
+  })
 
   // Fill any remaining space due to rounding
   if (usedWidth < width) {
-    result += chalk.dim('\u2591'.repeat(width - usedWidth));
+    result += chalk.dim('\u2591'.repeat(width - usedWidth))
   }
 
-  return result;
+  return result
 }
 
 /**
@@ -268,16 +268,16 @@ export function miniBar(
   width: number = 5,
   color?: (s: string) => string
 ): string {
-  if (max <= 0) return '\u2591'.repeat(width);
+  if (max <= 0) return '\u2591'.repeat(width)
 
-  const ratio = Math.min(value / max, 1);
-  const filled = Math.round(ratio * width);
-  const empty = width - filled;
+  const ratio = Math.min(value / max, 1)
+  const filled = Math.round(ratio * width)
+  const empty = width - filled
 
-  const filledStr = '\u2588'.repeat(filled);
-  const emptyStr = '\u2591'.repeat(empty);
+  const filledStr = '\u2588'.repeat(filled)
+  const emptyStr = '\u2591'.repeat(empty)
 
-  return color ? color(filledStr) + chalk.dim(emptyStr) : filledStr + chalk.dim(emptyStr);
+  return color ? color(filledStr) + chalk.dim(emptyStr) : filledStr + chalk.dim(emptyStr)
 }
 
 /**
@@ -293,9 +293,9 @@ export function percentIndicator(
   max: number = 100,
   colorFn?: (s: string) => string
 ): string {
-  const percent = Math.round((value / max) * 100);
-  const color = colorFn || getHealthColor(percent);
-  return color(`${percent}%`);
+  const percent = Math.round((value / max) * 100)
+  const color = colorFn || getHealthColor(percent)
+  return color(`${percent}%`)
 }
 
 /**
@@ -313,25 +313,25 @@ export async function animateScore(
   max: number = 100,
   barWidth: number = 30
 ): Promise<void> {
-  const healthGrad = gradient(['#ff6b6b', '#ffd93d', '#6bcb77']);
+  const healthGrad = gradient(['#ff6b6b', '#ffd93d', '#6bcb77'])
 
   if (!process.stdout.isTTY) {
-    const filled = Math.round((target / max) * barWidth);
-    const bar = healthGrad('\u2588'.repeat(filled)) + chalk.dim('\u2591'.repeat(barWidth - filled));
-    console.log(`  ${label}: ${chalk.bold(String(target))}/${max}`);
-    console.log(`  ${bar}`);
-    return;
+    const filled = Math.round((target / max) * barWidth)
+    const bar = healthGrad('\u2588'.repeat(filled)) + chalk.dim('\u2591'.repeat(barWidth - filled))
+    console.log(`  ${label}: ${chalk.bold(String(target))}/${max}`)
+    console.log(`  ${bar}`)
+    return
   }
 
-  const steps = Math.min(target, 40);
+  const steps = Math.min(target, 40)
   for (let i = 0; i <= steps; i++) {
-    const current = Math.round((i / steps) * target);
-    const filled = Math.round((current / max) * barWidth);
-    const bar = healthGrad('\u2588'.repeat(filled)) + chalk.dim('\u2591'.repeat(barWidth - filled));
-    logUpdate(`  ${label}: ${chalk.bold(String(current))}/${max}\n  ${bar}`);
-    await new Promise((r) => setTimeout(r, 15));
+    const current = Math.round((i / steps) * target)
+    const filled = Math.round((current / max) * barWidth)
+    const bar = healthGrad('\u2588'.repeat(filled)) + chalk.dim('\u2591'.repeat(barWidth - filled))
+    logUpdate(`  ${label}: ${chalk.bold(String(current))}/${max}\n  ${bar}`)
+    await new Promise((r) => setTimeout(r, 15))
   }
-  logUpdate.done();
+  logUpdate.done()
 }
 
 /**
@@ -342,7 +342,7 @@ export async function animateScore(
  * @returns Clickable link string (or plain text in unsupported terminals)
  */
 export function fileLink(text: string, url: string): string {
-  return terminalLink(text, url, { fallback: (text) => text });
+  return terminalLink(text, url, { fallback: (text) => text })
 }
 
 /**
@@ -353,15 +353,15 @@ export function fileLink(text: string, url: string): string {
  * @returns Clickable path string
  */
 export function clickablePath(filePath: string, rootDir?: string): string {
-  const displayPath = filePath;
-  let fullPath = filePath;
+  const displayPath = filePath
+  let fullPath = filePath
   if (rootDir && !filePath.startsWith('/')) {
-    fullPath = `${rootDir}/${filePath}`;
+    fullPath = `${rootDir}/${filePath}`
   }
-  const fileUrl = `file://${fullPath}`;
+  const fileUrl = `file://${fullPath}`
   return terminalLink(colors.file(displayPath), fileUrl, {
     fallback: () => colors.file(displayPath),
-  });
+  })
 }
 
 /**
@@ -372,7 +372,7 @@ export function clickablePath(filePath: string, rootDir?: string): string {
  */
 export function timingBadge(ms: number): string {
   if (ms < 1000) {
-    return chalk.dim(`(${Math.round(ms)}ms)`);
+    return chalk.dim(`(${Math.round(ms)}ms)`)
   }
-  return chalk.dim(`(${(ms / 1000).toFixed(1)}s)`);
+  return chalk.dim(`(${(ms / 1000).toFixed(1)}s)`)
 }
