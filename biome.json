@@ -50,7 +50,12 @@
       "!**/coverage",
       "!**/*.min.js",
       "!**/public",
-      "!**/vendor"
+      "!**/vendor",
+      "!docs/**",
+      "!.history/**",
+      "!thoughts/**",
+      "!.codacy/**",
+      "!.specter/**"
     ]
   }
 }

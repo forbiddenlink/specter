@@ -26,7 +26,7 @@
       <section class="metrics-overview" id="metrics-overview">
         <div class="metric-card">
           <div class="metric-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><title>File icon</title><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
           </div>
           <div class="metric-content">
             <span class="metric-value" id="metric-file-count">--</span>
@@ -35,7 +35,7 @@
         </div>
         <div class="metric-card">
           <div class="metric-icon warning">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20v-6M6 20V10M18 20V4"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><title>Bar chart icon</title><path d="M12 20v-6M6 20V10M18 20V4"/></svg>
           </div>
           <div class="metric-content">
             <span class="metric-value" id="metric-avg-complexity">--</span>
@@ -44,7 +44,7 @@
         </div>
         <div class="metric-card">
           <div class="metric-icon success">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><title>Activity pulse icon</title><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
           </div>
           <div class="metric-content">
             <span class="metric-value" id="metric-health-score">--</span>
@@ -53,7 +53,7 @@
         </div>
         <div class="metric-card">
           <div class="metric-icon danger">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><title>Warning triangle icon</title><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
           </div>
           <div class="metric-content">
             <span class="metric-value" id="metric-hotspots">--</span>
@@ -180,8 +180,8 @@
               <option value="class">Classes</option>
               <option value="interface">Interfaces</option>
             </select>
-            <button id="reset-view" class="btn">Reset View</button>
-            <button id="toggle-layout" class="btn">Toggle Layout</button>
+            <button type="button" id="reset-view" class="btn">Reset View</button>
+            <button type="button" id="toggle-layout" class="btn">Toggle Layout</button>
           </div>
           <div id="cy"></div>
           <div class="graph-legend">
