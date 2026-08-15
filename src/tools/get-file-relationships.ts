@@ -39,7 +39,7 @@ export function execute(graph: KnowledgeGraph, input: Input): FileRelationshipsR
   // Check if file exists in graph
   const fileNode = graph.nodes[filePath]
 
-  if (!fileNode || fileNode.type !== 'file') {
+  if (fileNode?.type !== 'file') {
     return {
       filePath,
       exists: false,

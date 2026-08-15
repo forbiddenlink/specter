@@ -323,7 +323,7 @@ export function register(program: Command): void {
 
       const resolved = resolveFilePath(graph, file, rootDir)
 
-      if (!resolved || resolved.node.type !== 'file') {
+      if (resolved?.node.type !== 'file') {
         console.log(chalk.red(`File "${file}" not found in the knowledge graph.`))
         console.log(chalk.dim('  Make sure the file is part of the scanned codebase.'))
         console.log(chalk.dim('  Run `specter scan` to update the graph.'))
