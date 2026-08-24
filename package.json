@@ -53,10 +53,10 @@
     "node": ">=20.0.0"
   },
   "dependencies": {
-    "@ai-sdk/google": "^3.0.55",
+    "@ai-sdk/google": "^4.0.24",
     "@anthropic-ai/sdk": "^0.106.0",
     "@fastify/cors": "^11.0.0",
-    "@fastify/rate-limit": "^10.3.0",
+    "@fastify/rate-limit": "^11.1.0",
     "@fastify/static": "^9.0.0",
     "@modelcontextprotocol/sdk": "^1.0.0",
     "@octokit/rest": "^22.0.1",
@@ -77,7 +77,7 @@
     "fastify": "^5.7.0",
     "gradient-string": "^3.0.0",
     "langfuse": "^3.38.20",
-    "listr2": "^10.1.0",
+    "listr2": "^11.0.0",
     "log-update": "^8.0.0",
     "ora": "^9.0.0",
     "pino": "^10.3.1",
@@ -90,10 +90,10 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.9",
-    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.2",
     "@types/gradient-string": "^1.1.6",
-    "@types/node": "^25.6.2",
+    "@types/node": "^26.1.1",
     "@vitejs/plugin-react": "^6.0.2",
     "@vitest/coverage-v8": "^4.0.18",
     "concurrently": "^10.0.0",
@@ -103,7 +103,7 @@
     "msw": "^2.12.14",
     "pino-test": "^2.0.0",
     "typedoc": "^0.28.0",
-    "typescript": "^6.0.3",
+    "typescript": "^7.0.2",
     "vitest": "^4.0.18"
   },
   "lint-staged": {
