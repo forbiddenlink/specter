@@ -103,7 +103,7 @@
     "msw": "^2.12.14",
     "pino-test": "^2.0.0",
     "typedoc": "^0.28.0",
-    "typescript": "^7.0.2",
+    "typescript": "^6.0.3",
     "vitest": "^4.0.18"
   },
   "lint-staged": {
