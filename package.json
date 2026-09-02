@@ -145,12 +145,11 @@
       "ip-address": ">=10.3.1 <11",
       "fast-xml-builder": ">=1.1.7",
       "@grpc/grpc-js": "^1.14.4",
-      "brace-expansion@5": ">=5.0.8 <6",
+      "brace-expansion@5": ">=5.0.9 <6",
       "@fastify/static@10": ">=10.1.2 <11",
       "shell-quote@1": ">=1.9.0 <2",
       "fast-uri@4": ">=4.1.1 <5",
       "@fastify/static": ">=10.1.2 <11",
-      "brace-expansion": ">=5.0.8 <6",
       "fast-uri": ">=4.0.1 <5",
       "hono": ">=4.12.34 <5"
     }
