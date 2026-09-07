@@ -54,7 +54,7 @@
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.24",
-    "@anthropic-ai/sdk": "^0.120.0",
+    "@anthropic-ai/sdk": "^0.122.0",
     "@fastify/cors": "^11.0.0",
     "@fastify/rate-limit": "^11.1.0",
     "@fastify/static": "^9.0.0",
