@@ -159,7 +159,7 @@ importers:
         specifier: ^1.1.6
         version: 1.1.6
       '@types/node':
-        specifier: ^26.1.1
+        specifier: ^26.3.0
         version: 26.3.0
       '@vitejs/plugin-react':
         specifier: ^6.1.0
@@ -177,7 +177,7 @@ importers:
         specifier: ^30.0.1
         version: 30.0.1(canvas@3.2.3)
       lint-staged:
-        specifier: ^17.0.7
+        specifier: ^17.3.0
         version: 17.3.0
       msw:
         specifier: ^2.12.14
