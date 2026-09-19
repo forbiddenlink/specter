@@ -9,7 +9,7 @@ knowledge graph from source + git history and exposes it as CLI commands and MCP
 ## Stack
 
 - TypeScript (strict, `NodeNext` module resolution), compiled with `tsc` (no bundler).
-- Node >=20. Package manager: pnpm (`packageManager: pnpm@10.32.1`, pnpm-lock.yaml present).
+- Node >=20. Package manager: pnpm (`packageManager: pnpm@10.34.5`, pnpm-lock.yaml present).
 - Vitest 4 (jsdom + React Testing Library for dashboard UI), Biome 2 for lint/format, Husky +
   lint-staged for pre-commit, Typedoc for API docs.
 - Fastify (dashboard server), `@modelcontextprotocol/sdk` (MCP server), `@anthropic-ai/sdk`,
@@ -33,7 +33,7 @@ pnpm dashboard       # node dist/cli.js dashboard  (serve the local dashboard)
 ```
 
 CI (`.github/workflows/ci.yml`) runs `pnpm install --frozen-lockfile`, `pnpm run lint`,
-`pnpm run test:coverage`, `pnpm run build` on Node 20.
+`pnpm run test:coverage`, `pnpm run build` on Node 22.
 
 ## Layout
 
@@ -68,7 +68,7 @@ CI (`.github/workflows/ci.yml`) runs `pnpm install --frozen-lockfile`, `pnpm run
 ## Testing
 
 Vitest with jsdom + `@testing-library/react` for dashboard components, MSW for mocking. Path
-alias `@` -> `./src` (set in `vitest.config.ts` and presumably `tsconfig.json` paths).
+alias `@` -> `./src` (set in `vitest.config.ts`; `tsconfig.json` has no `paths` field).
 
 ## Env vars
 

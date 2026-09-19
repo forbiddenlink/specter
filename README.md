@@ -24,7 +24,7 @@ Traditional analysis tools show metrics without meaning. Specter **connects the 
 | "Cyclomatic complexity: 45" | **Where** the hotspots are + **why** they matter |
 | "Tech debt exists" | **$510k** annual maintenance burden (your hourly rate) |
 | "Bus factor: 1" | **Who** owns what + **what breaks** if they leave |
-| Numbers without context | AI-powered explanations in 12 personality modes |
+| Numbers without context | AI-powered explanations in 19 personality modes |
 
 ```bash
 # Install and get started in 30 seconds
