@@ -10,13 +10,13 @@ git clone https://github.com/forbiddenlink/specter.git
 cd specter
 
 # Install dependencies
-npm install
+pnpm install
 
 # Build
-npm run build
+pnpm build
 
 # Run tests
-npm test
+pnpm test:run
 ```
 
 ## Code Style
@@ -25,13 +25,13 @@ We use [Biome](https://biomejs.dev/) for linting and formatting:
 
 ```bash
 # Check for issues
-npm run lint
+pnpm lint
 
 # Auto-fix issues
-npm run lint:fix
+pnpm lint:fix
 
 # Format code
-npm run format
+pnpm format
 ```
 
 ## Testing
@@ -39,14 +39,14 @@ npm run format
 We use [Vitest](https://vitest.dev/) for testing:
 
 ```bash
-# Run tests
-npm test
+# Run tests (single pass)
+pnpm test:run
 
 # Run tests with coverage
-npm run test:coverage
+pnpm test:coverage
 
 # Run tests in watch mode
-npm run test -- --watch
+pnpm test
 ```
 
 ### Writing Tests
@@ -65,7 +65,7 @@ Security is a priority. Please:
 - **Never** use string interpolation in shell commands
 - Use `spawnSync` with argument arrays instead of `execSync` with strings
 - Validate and sanitize all user input
-- Run `npm audit` before submitting PRs
+- Run `pnpm audit` before submitting PRs
 
 See our [Security Policy](SECURITY.md) for reporting vulnerabilities.
 
