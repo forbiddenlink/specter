@@ -10,7 +10,7 @@
 <p align="center">
   <strong>Give your codebase a voice.</strong><br/>
   A code intelligence CLI that speaks <em>as</em> your codebase in first person.<br/>
-  <strong>65 commands. 14 MCP tools. 12 personality modes. 1 ghost in your git history.</strong>
+  <strong>72 commands. 14 MCP tools. 19 personality modes. 1 ghost in your git history.</strong>
 </p>
 
 ---
@@ -24,7 +24,7 @@ Traditional analysis tools show metrics without meaning. Specter **connects the 
 | "Cyclomatic complexity: 45" | **Where** the hotspots are + **why** they matter |
 | "Tech debt exists" | **$510k** annual maintenance burden (your hourly rate) |
 | "Bus factor: 1" | **Who** owns what + **what breaks** if they leave |
-| Numbers without context | AI-powered explanations in 12 personality modes |
+| Numbers without context | AI-powered explanations in 19 personality modes |
 
 ```bash
 # Install and get started in 30 seconds
@@ -81,7 +81,8 @@ copilot -p "Use specter to suggest refactoring for the most complex file"
 
 **6 prompt templates**: `specter:introduce`, `specter:review`, `specter:onboard`, `specter:refactor-plan`, `specter:standup-summary`, `specter:health-check`
 
-See [Copilot CLI Integration](docs/COPILOT_CLI_INTEGRATION.md) | [MCP Integration](docs/MCP_INTEGRATION.md) | [Example Prompts](docs/MCP_EXAMPLE_PROMPTS.md)
+See `.github/instructions/specter-copilot.instructions.md` for the full Copilot CLI integration
+guide, and `plugin/` for the plugin manifest and MCP tool implementations.
 
 ---
 
@@ -263,8 +264,6 @@ specter health --accessible
 SPECTER_ACCESSIBLE=true specter health
 ```
 
-See the [Accessibility Guide](docs/ACCESSIBILITY.md) for details.
-
 ---
 
 ## Data Storage
@@ -295,12 +294,7 @@ No external services. No telemetry. Your data stays on your machine.
 
 | Guide | Topic |
 |-------|-------|
-| [**Copilot CLI Integration**](docs/COPILOT_CLI_INTEGRATION.md) | GitHub Copilot CLI setup |
-| [**MCP Integration**](docs/MCP_INTEGRATION.md) | All 14 MCP tools |
-| [**Example Prompts**](docs/MCP_EXAMPLE_PROMPTS.md) | Real-world AI prompts |
-| [**Accessibility**](docs/ACCESSIBILITY.md) | Colorblind-friendly mode |
-| [**Comparison**](docs/COMPARISON.md) | vs SonarQube, CodeClimate, etc |
-| [**Troubleshooting**](docs/TROUBLESHOOTING.md) | Common issues & solutions |
+| [**Copilot instructions**](.github/instructions/specter-copilot.instructions.md) | GitHub Copilot CLI integration guide |
 | [**Contributing**](CONTRIBUTING.md) | How to contribute |
 | [**Security**](SECURITY.md) | Security policy |
 
