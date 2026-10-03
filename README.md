@@ -88,7 +88,7 @@ The plugin adds a `PreToolUse` hook on `Edit|Write`, which injects the brief, an
 
 **How accurate is it?** Run `specter backtest` on your repo. It replays history and checks each co-change prediction against what actually changed in the same commit, using the evaluation design of Zimmermann et al., [ROSE](https://thomas-zimmermann.com/publications/files/zimmermann-tse-2005.pdf). On 9 real TypeScript repos, at the brief's thresholds (at least 5 shared commits and 50% confidence):
 
-- Precision ranged from 28% to 67%, with a median of about 40%.
+- Precision ranged from 26% to 65%, with a median of about 43%. Single-file commits count as misses whenever a partner was predicted.
 - The brief named a partner on 7% to 21% of edits.
 
 Every scan measures this for its own repo, and the brief drops co-change hints in repos where they prove unreliable. To see exactly what Claude would be told about a file, run `specter brief <file>`.

@@ -2,13 +2,13 @@
  * @vitest-environment node
  */
 
-import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { recordGraph } from '../../src/graph/provenance.js'
 import type { GraphEdge, GraphNode, KnowledgeGraph } from '../../src/graph/types.js'
-import { isLocallyBuiltGraph, runHook, sessionStore } from '../../src/risk/agent-hook.js'
+import { runHook, sessionStore } from '../../src/risk/agent-hook.js'
 import { buildFileBrief, renderAgentBrief } from '../../src/risk/brief.js'
 
 let root: string
@@ -187,7 +187,9 @@ describe('runHook', () => {
       {}
     )
     fs.mkdirSync(path.join(root, '.specter'), { recursive: true })
-    fs.writeFileSync(path.join(root, '.specter', 'graph.json'), JSON.stringify(graph))
+    const content = JSON.stringify(graph)
+    fs.writeFileSync(path.join(root, '.specter', 'graph.json'), content)
+    recordGraph(root, content)
   }
 
   it('returns PreToolUse additionalContext for a risky file', () => {
@@ -243,21 +245,38 @@ describe('hostile repositories', () => {
     expect(renderAgentBrief(buildFileBrief(graph, root, 'src/core.ts'))).toBeNull()
   })
 
-  it('ignores a graph that the repository itself tracks in git', () => {
-    const env = { ...process.env, GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' }
-    execFileSync('git', ['init', '-q'], { cwd: root, env })
+  it('ignores a graph this machine did not write, or one edited since', () => {
+    const shipped = graphOf(
+      [
+        ...fileNode('src/core.ts', 1),
+        ...['a', 'b', 'c', 'd', 'e'].flatMap((n) => fileNode(`src/${n}.ts`, 1)),
+      ],
+      ['a', 'b', 'c', 'd', 'e'].map((n) => imp(`src/${n}.ts`, 'src/core.ts')),
+      {}
+    )
     fs.mkdirSync(path.join(root, '.specter'), { recursive: true })
-    fs.writeFileSync(path.join(root, '.specter', 'graph.json'), '{}')
-    expect(isLocallyBuiltGraph(root)).toBe(true)
-    execFileSync('git', ['add', '-f', '.specter/graph.json'], { cwd: root, env })
-    expect(isLocallyBuiltGraph(root)).toBe(false)
+    const graphPath = path.join(root, '.specter', 'graph.json')
+    const input = { tool_name: 'Edit', tool_input: { file_path: path.join(root, 'src/core.ts') } }
+
+    // Shipped by the repository: never recorded locally
+    fs.writeFileSync(graphPath, JSON.stringify(shipped))
+    expect(runHook(input)).toBeNull()
+
+    // Built here, then tampered with
+    recordGraph(root, JSON.stringify(shipped))
+    expect(runHook(input)).not.toBeNull()
+    fs.writeFileSync(graphPath, `${JSON.stringify(shipped)} `)
+    expect(runHook(input)).toBeNull()
   })
 
   it('ignores a symlinked graph directory', () => {
     const elsewhere = fs.mkdtempSync(path.join(os.tmpdir(), 'specter-elsewhere-'))
     fs.writeFileSync(path.join(elsewhere, 'graph.json'), '{}')
+    recordGraph(root, '{}')
     fs.symlinkSync(elsewhere, path.join(root, '.specter'))
-    expect(isLocallyBuiltGraph(root)).toBe(false)
+    expect(
+      runHook({ tool_name: 'Edit', tool_input: { file_path: path.join(root, 'src/core.ts') } })
+    ).toBeNull()
     fs.rmSync(elsewhere, { recursive: true, force: true })
   })
 

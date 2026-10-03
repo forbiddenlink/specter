@@ -2,10 +2,10 @@
  * Claude Code PreToolUse hook logic: Edit/Write in, change-risk brief out.
  */
 
-import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { isRecordedGraph } from '../graph/provenance.js'
 import type { KnowledgeGraph } from '../graph/types.js'
 import { buildFileBrief, renderAgentBrief } from './brief.js'
 
@@ -46,11 +46,16 @@ export function runHook(input: HookInput, seen?: Set<string>): object | null {
   if (relative.startsWith('..')) return null
   if (seen?.has(absolute)) return null
 
-  if (!isLocallyBuiltGraph(root)) return null
-
-  const graph = JSON.parse(
-    fs.readFileSync(path.join(root, '.specter', 'graph.json'), 'utf-8')
-  ) as KnowledgeGraph
+  const graphDir = path.join(root, '.specter')
+  try {
+    if (fs.lstatSync(graphDir).isSymbolicLink()) return null
+  } catch {
+    return null
+  }
+  // Read once; check and parse the same bytes
+  const content = fs.readFileSync(path.join(graphDir, 'graph.json'))
+  if (!isRecordedGraph(root, content)) return null
+  const graph = JSON.parse(content.toString('utf-8')) as KnowledgeGraph
   const text = renderAgentBrief(buildFileBrief(graph, root, relative))
   if (!text) return null
 
@@ -60,33 +65,6 @@ export function runHook(input: HookInput, seen?: Set<string>): object | null {
       hookEventName: 'PreToolUse',
       additionalContext: text,
     },
-  }
-}
-
-/**
- * The graph's text goes straight into the agent's context, so only trust a graph
- * this machine built. A repository could commit a crafted `.specter/graph.json`
- * (or symlink it elsewhere) to smuggle instructions into every edit.
- */
-export function isLocallyBuiltGraph(root: string): boolean {
-  try {
-    const dir = path.join(root, '.specter')
-    if (fs.lstatSync(dir).isSymbolicLink()) return false
-    if (fs.lstatSync(path.join(dir, 'graph.json')).isSymbolicLink()) return false
-  } catch {
-    return false
-  }
-  try {
-    const tracked = execFileSync('git', ['ls-files', '--', '.specter'], {
-      cwd: root,
-      encoding: 'utf-8',
-      timeout: 2000,
-      stdio: ['ignore', 'pipe', 'ignore'],
-    })
-    return tracked.trim() === ''
-  } catch {
-    // Not a git repo (or git missing): nothing could have shipped the graph to us
-    return true
   }
 }
 

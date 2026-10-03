@@ -11,6 +11,7 @@ import path from 'node:path'
 import { createSnapshot } from '../history/snapshot.js'
 import { saveSnapshot } from '../history/storage.js'
 import { logger } from '../lib/logger.js'
+import { recordGraph } from './provenance.js'
 import { KnowledgeGraphSchema } from './schema.js'
 import type { GraphMetadata, KnowledgeGraph } from './types.js'
 
@@ -44,7 +45,10 @@ export async function saveGraph(graph: KnowledgeGraph, rootDir: string): Promise
   const specterDir = await ensureSpecterDir(rootDir)
 
   // Atomic writes: the edit hook may read the graph while a background scan saves it
-  await writeFileAtomic(path.join(specterDir, GRAPH_FILE), JSON.stringify(graph))
+  const content = JSON.stringify(graph)
+  await writeFileAtomic(path.join(specterDir, GRAPH_FILE), content)
+  // Lets the edit hook tell a graph we built from one a repository shipped
+  recordGraph(rootDir, content)
   await writeFileAtomic(
     path.join(specterDir, METADATA_FILE),
     JSON.stringify(graph.metadata, null, 2)
