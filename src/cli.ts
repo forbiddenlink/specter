@@ -7,6 +7,7 @@
  * the knowledge graph.
  */
 
+import { readFileSync } from 'node:fs'
 import cfonts from 'cfonts'
 import chalk from 'chalk'
 import { Command, type ParseOptions } from 'commander'
@@ -23,6 +24,13 @@ import { runFirstTimeExperience } from './first-run.js'
 import { initTelemetry } from './lib/telemetry.js'
 
 void initTelemetry()
+
+// Read from package.json so the banner and --version cannot drift from the release
+const VERSION: string = (
+  JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf-8')) as {
+    version: string
+  }
+).version
 
 const program = new Command()
 
@@ -54,7 +62,7 @@ function printBanner(): void {
  */
 function printVersion(): void {
   printBanner()
-  console.log(chalk.dim(`  v1.2.0`))
+  console.log(chalk.dim(`  v${VERSION}`))
   console.log()
 }
 
@@ -74,7 +82,7 @@ program.option('--no-emoji', 'Disable emoji in output')
 program
   .name('specter')
   .description('Give your codebase a voice. Build a knowledge graph and talk to your code.')
-  .version('1.2.0')
+  .version(VERSION)
   .showSuggestionAfterError(true)
   .showHelpAfterError('(add --help for additional information)')
   .action(async () => {

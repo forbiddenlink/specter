@@ -16,6 +16,7 @@ import {
   isGraphStale,
   loadGraph,
   loadMetadata,
+  loadTrustedGraph,
   saveGraph,
 } from '../../src/graph/persistence.js'
 import type { GraphMetadata, KnowledgeGraph } from '../../src/graph/types.js'
@@ -154,6 +155,17 @@ describe('Graph Persistence', () => {
 
       await expect(saveGraph(createMockGraph(), tempDir)).rejects.toThrow(/symlink/)
       expect(await fs.readdir(elsewhere)).toEqual([])
+    })
+
+    it('only treats graphs it saved itself as a base for incremental scans', async () => {
+      const graph = createMockGraph()
+      await fs.mkdir(path.join(tempDir, '.specter'), { recursive: true })
+      // As if shipped inside a cloned repository
+      await fs.writeFile(path.join(tempDir, '.specter', 'graph.json'), JSON.stringify(graph))
+      expect(await loadTrustedGraph(tempDir)).toBeNull()
+
+      await saveGraph(graph, tempDir)
+      expect(await loadTrustedGraph(tempDir)).not.toBeNull()
     })
 
     it('leaves no temp files behind after an atomic save', async () => {

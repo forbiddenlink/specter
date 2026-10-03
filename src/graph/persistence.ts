@@ -11,7 +11,7 @@ import path from 'node:path'
 import { createSnapshot } from '../history/snapshot.js'
 import { saveSnapshot } from '../history/storage.js'
 import { logger } from '../lib/logger.js'
-import { recordGraph } from './provenance.js'
+import { isRecordedGraph, recordGraph } from './provenance.js'
 import { KnowledgeGraphSchema } from './schema.js'
 import type { GraphMetadata, KnowledgeGraph } from './types.js'
 
@@ -63,6 +63,22 @@ export async function saveGraph(graph: KnowledgeGraph, rootDir: string): Promise
     await saveSnapshot(rootDir, snapshot)
   } catch {
     // Snapshot creation is non-critical, don't fail the save
+  }
+}
+
+/**
+ * Load the graph only if this machine wrote it (see provenance.ts). Use this as the
+ * base for anything that is saved and recorded again, such as an incremental scan,
+ * so a graph shipped inside a repository can never be laundered into a trusted one.
+ */
+export async function loadTrustedGraph(rootDir: string): Promise<KnowledgeGraph | null> {
+  try {
+    const content = await fs.readFile(path.join(rootDir, SPECTER_DIR, GRAPH_FILE))
+    if (!isRecordedGraph(rootDir, content)) return null
+    const result = KnowledgeGraphSchema.safeParse(JSON.parse(content.toString('utf-8')))
+    return result.success ? (result.data as KnowledgeGraph) : null
+  } catch {
+    return null
   }
 }
 

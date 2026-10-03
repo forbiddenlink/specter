@@ -15,7 +15,7 @@ import {
   updateGraphIncremental,
 } from '../../graph/builder.js'
 import { getChangedFiles } from '../../graph/changes.js'
-import { graphExists, isGraphStale, loadGraph, saveGraph } from '../../graph/persistence.js'
+import { graphExists, isGraphStale, loadTrustedGraph, saveGraph } from '../../graph/persistence.js'
 import { outputJson } from '../../json-output.js'
 import { acquireScanLock, releaseScanLock } from '../../scan-lock.js'
 import { timingBadge } from '../../ui/progress.js'
@@ -62,7 +62,9 @@ Examples:
 
       try {
         // Check if graph already exists and is fresh
-        if (!options.force && (await graphExists(rootDir))) {
+        // A graph this machine did not write (one shipped in the repo) is always rebuilt
+        const trusted = options.force ? null : await loadTrustedGraph(rootDir)
+        if (trusted && (await graphExists(rootDir))) {
           const isStale = await isGraphStale(rootDir)
           if (!isStale) {
             spinner?.info('I already know this codebase. Use --force to rescan.')
@@ -81,7 +83,7 @@ Examples:
         }
 
         // Incremental when we have a graph that knows its commit; full scan otherwise
-        const existing = options.force ? null : await loadGraph(rootDir)
+        const existing = trusted
         const changedFiles = existing ? await getChangedFiles(rootDir, existing) : null
 
         const buildOptions: BuildOptions = {
