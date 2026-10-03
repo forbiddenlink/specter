@@ -137,18 +137,42 @@ export function buildFileBrief(
     hotspotPercentile,
     dependents: [...dependents].sort(),
     coChange,
-    tests: findTestFiles(rootDir, file),
+    tests: findTestFiles(rootDir, file, isUniqueName(graph, file)),
     owners: solo ? [] : (fileNode?.contributors ?? []),
     scannedAt: graph.metadata.scannedAt,
     coChangeAccuracy: graph.metadata.coChangeAccuracy,
   }
 }
 
+/** Directory segments that hold tests rather than mirror source layout */
+const TEST_DIR_SEGMENTS = new Set(['__tests__', 'tests', 'test', 'spec', '__specs__'])
+
+function mirroredDir(testFile: string): string {
+  return path
+    .dirname(testFile)
+    .split(path.sep)
+    .filter((segment) => !TEST_DIR_SEGMENTS.has(segment))
+    .join(path.sep)
+}
+
+function isUniqueName(graph: KnowledgeGraph, file: string): boolean {
+  const name = path.basename(file)
+  let count = 0
+  for (const node of Object.values(graph.nodes)) {
+    if (node.type === 'file' && path.basename(node.filePath) === name && ++count > 1) return false
+  }
+  return true
+}
+
 /**
- * Test files that most likely cover `file`: `x.test.ts` / `x.spec.ts` beside it,
- * in `__tests__/`, or anywhere under a tests directory with the same base name.
+ * Test files that cover `file`: `x.test.ts` / `x.spec.ts` beside it, in a
+ * `__tests__/` folder, or in a `tests/` tree that mirrors the source path.
+ *
+ * Next.js and similar layouts repeat names like page.tsx in every route, so a
+ * test only counts when its location matches. Loose name-only matching (closest
+ * first) applies just to names that are unique among source files.
  */
-export function findTestFiles(rootDir: string, file: string): string[] {
+export function findTestFiles(rootDir: string, file: string, uniqueName = false): string[] {
   const base = path.basename(file).replace(/\.(m|c)?(t|j)sx?$/, '')
   if (!base || base === 'index') return []
   try {
@@ -158,11 +182,17 @@ export function findTestFiles(rootDir: string, file: string): string[] {
       deep: 8,
       suppressErrors: true,
     })
-    // Closest to the source file first
-    const dir = path.dirname(file)
+    const sourceDir = path.dirname(file)
+    const exact = found.filter((t) => {
+      const mirrored = mirroredDir(t)
+      // tests/src/x.test.ts mirrors src/x.ts; tests/x.test.ts mirrors src/x.ts too
+      return mirrored === sourceDir || mirrored === sourceDir.replace(/^src(\/|$)/, '')
+    })
+    if (exact.length > 0) return exact.sort().slice(0, 3)
+    if (!uniqueName) return []
     return found
-      .sort((a, b) => distance(dir, a) - distance(dir, b) || a.localeCompare(b))
-      .slice(0, 3)
+      .sort((a, b) => distance(sourceDir, a) - distance(sourceDir, b) || a.localeCompare(b))
+      .slice(0, 1)
   } catch {
     return []
   }

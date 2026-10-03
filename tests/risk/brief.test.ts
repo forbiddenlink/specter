@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { recordGraph } from '../../src/graph/provenance.js'
 import type { GraphEdge, GraphNode, KnowledgeGraph } from '../../src/graph/types.js'
 import { runHook, sessionStore } from '../../src/risk/agent-hook.js'
-import { buildFileBrief, renderAgentBrief } from '../../src/risk/brief.js'
+import { buildFileBrief, findTestFiles, renderAgentBrief } from '../../src/risk/brief.js'
 
 let root: string
 
@@ -299,5 +299,37 @@ describe('hostile repositories', () => {
     first.save()
     second.save()
     expect([...(sessionStore('s1', dir).seen ?? [])].sort()).toEqual(['/a', '/b'])
+  })
+})
+
+describe('findTestFiles', () => {
+  it('matches tests by location, not just by name', () => {
+    for (const f of [
+      'app/page.tsx',
+      'app/about/page.tsx',
+      '__tests__/app/page.test.tsx',
+      '__tests__/app/about/page.test.tsx',
+    ])
+      touch(f)
+    expect(findTestFiles(root, 'app/page.tsx')).toEqual(['__tests__/app/page.test.tsx'])
+  })
+
+  it('finds co-located, __tests__ and mirrored tests/ files', () => {
+    touch('src/lib/a.test.ts')
+    touch('src/lib/__tests__/a.spec.ts')
+    touch('tests/lib/a.test.ts')
+    expect(findTestFiles(root, 'src/lib/a.ts')).toEqual([
+      'src/lib/__tests__/a.spec.ts',
+      'src/lib/a.test.ts',
+      'tests/lib/a.test.ts',
+    ])
+  })
+
+  it('falls back to the nearest same-name test only for unique names', () => {
+    touch('test/integration/widget.test.ts')
+    expect(findTestFiles(root, 'src/ui/widget.ts', true)).toEqual([
+      'test/integration/widget.test.ts',
+    ])
+    expect(findTestFiles(root, 'src/ui/widget.ts', false)).toEqual([])
   })
 })
