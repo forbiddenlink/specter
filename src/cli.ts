@@ -22,7 +22,7 @@ import { runFirstTimeExperience } from './first-run.js'
 // Initialize telemetry
 import { initTelemetry } from './lib/telemetry.js'
 
-initTelemetry()
+void initTelemetry()
 
 const program = new Command()
 
