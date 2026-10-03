@@ -5,11 +5,13 @@
  * Graphs are stored in .specter/ directory in the project root.
  */
 
+import { randomBytes } from 'node:crypto'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { createSnapshot } from '../history/snapshot.js'
 import { saveSnapshot } from '../history/storage.js'
 import { logger } from '../lib/logger.js'
+import { isRecordedGraph, recordGraph } from './provenance.js'
 import { KnowledgeGraphSchema } from './schema.js'
 import type { GraphMetadata, KnowledgeGraph } from './types.js'
 
@@ -24,8 +26,12 @@ async function ensureSpecterDir(rootDir: string): Promise<string> {
   const specterDir = path.join(rootDir, SPECTER_DIR)
 
   try {
-    await fs.access(specterDir)
-  } catch {
+    // A cloned repo could ship .specter as a symlink to redirect our writes elsewhere
+    if ((await fs.lstat(specterDir)).isSymbolicLink()) {
+      throw new Error(`${specterDir} is a symlink; refusing to write the graph through it`)
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
     await fs.mkdir(specterDir, { recursive: true })
   }
 
@@ -38,16 +44,18 @@ async function ensureSpecterDir(rootDir: string): Promise<string> {
 export async function saveGraph(graph: KnowledgeGraph, rootDir: string): Promise<void> {
   const specterDir = await ensureSpecterDir(rootDir)
 
-  // Save full graph
-  const graphPath = path.join(specterDir, GRAPH_FILE)
-  await fs.writeFile(graphPath, JSON.stringify(graph, null, 2), 'utf-8')
+  // Atomic writes: the edit hook may read the graph while a background scan saves it
+  const content = JSON.stringify(graph)
+  await writeFileAtomic(path.join(specterDir, GRAPH_FILE), content)
+  // Lets the edit hook tell a graph we built from one a repository shipped
+  recordGraph(rootDir, content)
+  await writeFileAtomic(
+    path.join(specterDir, METADATA_FILE),
+    JSON.stringify(graph.metadata, null, 2)
+  )
 
-  // Save metadata separately for quick access
-  const metadataPath = path.join(specterDir, METADATA_FILE)
-  await fs.writeFile(metadataPath, JSON.stringify(graph.metadata, null, 2), 'utf-8')
-
-  // Add .specter to .gitignore if not already there
-  await addToGitignore(rootDir)
+  // The cache directory ignores itself, so scanning never edits the project's .gitignore
+  await writeFileAtomic(path.join(specterDir, '.gitignore'), '# Specter cache, safe to delete\n*\n')
 
   // Auto-create health snapshot for trend tracking
   try {
@@ -55,6 +63,22 @@ export async function saveGraph(graph: KnowledgeGraph, rootDir: string): Promise
     await saveSnapshot(rootDir, snapshot)
   } catch {
     // Snapshot creation is non-critical, don't fail the save
+  }
+}
+
+/**
+ * Load the graph only if this machine wrote it (see provenance.ts). Use this as the
+ * base for anything that is saved and recorded again, such as an incremental scan,
+ * so a graph shipped inside a repository can never be laundered into a trusted one.
+ */
+export async function loadTrustedGraph(rootDir: string): Promise<KnowledgeGraph | null> {
+  try {
+    const content = await fs.readFile(path.join(rootDir, SPECTER_DIR, GRAPH_FILE))
+    if (!isRecordedGraph(rootDir, content)) return null
+    const result = KnowledgeGraphSchema.safeParse(JSON.parse(content.toString('utf-8')))
+    return result.success ? (result.data as KnowledgeGraph) : null
+  } catch {
+    return null
   }
 }
 
@@ -184,26 +208,18 @@ async function getSourceFilePaths(rootDir: string): Promise<string[]> {
 }
 
 /**
- * Add .specter to .gitignore
+ * Write via an unpredictable temp file opened exclusively, then rename. Exclusive
+ * create never follows a planted symlink, and rename replaces a symlink at the
+ * target instead of writing through it.
  */
-async function addToGitignore(rootDir: string): Promise<void> {
-  const gitignorePath = path.join(rootDir, '.gitignore')
-
+async function writeFileAtomic(target: string, content: string): Promise<void> {
+  const temp = `${target}.${randomBytes(6).toString('hex')}.tmp`
   try {
-    let content = ''
-
-    try {
-      content = await fs.readFile(gitignorePath, 'utf-8')
-    } catch {
-      // File doesn't exist yet
-    }
-
-    if (!content.includes('.specter')) {
-      const newContent = `${content.trim()}\n\n# Specter knowledge graph cache\n.specter/\n`
-      await fs.writeFile(gitignorePath, newContent, 'utf-8')
-    }
-  } catch {
-    // Ignore errors updating gitignore
+    await fs.writeFile(temp, content, { encoding: 'utf-8', flag: 'wx' })
+    await fs.rename(temp, target)
+  } catch (error) {
+    await fs.rm(temp, { force: true })
+    throw error
   }
 }
 

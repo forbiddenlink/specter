@@ -270,30 +270,39 @@ describe('Git Analyzer', () => {
       expect(result.repoStats.totalCommits).toBe(0)
     })
 
-    it('should analyze multiple files', async () => {
+    it('mines all files from a single git log pass', async () => {
+      const R = '\x1e'
+      const F = '\x1f'
       mockGit.status.mockResolvedValue({ current: 'main' })
-      mockGit.log.mockResolvedValue({
-        latest: { date: '2024-01-15T10:00:00Z' },
-        total: 10,
-        all: [
-          {
-            hash: 'abc1234',
-            author_name: 'Alice',
-            author_email: 'alice@example.com',
-            date: '2024-01-15T10:00:00Z',
-            message: 'Commit',
-          },
-        ],
+      mockGit.log.mockResolvedValue({ latest: { date: '2024-01-15T10:00:00Z' }, total: 1, all: [] })
+      mockGit.raw.mockImplementation((rawArgs: string[]) => {
+        // Drop leading `-c key=value` config pairs
+        const args = rawArgs[0] === '-c' ? rawArgs.slice(2) : rawArgs
+        switch (args[0]) {
+          case 'shortlog':
+            return Promise.resolve('  10\tAlice\n')
+          case 'rev-list':
+            return Promise.resolve('100\n')
+          case 'rev-parse':
+            return Promise.resolve(args[1] === 'HEAD' ? 'abc1234\n' : '\n')
+          case 'log':
+            return args[1] === '--reverse'
+              ? Promise.resolve('2020-01-01T00:00:00Z\n')
+              : Promise.resolve(
+                  `${R}abc1234${F}Alice${F}alice@example.com${F}2024-01-15T10:00:00Z${F}feat: x\n\nfile1.ts\nfile2.ts\n`
+                )
+          default:
+            return Promise.resolve('')
+        }
       })
-      mockGit.raw
-        .mockResolvedValueOnce('  10\tAlice\n')
-        .mockResolvedValueOnce('100\n')
-        .mockResolvedValueOnce('2020-01-01T00:00:00Z\n')
 
-      const result = await analyzeGitHistory('/project', ['file1.ts', 'file2.ts'])
+      const result = await analyzeGitHistory('/project', ['file1.ts', 'file2.ts', 'file3.ts'])
 
       expect(result.isGitRepo).toBe(true)
-      expect(result.fileHistories.size).toBe(2)
+      expect(result.headCommit).toBe('abc1234')
+      expect([...result.fileHistories.keys()].sort()).toEqual(['file1.ts', 'file2.ts'])
+      // One history read, regardless of file count
+      expect(mockGit.log).toHaveBeenCalledTimes(1)
     })
 
     it('should call progress callback', async () => {
@@ -302,29 +311,21 @@ describe('Git Analyzer', () => {
       mockGit.raw.mockResolvedValue('')
 
       const progress = vi.fn()
-      const files = Array(15)
-        .fill(null)
-        .map((_, i) => `file${i}.ts`)
+      await analyzeGitHistory('/project', ['a.ts', 'b.ts'], progress)
 
-      await analyzeGitHistory('/project', files, progress)
-
-      expect(progress).toHaveBeenCalled()
+      expect(progress).toHaveBeenLastCalledWith(2, 2)
     })
 
-    it('should process files in batches', async () => {
+    it('returns empty histories when the history read fails', async () => {
       mockGit.status.mockResolvedValue({ current: 'main' })
       mockGit.log.mockResolvedValue({ total: 0, all: [] })
-      mockGit.raw.mockResolvedValue('')
+      mockGit.raw.mockRejectedValue(new Error('fatal: bad default revision HEAD'))
 
-      const files = Array(25)
-        .fill(null)
-        .map((_, i) => `file${i}.ts`)
+      const result = await analyzeGitHistory('/project', ['a.ts'])
 
-      await analyzeGitHistory('/project', files)
-
-      // With 25 files and batch size of 10, log should be called at least 25 times
-      // (once per file for history analysis)
-      expect(mockGit.log.mock.calls.length).toBeGreaterThanOrEqual(25)
+      expect(result.isGitRepo).toBe(true)
+      expect(result.fileHistories.size).toBe(0)
+      expect(result.coChange).toEqual({})
     })
   })
 
@@ -768,37 +769,6 @@ describe('Git Analyzer', () => {
       const result = await analyzeFileHistory(mockGit as never, 'slow-file.ts', '/project')
 
       expect(result).toBeNull()
-    })
-
-    it('should continue processing other files when one fails', async () => {
-      mockGit.status.mockResolvedValue({ current: 'main' })
-      mockGit.raw.mockResolvedValue('')
-
-      let callCount = 0
-      mockGit.log.mockImplementation(() => {
-        callCount++
-        if (callCount === 2) {
-          return Promise.reject(new Error('Git error'))
-        }
-        return Promise.resolve({
-          total: 1,
-          latest: { date: '2024-01-15T10:00:00Z' },
-          all: [
-            {
-              hash: 'abc1234',
-              author_name: 'Alice',
-              author_email: 'alice@example.com',
-              date: '2024-01-15T10:00:00Z',
-              message: 'Commit',
-            },
-          ],
-        })
-      })
-
-      const result = await analyzeGitHistory('/project', ['file1.ts', 'file2.ts', 'file3.ts'])
-
-      // Should have 2 histories (file1 and file3), file2 failed
-      expect(result.fileHistories.size).toBe(2)
     })
   })
 })

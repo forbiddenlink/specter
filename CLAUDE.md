@@ -2,8 +2,8 @@
 
 `@purplegumdropz/specter` - a local code-intelligence CLI (npm-published) that builds a
 knowledge graph from source + git history and exposes it as CLI commands and MCP tools.
-72 commands, 14 MCP tools, 19 "personality" modes. Ships as a Copilot CLI plugin
-(`plugin/`) and a VS Code extension (`vscode-extension/`), plus a standalone
+74 commands, 14 MCP tools, 19 "personality" modes. Ships as a Claude Code plugin
+(`claude-plugin/`, marketplace in `.claude-plugin/`), a Copilot CLI plugin (`plugin/`) and a VS Code extension (`vscode-extension/`), plus a standalone
 `packages/specter-roast` sub-package (`npx @purplegumdropz/specter-roast`).
 
 ## Stack
@@ -37,8 +37,11 @@ CI (`.github/workflows/ci.yml`) runs `pnpm install --frozen-lockfile`, `pnpm run
 
 ## Layout
 
-- `src/cli.ts` - CLI entry (`bin: specter`); `src/index.ts` - MCP server entry (`bin: specter-mcp`).
-- `src/commands/{core,ai,analysis,fun,git,visualization,workflow}/` - the 72 CLI commands,
+- `src/cli.ts` - CLI entry (`bin: specter`); `src/index.ts` - MCP server entry (`bin: specter-mcp`);
+  `src/hook.ts` - Claude Code edit hook (`bin: specter-hook`), kept import-light so it starts fast.
+- `src/risk/brief.ts` + `src/risk/agent-hook.ts` - the change-risk brief and the hook logic;
+  `src/risk/backtest.ts` - co-change precision backtest (`specter backtest`).
+- `src/commands/{core,ai,analysis,fun,git,visualization,workflow}/` - the 74 CLI commands,
   grouped by category.
 - `src/graph/` - knowledge graph builder, persistence, and schema.
 - `src/mcp/` - MCP server (tools, resources, prompts).
@@ -79,6 +82,10 @@ alias `@` -> `./src` (set in `vitest.config.ts`; `tsconfig.json` has no `paths` 
 
 ## Gotchas
 
+- Incremental scans (`src/graph/changes.ts`) diff from `metadata.headCommit`; tsconfig/package.json
+  changes, a missing commit, or >40% of files changed fall back to a full scan.
+- Tests that create git repos must set `GIT_CONFIG_GLOBAL=/dev/null` so a developer's global
+  hooks and commit signing do not run (see `tests/graph/incremental.test.ts`).
 - `dist/` is the build output for both the CLI and MCP server; run `pnpm build` after source
   changes before testing the published binaries (`dist/cli.js`, `dist/index.js`).
 - `.specter/` (in consumer repos) holds Specter's own graph cache; this repo's own `.specter/`

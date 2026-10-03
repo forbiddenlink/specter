@@ -9,3 +9,10 @@ afterEach(() => server.resetHandlers())
 
 // Clean up after all tests
 afterAll(() => server.close())
+
+// Graph provenance records go to a throwaway dir, never the developer's ~/.cache
+import { mkdtempSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+
+process.env['SPECTER_CACHE_DIR'] = mkdtempSync(join(tmpdir(), 'specter-cache-'))

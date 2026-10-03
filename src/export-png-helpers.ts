@@ -4,7 +4,6 @@
  */
 
 import type { Canvas, CanvasRenderingContext2D } from 'canvas'
-import { loadImage } from 'canvas'
 import * as QRCode from 'qrcode'
 
 export interface PngDrawContext {
@@ -233,6 +232,7 @@ export async function drawQrCode(
     })
 
     // Load and draw QR code image
+    const { loadImage } = await import('canvas')
     const qrImage = await loadImage(qrDataUrl)
 
     // Draw subtle background for QR code

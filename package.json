@@ -1,19 +1,22 @@
 {
   "name": "@purplegumdropz/specter",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Give your codebase a voice. A Copilot CLI plugin that builds a knowledge graph and lets you talk to your code.",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
     "specter": "dist/cli.js",
-    "specter-mcp": "dist/index.js"
+    "specter-mcp": "dist/index.js",
+    "specter-hook": "dist/hook.js"
   },
   "files": [
     "dist/",
     "LICENSE",
     "README.md",
     "action.yml",
-    "scripts/"
+    "scripts/",
+    "claude-plugin/",
+    ".claude-plugin/"
   ],
   "scripts": {
     "build": "tsc && cp -r src/dashboard/static dist/dashboard/",

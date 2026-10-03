@@ -16,6 +16,7 @@ import {
   isGraphStale,
   loadGraph,
   loadMetadata,
+  loadTrustedGraph,
   saveGraph,
 } from '../../src/graph/persistence.js'
 import type { GraphMetadata, KnowledgeGraph } from '../../src/graph/types.js'
@@ -123,27 +124,55 @@ describe('Graph Persistence', () => {
       expect(stats.isDirectory()).toBe(true)
     })
 
-    it('should add .specter to .gitignore', async () => {
+    it('ignores its own cache directory without touching the project .gitignore', async () => {
       const graph = createMockGraph()
 
       await saveGraph(graph, tempDir)
 
-      const gitignorePath = path.join(tempDir, '.gitignore')
-      const content = await fs.readFile(gitignorePath, 'utf-8')
-      expect(content).toContain('.specter')
+      const own = await fs.readFile(path.join(tempDir, '.specter', '.gitignore'), 'utf-8')
+      expect(own).toContain('*')
+      await expect(fs.access(path.join(tempDir, '.gitignore'))).rejects.toThrow()
     })
 
-    it('should not duplicate .specter in existing .gitignore', async () => {
-      // Create existing gitignore with .specter already present
-      const gitignorePath = path.join(tempDir, '.gitignore')
-      await fs.writeFile(gitignorePath, 'node_modules/\n.specter/\n', 'utf-8')
+    it('replaces a planted symlink instead of writing through it', async () => {
+      const victim = path.join(tempDir, 'victim.txt')
+      await fs.writeFile(victim, 'precious')
+      await fs.mkdir(path.join(tempDir, '.specter'), { recursive: true })
+      await fs.symlink(victim, path.join(tempDir, '.specter', '.gitignore'))
 
+      await saveGraph(createMockGraph(), tempDir)
+
+      expect(await fs.readFile(victim, 'utf-8')).toBe('precious')
+      expect((await fs.lstat(path.join(tempDir, '.specter', '.gitignore'))).isSymbolicLink()).toBe(
+        false
+      )
+    })
+
+    it('refuses to save through a symlinked .specter directory', async () => {
+      const elsewhere = path.join(tempDir, 'elsewhere')
+      await fs.mkdir(elsewhere)
+      await fs.symlink(elsewhere, path.join(tempDir, '.specter'))
+
+      await expect(saveGraph(createMockGraph(), tempDir)).rejects.toThrow(/symlink/)
+      expect(await fs.readdir(elsewhere)).toEqual([])
+    })
+
+    it('only treats graphs it saved itself as a base for incremental scans', async () => {
       const graph = createMockGraph()
-      await saveGraph(graph, tempDir)
+      await fs.mkdir(path.join(tempDir, '.specter'), { recursive: true })
+      // As if shipped inside a cloned repository
+      await fs.writeFile(path.join(tempDir, '.specter', 'graph.json'), JSON.stringify(graph))
+      expect(await loadTrustedGraph(tempDir)).toBeNull()
 
-      const content = await fs.readFile(gitignorePath, 'utf-8')
-      const matches = content.match(/\.specter/g)
-      expect(matches?.length).toBe(1)
+      await saveGraph(graph, tempDir)
+      expect(await loadTrustedGraph(tempDir)).not.toBeNull()
+    })
+
+    it('leaves no temp files behind after an atomic save', async () => {
+      await saveGraph(createMockGraph(), tempDir)
+
+      const files = await fs.readdir(path.join(tempDir, '.specter'))
+      expect(files.filter((f) => f.endsWith('.tmp'))).toEqual([])
     })
 
     it('should preserve complex graph structure', async () => {

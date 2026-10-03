@@ -6,6 +6,8 @@
  */
 
 import path from 'node:path'
+import fg from 'fast-glob'
+import type { SourceFile } from 'ts-morph'
 import {
   type ASTAnalysisResult,
   analyzeSourceFile,
@@ -14,15 +16,18 @@ import {
 } from '../analyzers/ast.js'
 import { analyzeGitHistory, type GitAnalysisResult } from '../analyzers/git.js'
 import {
-  analyzeExports,
   analyzeImports,
   buildDependencyMap,
-  buildReverseDependencyMap,
   createImportEdges,
-  type ExportInfo,
+  createImportResolver,
   type ImportInfo,
+  type ImportResolver,
 } from '../analyzers/imports.js'
+import { getDirtyFiles } from './changes.js'
 import type { FileNode, GraphEdge, GraphMetadata, GraphNode, KnowledgeGraph } from './types.js'
+
+/** Extensions a full scan includes (see getSourceFiles defaults) */
+const SOURCE_FILE = /\.(ts|tsx|js|jsx)$/
 
 export interface BuildOptions {
   rootDir: string
@@ -60,6 +65,165 @@ function safeAnalyzeSourceFile(
     // Return null for files that fail to analyze
     return null
   }
+}
+
+interface AnalyzeFilesOptions {
+  rootDir: string
+  resolver: ImportResolver
+  startTime: number
+  timeoutMs: number
+  fileTimeoutMs: number
+  onProgress?: BuildOptions['onProgress']
+  errors: Array<{ file: string; error: string }>
+}
+
+interface AnalyzedFiles {
+  /** Files with a relative import that resolved to nothing */
+  unresolvedImporters: Set<string>
+  astResults: ASTAnalysisResult[]
+  allImports: ImportInfo[]
+  nodes: Record<string, GraphNode>
+  edges: GraphEdge[]
+}
+
+/**
+ * AST + import analysis for a set of source files. Shared by full and incremental builds.
+ */
+function analyzeFiles(sourceFiles: SourceFile[], options: AnalyzeFilesOptions): AnalyzedFiles {
+  const { rootDir, resolver, startTime, timeoutMs, fileTimeoutMs, onProgress, errors } = options
+  const astResults: ASTAnalysisResult[] = []
+  const allImports: ImportInfo[] = []
+  const nodes: Record<string, GraphNode> = {}
+  const edges: GraphEdge[] = []
+  const unresolvedImporters = new Set<string>()
+
+  for (let i = 0; i < sourceFiles.length; i++) {
+    if (Date.now() - startTime > timeoutMs) {
+      errors.push({
+        file: rootDir,
+        error: `Scan timeout exceeded (${Math.round(timeoutMs / 1000)}s). Partial results returned.`,
+      })
+      break
+    }
+
+    const sourceFile = sourceFiles[i]
+    if (!sourceFile) continue
+    const filePath = path.relative(rootDir, sourceFile.getFilePath())
+
+    try {
+      const astResult = safeAnalyzeSourceFile(sourceFile, rootDir, fileTimeoutMs)
+
+      if (!astResult) {
+        errors.push({ file: filePath, error: 'Analysis timeout or parse error' })
+        onProgress?.('Analyzing AST', i + 1, sourceFiles.length)
+        continue
+      }
+
+      astResults.push(astResult)
+      nodes[astResult.fileNode.id] = astResult.fileNode
+
+      for (const symbolNode of astResult.symbolNodes) {
+        nodes[symbolNode.id] = symbolNode
+        edges.push({
+          id: '',
+          source: astResult.fileNode.id,
+          target: symbolNode.id,
+          type: 'contains',
+        })
+      }
+
+      const unresolved: string[] = []
+      allImports.push(...analyzeImports(sourceFile, rootDir, resolver, unresolved))
+      if (unresolved.length > 0) unresolvedImporters.add(filePath)
+    } catch (error) {
+      errors.push({
+        file: filePath,
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
+
+    onProgress?.('Analyzing AST', i + 1, sourceFiles.length, filePath)
+  }
+
+  edges.push(...createImportEdges(allImports))
+
+  for (const [filePath, deps] of buildDependencyMap(allImports)) {
+    const fileNode = nodes[filePath] as FileNode | undefined
+    if (fileNode) fileNode.importCount = deps.size
+  }
+
+  return { astResults, allImports, nodes, edges, unresolvedImporters }
+}
+
+/**
+ * Copy churn and ownership from git onto file nodes.
+ */
+function applyGitHistory(nodes: Record<string, GraphNode>, gitResult: GitAnalysisResult): void {
+  for (const node of Object.values(nodes)) {
+    if (node.type !== 'file') continue
+    const history = gitResult.fileHistories.get(node.filePath)
+    if (history) {
+      node.lastModified = history.lastModified
+      node.modificationCount = history.commitCount
+      node.contributors = history.contributors.map((c) => c.name)
+    } else {
+      delete node.lastModified
+      delete node.modificationCount
+      delete node.contributors
+    }
+  }
+}
+
+/**
+ * Build the graph object: stable edge ids, metadata, change coupling.
+ */
+function assembleGraph(
+  nodes: Record<string, GraphNode>,
+  edges: GraphEdge[],
+  rootDir: string,
+  startTime: number,
+  gitResult: GitAnalysisResult | null,
+  extras: { dirtyFiles?: string[]; unresolvedImporters?: Iterable<string> } = {}
+): KnowledgeGraph {
+  const counters: Record<string, number> = {}
+  for (const edge of edges) {
+    const prefix = edge.type === 'imports' ? 'import' : edge.type
+    const n = counters[prefix] ?? 0
+    counters[prefix] = n + 1
+    edge.id = `${prefix}-${n}`
+  }
+
+  const languages: Record<string, number> = {}
+  let totalLines = 0
+  let fileCount = 0
+  for (const node of Object.values(nodes)) {
+    if (node.type !== 'file') continue
+    const file = node as FileNode
+    fileCount++
+    languages[file.language] = (languages[file.language] || 0) + 1
+    totalLines += file.lineCount ?? 0
+  }
+
+  const metadata: GraphMetadata = {
+    scannedAt: new Date().toISOString(),
+    scanDurationMs: Date.now() - startTime,
+    rootDir: path.resolve(rootDir),
+    fileCount,
+    totalLines,
+    languages,
+    nodeCount: Object.keys(nodes).length,
+    edgeCount: edges.length,
+  }
+  if (gitResult?.headCommit) metadata.headCommit = gitResult.headCommit
+  if (gitResult?.windowAuthors !== undefined) metadata.authorCount = gitResult.windowAuthors
+  if (gitResult?.coChangeAccuracy) metadata.coChangeAccuracy = gitResult.coChangeAccuracy
+
+  const graph: KnowledgeGraph = { version: '1.0.0', metadata, nodes, edges }
+  if (gitResult?.isGitRepo) graph.coChange = gitResult.coChange
+  if (extras.dirtyFiles && extras.dirtyFiles.length > 0) metadata.dirtyFiles = extras.dirtyFiles
+  const unresolved = [...(extras.unresolvedImporters ?? [])].filter((f) => f in nodes).sort()
+  if (unresolved.length > 0) graph.unresolvedImporters = unresolved
+  return graph
 }
 
 export interface BuildResult {
@@ -104,87 +268,19 @@ export async function buildKnowledgeGraph(options: BuildOptions): Promise<BuildR
   onProgress?.('Found files', sourceFiles.length, sourceFiles.length)
 
   // Phase 2: Analyze AST for each file
-  const astResults: ASTAnalysisResult[] = []
-  const allImports: ImportInfo[] = []
-  const allExports: Map<string, ExportInfo[]> = new Map()
-
-  for (let i = 0; i < sourceFiles.length; i++) {
-    // Check overall timeout
-    if (Date.now() - startTime > timeoutMs) {
-      errors.push({
-        file: rootDir,
-        error: `Scan timeout exceeded (${Math.round(timeoutMs / 1000)}s). Partial results returned.`,
-      })
-      break
-    }
-
-    const sourceFile = sourceFiles[i]
-    if (!sourceFile) continue
-    const filePath = path.relative(rootDir, sourceFile.getFilePath())
-
-    try {
-      // AST analysis with safe wrapper to prevent hanging
-      const astResult = safeAnalyzeSourceFile(sourceFile, rootDir, fileTimeoutMs)
-
-      if (!astResult) {
-        errors.push({
-          file: filePath,
-          error: 'Analysis timeout or parse error',
-        })
-        onProgress?.('Analyzing AST', i + 1, sourceFiles.length)
-        continue
-      }
-
-      astResults.push(astResult)
-
-      // Add file node
-      nodes[astResult.fileNode.id] = astResult.fileNode
-
-      // Add symbol nodes
-      for (const symbolNode of astResult.symbolNodes) {
-        nodes[symbolNode.id] = symbolNode
-
-        // Create "contains" edge from file to symbol
-        edges.push({
-          id: `contains-${edges.length}`,
-          source: astResult.fileNode.id,
-          target: symbolNode.id,
-          type: 'contains',
-        })
-      }
-
-      // Import analysis
-      const imports = analyzeImports(sourceFile, rootDir)
-      allImports.push(...imports)
-
-      // Export analysis
-      const exports = analyzeExports(sourceFile, rootDir)
-      allExports.set(filePath, exports)
-    } catch (error) {
-      errors.push({
-        file: filePath,
-        error: error instanceof Error ? error.message : String(error),
-      })
-    }
-
-    onProgress?.('Analyzing AST', i + 1, sourceFiles.length, filePath)
-  }
-
-  // Phase 3: Create import edges
-  const importEdges = createImportEdges(allImports)
-  edges.push(...importEdges)
-
-  // Build dependency maps for later use
-  const dependencies = buildDependencyMap(allImports)
-  const _reverseDeps = buildReverseDependencyMap(allImports)
-
-  // Update file nodes with dependency counts
-  for (const [filePath, deps] of dependencies) {
-    const fileNode = nodes[filePath] as FileNode
-    if (fileNode) {
-      fileNode.importCount = deps.size
-    }
-  }
+  const resolver = createImportResolver(rootDir)
+  const analyzed = analyzeFiles(sourceFiles, {
+    rootDir,
+    resolver,
+    startTime,
+    timeoutMs,
+    fileTimeoutMs,
+    onProgress,
+    errors,
+  })
+  const { astResults } = analyzed
+  Object.assign(nodes, analyzed.nodes)
+  edges.push(...analyzed.edges)
 
   // Phase 4: Analyze git history (optional)
   let gitResult: GitAnalysisResult | null = null
@@ -198,15 +294,7 @@ export async function buildKnowledgeGraph(options: BuildOptions): Promise<BuildR
       onProgress?.('Analyzing git history', completed, total)
     )
 
-    // Enrich nodes with git data
-    for (const [filePath, history] of gitResult.fileHistories) {
-      const fileNode = nodes[filePath]
-      if (fileNode) {
-        fileNode.lastModified = history.lastModified
-        fileNode.modificationCount = history.commitCount
-        fileNode.contributors = history.contributors.map((c) => c.name)
-      }
-    }
+    applyGitHistory(nodes, gitResult)
 
     if (!gitResult.isGitRepo) {
       warnings.push({
@@ -217,32 +305,10 @@ export async function buildKnowledgeGraph(options: BuildOptions): Promise<BuildR
   }
 
   // Phase 5: Calculate metadata
-  const languages: Record<string, number> = {}
-  let totalLines = 0
-
-  for (const astResult of astResults) {
-    const lang = astResult.fileNode.language
-    languages[lang] = (languages[lang] || 0) + 1
-    totalLines += astResult.fileNode.lineCount
-  }
-
-  const metadata: GraphMetadata = {
-    scannedAt: new Date().toISOString(),
-    scanDurationMs: Date.now() - startTime,
-    rootDir: path.resolve(rootDir),
-    fileCount: astResults.length,
-    totalLines,
-    languages,
-    nodeCount: Object.keys(nodes).length,
-    edgeCount: edges.length,
-  }
-
-  const graph: KnowledgeGraph = {
-    version: '1.0.0',
-    metadata,
-    nodes,
-    edges,
-  }
+  const graph = assembleGraph(nodes, edges, rootDir, startTime, gitResult, {
+    dirtyFiles: gitResult?.isGitRepo ? await getDirtyFiles(rootDir) : undefined,
+    unresolvedImporters: analyzed.unresolvedImporters,
+  })
 
   onProgress?.('Complete', 1, 1)
 
@@ -271,16 +337,96 @@ function createEmptyGraph(rootDir: string, startTime: number): KnowledgeGraph {
 }
 
 /**
- * Incrementally update graph with changed files
+ * Incrementally update a graph: re-analyze only `changedFiles` (relative paths;
+ * deleted files are dropped), then refresh git history with one log pass.
+ *
+ * Every per-file fact (nodes, contains edges, outgoing import edges) is owned by
+ * exactly one file, so replacing a file's facts gives the same graph a full scan
+ * would produce.
  */
 export async function updateGraphIncremental(
-  _existingGraph: KnowledgeGraph,
-  _changedFiles: string[],
+  existingGraph: KnowledgeGraph,
+  changedFiles: string[],
   options: BuildOptions
 ): Promise<BuildResult> {
-  // For now, just rebuild the entire graph
-  // TODO: Implement true incremental updates
-  return buildKnowledgeGraph(options)
+  const {
+    rootDir,
+    includeGitHistory = true,
+    onProgress,
+    timeoutMs = 5 * 60 * 1000,
+    fileTimeoutMs = 10000,
+  } = options
+  const startTime = Date.now()
+  const errors: Array<{ file: string; error: string }> = []
+  const warnings: Array<{ file: string; warning: string }> = []
+  const changed = new Set(changedFiles.map((f) => path.normalize(f)))
+  // Importers of a changed file re-resolve too, so a deleted or renamed target drops their edge
+  for (const edge of existingGraph.edges) {
+    if (edge.type === 'imports' && changed.has(edge.target)) changed.add(edge.source)
+  }
+  // A new file may be the target an existing import was waiting for
+  const knownFiles = new Set(Object.values(existingGraph.nodes).map((n) => n.filePath))
+  if ([...changed].some((f) => !knownFiles.has(f))) {
+    for (const importer of existingGraph.unresolvedImporters ?? []) changed.add(importer)
+  }
+
+  // Drop everything owned by a changed file
+  const nodes: Record<string, GraphNode> = {}
+  for (const [id, node] of Object.entries(existingGraph.nodes)) {
+    if (!changed.has(node.filePath)) nodes[id] = { ...node }
+  }
+  const edges: GraphEdge[] = existingGraph.edges
+    .filter((edge) => {
+      if (edge.type === 'imports') return !changed.has(edge.source)
+      return edge.source in nodes && edge.target in nodes
+    })
+    .map((edge) => ({ ...edge }))
+
+  // Re-analyze the changed files that still exist and still count as source
+  onProgress?.('Analyzing changed files', 0, changed.size)
+  const project = createProject(rootDir)
+  const sourceFiles =
+    changed.size > 0
+      ? getSourceFiles(
+          project,
+          rootDir,
+          [...changed]
+            // Same extensions a full scan globs for; README.md and friends never become nodes
+            .filter((f) => SOURCE_FILE.test(f))
+            .map((f) => fg.escapePath(f.split(path.sep).join('/')))
+        )
+      : []
+  const analyzed = analyzeFiles(sourceFiles, {
+    rootDir,
+    resolver: createImportResolver(rootDir),
+    startTime,
+    timeoutMs,
+    fileTimeoutMs,
+    onProgress,
+    errors,
+  })
+  Object.assign(nodes, analyzed.nodes)
+  edges.push(...analyzed.edges)
+
+  let gitResult: GitAnalysisResult | null = null
+  if (includeGitHistory) {
+    onProgress?.('Analyzing git history', 0, 1)
+    const filePaths = Object.values(nodes)
+      .filter((n) => n.type === 'file')
+      .map((n) => n.filePath)
+    gitResult = await analyzeGitHistory(rootDir, filePaths)
+    applyGitHistory(nodes, gitResult)
+  }
+
+  const graph = assembleGraph(nodes, edges, rootDir, startTime, gitResult, {
+    dirtyFiles: gitResult?.isGitRepo ? await getDirtyFiles(rootDir) : undefined,
+    unresolvedImporters: [
+      ...(existingGraph.unresolvedImporters ?? []).filter((f) => !changed.has(f)),
+      ...analyzed.unresolvedImporters,
+    ],
+  })
+  onProgress?.('Complete', 1, 1)
+  return { graph, errors, warnings }
 }
 
 /**

@@ -18,7 +18,7 @@ import { initTelemetry } from './lib/telemetry.js'
 import { registerPrompts, registerResources, registerTools } from './mcp/index.js'
 
 // Initialize telemetry before server starts
-initTelemetry()
+void initTelemetry()
 
 /**
  * Create the MCP server with all tools, prompts, and resources
