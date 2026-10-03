@@ -69,11 +69,11 @@ specter roast                         # Comedic codebase roast
 Before Claude edits a file, Specter tells it what the file's git history knows and the code does not show:
 
 ```
-Specter change-risk brief for src/lib/api.ts:
-- Usually changes together with: src/lib/schema.ts (62% of its changes, 8 commits, no import link). Check whether they need the same change. In this repo such predictions held 51% of the time.
-- Imported by 14 files (src/app/page.tsx, src/lib/auth.ts, src/lib/db.ts, ...). Keep its exports compatible.
-- Tests: src/lib/api.test.ts
+Specter change-risk brief for components/pages/pricing/PricingPageClient.tsx:
+- Usually changes together with: components/pages/home/HomePageClient.tsx (55% of its changes, 28 commits, no import link). Check whether they need the same change. In this repo such predictions held 26% of the time.
 ```
+
+That is real output from a Next.js repo, quoted back by Claude Code during an edit. Two files with no import between them had changed together in 28 commits. Nothing in the code shows that link, and the brief states its own measured hit rate.
 
 It stays silent for unremarkable files, and tells Claude about each file once per session. Research on context files for coding agents found that overview-style context raised cost without improving results, while specific, actionable instructions do get followed (Gloaguen et al., 2026, [arXiv:2602.11988](https://arxiv.org/abs/2602.11988)).
 
