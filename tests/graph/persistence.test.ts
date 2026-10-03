@@ -123,27 +123,21 @@ describe('Graph Persistence', () => {
       expect(stats.isDirectory()).toBe(true)
     })
 
-    it('should add .specter to .gitignore', async () => {
+    it('ignores its own cache directory without touching the project .gitignore', async () => {
       const graph = createMockGraph()
 
       await saveGraph(graph, tempDir)
 
-      const gitignorePath = path.join(tempDir, '.gitignore')
-      const content = await fs.readFile(gitignorePath, 'utf-8')
-      expect(content).toContain('.specter')
+      const own = await fs.readFile(path.join(tempDir, '.specter', '.gitignore'), 'utf-8')
+      expect(own).toContain('*')
+      await expect(fs.access(path.join(tempDir, '.gitignore'))).rejects.toThrow()
     })
 
-    it('should not duplicate .specter in existing .gitignore', async () => {
-      // Create existing gitignore with .specter already present
-      const gitignorePath = path.join(tempDir, '.gitignore')
-      await fs.writeFile(gitignorePath, 'node_modules/\n.specter/\n', 'utf-8')
+    it('leaves no temp files behind after an atomic save', async () => {
+      await saveGraph(createMockGraph(), tempDir)
 
-      const graph = createMockGraph()
-      await saveGraph(graph, tempDir)
-
-      const content = await fs.readFile(gitignorePath, 'utf-8')
-      const matches = content.match(/\.specter/g)
-      expect(matches?.length).toBe(1)
+      const files = await fs.readdir(path.join(tempDir, '.specter'))
+      expect(files.filter((f) => f.endsWith('.tmp'))).toEqual([])
     })
 
     it('should preserve complex graph structure', async () => {

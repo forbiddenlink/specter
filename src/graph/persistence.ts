@@ -38,16 +38,19 @@ async function ensureSpecterDir(rootDir: string): Promise<string> {
 export async function saveGraph(graph: KnowledgeGraph, rootDir: string): Promise<void> {
   const specterDir = await ensureSpecterDir(rootDir)
 
-  // Save full graph
-  const graphPath = path.join(specterDir, GRAPH_FILE)
-  await fs.writeFile(graphPath, JSON.stringify(graph, null, 2), 'utf-8')
+  // Atomic writes: the edit hook may read the graph while a background scan saves it
+  await writeFileAtomic(path.join(specterDir, GRAPH_FILE), JSON.stringify(graph))
+  await writeFileAtomic(
+    path.join(specterDir, METADATA_FILE),
+    JSON.stringify(graph.metadata, null, 2)
+  )
 
-  // Save metadata separately for quick access
-  const metadataPath = path.join(specterDir, METADATA_FILE)
-  await fs.writeFile(metadataPath, JSON.stringify(graph.metadata, null, 2), 'utf-8')
-
-  // Add .specter to .gitignore if not already there
-  await addToGitignore(rootDir)
+  // The cache directory ignores itself, so scanning never edits the project's .gitignore
+  await fs.writeFile(
+    path.join(specterDir, '.gitignore'),
+    '# Specter cache, safe to delete\n*\n',
+    'utf-8'
+  )
 
   // Auto-create health snapshot for trend tracking
   try {
@@ -183,28 +186,10 @@ async function getSourceFilePaths(rootDir: string): Promise<string[]> {
   return files
 }
 
-/**
- * Add .specter to .gitignore
- */
-async function addToGitignore(rootDir: string): Promise<void> {
-  const gitignorePath = path.join(rootDir, '.gitignore')
-
-  try {
-    let content = ''
-
-    try {
-      content = await fs.readFile(gitignorePath, 'utf-8')
-    } catch {
-      // File doesn't exist yet
-    }
-
-    if (!content.includes('.specter')) {
-      const newContent = `${content.trim()}\n\n# Specter knowledge graph cache\n.specter/\n`
-      await fs.writeFile(gitignorePath, newContent, 'utf-8')
-    }
-  } catch {
-    // Ignore errors updating gitignore
-  }
+async function writeFileAtomic(target: string, content: string): Promise<void> {
+  const temp = `${target}.${process.pid}.tmp`
+  await fs.writeFile(temp, content, 'utf-8')
+  await fs.rename(temp, target)
 }
 
 /**

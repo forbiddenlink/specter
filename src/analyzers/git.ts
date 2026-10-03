@@ -8,10 +8,30 @@
 import path from 'node:path'
 import { type SimpleGit, simpleGit } from 'simple-git'
 import type { ChangeCoupling, ChangeCouplingResult, GitFileHistory } from '../graph/types.js'
+import { runCoChangeBacktest } from '../risk/backtest.js'
+import { DEFAULT_BRIEF_THRESHOLDS } from '../risk/brief.js'
+import {
+  type CoChangeOptions,
+  type CoChangePartner,
+  computeCoChange,
+  countAuthors,
+  type MinedCommit,
+  parseGitLog,
+  readGitLog,
+  summarizeFileHistories,
+} from './git-history.js'
 
 export interface GitAnalysisResult {
   isGitRepo: boolean
   fileHistories: Map<string, GitFileHistory>
+  /** Change coupling per file, from the same history window */
+  coChange: Record<string, CoChangePartner[]>
+  /** HEAD at analysis time, so the next scan can diff from it */
+  headCommit?: string
+  /** Distinct authors in the mined window */
+  windowAuthors?: number
+  /** Backtested hit rate of co-change predictions at the brief's thresholds */
+  coChangeAccuracy?: { precision: number; predictions: number }
   repoStats: {
     totalCommits: number
     totalContributors: number
@@ -161,7 +181,8 @@ export async function getRepoStats(git: SimpleGit): Promise<{
 export async function analyzeGitHistory(
   rootDir: string,
   filePaths: string[],
-  onProgress?: (completed: number, total: number) => void
+  onProgress?: (completed: number, total: number) => void,
+  options: { maxCommits?: number; coChange?: CoChangeOptions } = {}
 ): Promise<GitAnalysisResult> {
   const git = createGitClient(rootDir)
   const isRepo = await isGitRepository(git)
@@ -170,6 +191,7 @@ export async function analyzeGitHistory(
     return {
       isGitRepo: false,
       fileHistories: new Map(),
+      coChange: {},
       repoStats: {
         totalCommits: 0,
         totalContributors: 0,
@@ -177,31 +199,45 @@ export async function analyzeGitHistory(
     }
   }
 
-  const fileHistories = new Map<string, GitFileHistory>()
   const repoStats = await getRepoStats(git)
+  onProgress?.(0, filePaths.length)
 
-  // Analyze files in batches to avoid overwhelming git
-  const batchSize = 10
-  for (let i = 0; i < filePaths.length; i += batchSize) {
-    const batch = filePaths.slice(i, i + batchSize)
-
-    await Promise.all(
-      batch.map(async (filePath) => {
-        const history = await analyzeFileHistory(git, path.join(rootDir, filePath), rootDir)
-        if (history) {
-          fileHistories.set(filePath, history)
-        }
-      })
-    )
-
-    if (onProgress) {
-      onProgress(Math.min(i + batchSize, filePaths.length), filePaths.length)
-    }
+  let commits: MinedCommit[] = []
+  let headCommit: string | undefined
+  try {
+    // git prints paths relative to the repo root; the scan may target a subdirectory
+    const prefix = (await git.raw(['rev-parse', '--show-prefix'])).trim()
+    headCommit = (await git.raw(['rev-parse', 'HEAD'])).trim() || undefined
+    const raw = await readGitLog(git, options.maxCommits ?? 2000)
+    commits = parseGitLog(raw).map((commit) => ({
+      ...commit,
+      files: commit.files.filter((f) => f.startsWith(prefix)).map((f) => f.slice(prefix.length)),
+    }))
+  } catch {
+    // Empty repo (no HEAD) or unreadable history: fall through with no commits
   }
+
+  const fileHistories = summarizeFileHistories(commits, filePaths)
+  const coChange = computeCoChange(commits, filePaths, options.coChange)
+  const [measured] = runCoChangeBacktest(commits, {
+    settings: [
+      {
+        minShared: DEFAULT_BRIEF_THRESHOLDS.minShared,
+        minConfidence: DEFAULT_BRIEF_THRESHOLDS.minConfidence,
+      },
+    ],
+  })
+  onProgress?.(filePaths.length, filePaths.length)
 
   return {
     isGitRepo: true,
     fileHistories,
+    coChange,
+    headCommit,
+    windowAuthors: countAuthors(commits),
+    coChangeAccuracy: measured
+      ? { precision: measured.precision, predictions: measured.predictions }
+      : undefined,
     repoStats,
   }
 }

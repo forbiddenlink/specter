@@ -24,20 +24,23 @@ export const EdgeTypeSchema = z.enum([
   'contains',
 ])
 
-export const GraphNodeSchema = z.object({
-  id: z.string(),
-  type: NodeTypeSchema,
-  name: z.string(),
-  filePath: z.string(),
-  lineStart: z.number(),
-  lineEnd: z.number(),
-  exported: z.boolean(),
-  complexity: z.number().optional(),
-  lastModified: z.string().optional(),
-  modificationCount: z.number().optional(),
-  contributors: z.array(z.string()).optional(),
-  documentation: z.string().optional(),
-})
+export const GraphNodeSchema = z
+  .object({
+    id: z.string(),
+    type: NodeTypeSchema,
+    name: z.string(),
+    filePath: z.string(),
+    lineStart: z.number(),
+    lineEnd: z.number(),
+    exported: z.boolean(),
+    complexity: z.number().optional(),
+    lastModified: z.string().optional(),
+    modificationCount: z.number().optional(),
+    contributors: z.array(z.string()).optional(),
+    documentation: z.string().optional(),
+  })
+  // Keep type-specific fields (lineCount, language, importCount, ...) through a load/save cycle
+  .passthrough()
 
 export const GraphEdgeSchema = z.object({
   id: z.string(),
@@ -57,6 +60,15 @@ export const GraphMetadataSchema = z.object({
   languages: z.record(z.string(), z.number()),
   nodeCount: z.number(),
   edgeCount: z.number(),
+  headCommit: z.string().optional(),
+  authorCount: z.number().optional(),
+  coChangeAccuracy: z.object({ precision: z.number(), predictions: z.number() }).optional(),
+})
+
+export const CoChangePartnerSchema = z.object({
+  file: z.string(),
+  shared: z.number(),
+  confidence: z.number(),
 })
 
 export const KnowledgeGraphSchema = z.object({
@@ -64,6 +76,7 @@ export const KnowledgeGraphSchema = z.object({
   metadata: GraphMetadataSchema,
   nodes: z.record(z.string(), GraphNodeSchema),
   edges: z.array(GraphEdgeSchema),
+  coChange: z.record(z.string(), z.array(CoChangePartnerSchema)).optional(),
 })
 
 export type ValidatedKnowledgeGraph = z.infer<typeof KnowledgeGraphSchema>

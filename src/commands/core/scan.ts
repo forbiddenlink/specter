@@ -8,8 +8,14 @@ import type { Command } from 'commander'
 import gradient from 'gradient-string'
 import { getComplexityEmoji } from '../../analyzers/complexity.js'
 import { showNextSteps } from '../../cli-utils.js'
-import { buildKnowledgeGraph, getGraphStats } from '../../graph/builder.js'
-import { graphExists, isGraphStale, saveGraph } from '../../graph/persistence.js'
+import {
+  type BuildOptions,
+  buildKnowledgeGraph,
+  getGraphStats,
+  updateGraphIncremental,
+} from '../../graph/builder.js'
+import { getChangedFiles } from '../../graph/changes.js'
+import { graphExists, isGraphStale, loadGraph, saveGraph } from '../../graph/persistence.js'
 import { outputJson } from '../../json-output.js'
 import { acquireScanLock, releaseScanLock } from '../../scan-lock.js'
 import { timingBadge } from '../../ui/progress.js'
@@ -74,7 +80,11 @@ Examples:
           }
         }
 
-        const result = await buildKnowledgeGraph({
+        // Incremental when we have a graph that knows its commit; full scan otherwise
+        const existing = options.force ? null : await loadGraph(rootDir)
+        const changedFiles = existing ? await getChangedFiles(rootDir, existing) : null
+
+        const buildOptions: BuildOptions = {
           rootDir,
           includeGitHistory: options.git !== false,
           onProgress: (phase, completed, total, currentFile) => {
@@ -106,12 +116,25 @@ Examples:
               }
             }
           },
-        })
+        }
+
+        const result =
+          existing && changedFiles
+            ? await updateGraphIncremental(existing, changedFiles, buildOptions)
+            : await buildKnowledgeGraph(buildOptions)
 
         // Save the graph
         await saveGraph(result.graph, rootDir)
 
-        spinner?.succeed(chalk.bold('I am awake!'))
+        if (existing && changedFiles) {
+          spinner?.succeed(
+            chalk.bold(
+              `Updated ${changedFiles.length} changed file${changedFiles.length === 1 ? '' : 's'} in ${(result.graph.metadata.scanDurationMs / 1000).toFixed(1)}s`
+            )
+          )
+        } else {
+          spinner?.succeed(chalk.bold('I am awake!'))
+        }
 
         // Print summary with personality
         const stats = getGraphStats(result.graph)
@@ -123,6 +146,8 @@ Examples:
             projectName,
             ...stats,
             healthScore: Math.round(healthScore),
+            mode: existing && changedFiles ? 'incremental' : 'full',
+            changedFiles: changedFiles?.length,
             errors: result.errors.map((e) => ({ file: e.file, error: e.error })),
           })
           return

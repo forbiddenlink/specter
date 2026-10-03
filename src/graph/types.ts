@@ -72,6 +72,21 @@ export interface GraphMetadata {
   languages: Record<string, number>
   nodeCount: number
   edgeCount: number
+  /** HEAD when the graph was built; incremental scans diff from here */
+  headCommit?: string
+  /** Distinct authors in the mined history window (1 = solo project) */
+  authorCount?: number
+  /** Backtested co-change hit rate on this repo at the brief's thresholds */
+  coChangeAccuracy?: { precision: number; predictions: number }
+}
+
+/** A file that historically changes in the same commits as another file */
+export interface CoChangePartner {
+  file: string
+  /** Commits that touched both files */
+  shared: number
+  /** shared / commits that touched the target file (0-1) */
+  confidence: number
 }
 
 export interface KnowledgeGraph {
@@ -79,6 +94,8 @@ export interface KnowledgeGraph {
   metadata: GraphMetadata
   nodes: Record<string, GraphNode>
   edges: GraphEdge[]
+  /** Change coupling per file path (absent on graphs built before 1.3) */
+  coChange?: Record<string, CoChangePartner[]>
 }
 
 export interface ComplexityHotspot {
