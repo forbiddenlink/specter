@@ -10,7 +10,7 @@
 <p align="center">
   <strong>Give your codebase a voice.</strong><br/>
   A code intelligence CLI that speaks <em>as</em> your codebase in first person.<br/>
-  <strong>72 commands. 14 MCP tools. 19 personality modes. 1 ghost in your git history.</strong>
+  <strong>74 commands. 14 MCP tools. 19 personality modes. 1 ghost in your git history.</strong>
 </p>
 
 ---
@@ -63,6 +63,35 @@ specter roast                         # Comedic codebase roast
 ```
 
 ---
+
+## Claude Code: change-risk briefs before every edit
+
+Before Claude edits a file, Specter tells it what the file's git history knows and the code does not show:
+
+```
+Specter change-risk brief for src/lib/api.ts:
+- Usually changes together with: src/lib/schema.ts (62% of its changes, 8 commits, no import link). Check whether they need the same change. In this repo such predictions held 51% of the time.
+- Imported by 14 files (src/app/page.tsx, src/lib/auth.ts, src/lib/db.ts, ...). Keep its exports compatible.
+- Tests: src/lib/api.test.ts
+```
+
+It stays silent for unremarkable files, and tells Claude about each file once per session. Research on context files for coding agents found that overview-style context raised cost without improving results, while specific, actionable instructions do get followed (Gloaguen et al., 2026, [arXiv:2602.11988](https://arxiv.org/abs/2602.11988)).
+
+```bash
+npm install -g @purplegumdropz/specter
+specter scan                                   # once per repo; later scans are incremental
+claude plugin marketplace add forbiddenlink/specter
+claude plugin install specter@specter
+```
+
+The plugin adds a `PreToolUse` hook on `Edit|Write`, which injects the brief, and a `SessionStart` hook, which refreshes the graph in the background. Both do nothing in repos without a `.specter/` graph.
+
+**How accurate is it?** Run `specter backtest` on your repo. It replays history and checks each co-change prediction against what actually changed in the same commit, using the evaluation design of Zimmermann et al., [ROSE](https://thomas-zimmermann.com/publications/files/zimmermann-tse-2005.pdf). On 9 real TypeScript repos, at the brief's thresholds (at least 5 shared commits and 50% confidence):
+
+- Precision ranged from 28% to 67%, with a median of about 40%.
+- The brief named a partner on 7% to 21% of edits.
+
+Every scan measures this for its own repo, and the brief drops co-change hints in repos where they prove unreliable. To see exactly what Claude would be told about a file, run `specter brief <file>`.
 
 ## GitHub Copilot CLI Integration
 

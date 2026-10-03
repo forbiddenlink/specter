@@ -1,0 +1,8 @@
+{
+  "name": "specter",
+  "version": "1.3.0",
+  "description": "Before Claude edits a file, tells it which files historically change with it, who imports it, and which tests cover it. Silent for unremarkable files.",
+  "author": { "name": "Liz Stein" },
+  "homepage": "https://github.com/forbiddenlink/specter",
+  "license": "MIT"
+}
