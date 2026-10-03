@@ -54,9 +54,21 @@ describe('runCoChangeBacktest', () => {
     expect(row?.precision).toBe(0)
   })
 
-  it('skips test files and oversized commits', () => {
+  it('counts a prediction for a file edited alone as a miss', () => {
+    const history = [...Array.from({ length: 5 }, (_, i) => c(i, ['a.ts', 'b.ts'])), c(5, ['a.ts'])]
+    const [row] = runCoChangeBacktest(newestFirst(history), {
+      evalCommits: 1,
+      settings: [{ minShared: 3, minConfidence: 0.5 }],
+    })
+    expect(row).toMatchObject({ queries: 1, answered: 1, hits: 0, precision: 0 })
+  })
+
+  it('never predicts test files', () => {
     const history = Array.from({ length: 6 }, (_, i) => c(i, ['a.ts', 'a.test.ts']))
-    const [row] = runCoChangeBacktest(newestFirst(history), { evalCommits: 6 })
-    expect(row?.queries).toBe(0)
+    const [row] = runCoChangeBacktest(newestFirst(history), {
+      evalCommits: 6,
+      settings: [{ minShared: 1, minConfidence: 0 }],
+    })
+    expect(row?.predictions).toBe(0)
   })
 })

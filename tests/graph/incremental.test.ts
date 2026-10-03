@@ -113,6 +113,44 @@ describe('updateGraphIncremental', () => {
     expect(incremental.edges.some((e) => e.target === 'src/old.ts')).toBe(false)
   })
 
+  async function expectIncrementalMatchesFull(before: KnowledgeGraph): Promise<KnowledgeGraph> {
+    const changed = await getChangedFiles(dir, before)
+    expect(changed).not.toBeNull()
+    const incremental = (await updateGraphIncremental(before, changed ?? [], { rootDir: dir }))
+      .graph
+    const full = (await buildKnowledgeGraph({ rootDir: dir })).graph
+    expect(shape(incremental)).toEqual(shape(full))
+    return incremental
+  }
+
+  it('re-checks a file that was dirty at scan time and reverted since', async () => {
+    write(
+      'src/util.ts',
+      'export function add(a: number, b: number) { if (a) { return a } return b }\n'
+    )
+    const dirty = (await buildKnowledgeGraph({ rootDir: dir })).graph
+    git('checkout', '--', 'src/util.ts')
+    await expectIncrementalMatchesFull(dirty)
+  })
+
+  it('links an existing import once its missing target is added', async () => {
+    write('src/waiting.ts', "import { later } from './later'\nexport const w = later\n")
+    commit('feat: import a file that does not exist yet')
+    const before = (await buildKnowledgeGraph({ rootDir: dir })).graph
+    write('src/later.ts', 'export const later = 1\n')
+    const after = await expectIncrementalMatchesFull(before)
+    expect(
+      after.edges.some((e) => e.source === 'src/waiting.ts' && e.target === 'src/later.ts')
+    ).toBe(true)
+  })
+
+  it('never turns non-source files into nodes', async () => {
+    const before = (await buildKnowledgeGraph({ rootDir: dir })).graph
+    write('README.md', '# hello\n')
+    const after = await expectIncrementalMatchesFull(before)
+    expect(after.nodes['README.md']).toBeUndefined()
+  })
+
   it('falls back to a full scan when tsconfig changes', async () => {
     const before = (await buildKnowledgeGraph({ rootDir: dir })).graph
     write('tsconfig.json', JSON.stringify({ compilerOptions: { paths: { '~/*': ['./src/*'] } } }))
@@ -134,6 +172,15 @@ describe('full build', () => {
       .map((e) => `${e.source}->${e.target}`)
     expect(edges).toContain('src/api.ts->src/util.ts')
     expect(edges).toContain('src/consumer.ts->src/old.ts')
+  })
+
+  it('keeps history for non-ASCII file names', async () => {
+    write('src/café.ts', 'export const c = 1\n')
+    commit('feat: accented name')
+    write('src/café.ts', 'export const c = 2\n')
+    commit('fix: accented name')
+    const graph = (await buildKnowledgeGraph({ rootDir: dir })).graph
+    expect(graph.nodes['src/café.ts']?.modificationCount).toBe(2)
   })
 
   it('records churn from a single history pass and co-change between files', async () => {

@@ -5,6 +5,7 @@
  * Graphs are stored in .specter/ directory in the project root.
  */
 
+import { randomBytes } from 'node:crypto'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { createSnapshot } from '../history/snapshot.js'
@@ -24,8 +25,12 @@ async function ensureSpecterDir(rootDir: string): Promise<string> {
   const specterDir = path.join(rootDir, SPECTER_DIR)
 
   try {
-    await fs.access(specterDir)
-  } catch {
+    // A cloned repo could ship .specter as a symlink to redirect our writes elsewhere
+    if ((await fs.lstat(specterDir)).isSymbolicLink()) {
+      throw new Error(`${specterDir} is a symlink; refusing to write the graph through it`)
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
     await fs.mkdir(specterDir, { recursive: true })
   }
 
@@ -46,11 +51,7 @@ export async function saveGraph(graph: KnowledgeGraph, rootDir: string): Promise
   )
 
   // The cache directory ignores itself, so scanning never edits the project's .gitignore
-  await fs.writeFile(
-    path.join(specterDir, '.gitignore'),
-    '# Specter cache, safe to delete\n*\n',
-    'utf-8'
-  )
+  await writeFileAtomic(path.join(specterDir, '.gitignore'), '# Specter cache, safe to delete\n*\n')
 
   // Auto-create health snapshot for trend tracking
   try {
@@ -186,10 +187,20 @@ async function getSourceFilePaths(rootDir: string): Promise<string[]> {
   return files
 }
 
+/**
+ * Write via an unpredictable temp file opened exclusively, then rename. Exclusive
+ * create never follows a planted symlink, and rename replaces a symlink at the
+ * target instead of writing through it.
+ */
 async function writeFileAtomic(target: string, content: string): Promise<void> {
-  const temp = `${target}.${process.pid}.tmp`
-  await fs.writeFile(temp, content, 'utf-8')
-  await fs.rename(temp, target)
+  const temp = `${target}.${randomBytes(6).toString('hex')}.tmp`
+  try {
+    await fs.writeFile(temp, content, { encoding: 'utf-8', flag: 'wx' })
+    await fs.rename(temp, target)
+  } catch (error) {
+    await fs.rm(temp, { force: true })
+    throw error
+  }
 }
 
 /**

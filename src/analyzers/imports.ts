@@ -33,6 +33,8 @@ const SOURCE_EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx', '.mts', '.cts', '.mjs',
 interface PathAlias {
   prefix: string
   suffix: string
+  /** False for exact patterns like "@lib", which must not match "@lib/other" */
+  wildcard: boolean
   targets: string[]
 }
 
@@ -56,6 +58,7 @@ function loadPathAliases(root: string): { aliases: PathAlias[]; baseUrl?: string
         aliases.push({
           prefix: star === -1 ? pattern : pattern.slice(0, star),
           suffix: star === -1 ? '' : pattern.slice(star + 1),
+          wildcard: star !== -1,
           targets: targets.map((t) => path.resolve(pathsBase, t)),
         })
       }
@@ -127,6 +130,7 @@ export function createImportResolver(rootDir: string): ImportResolver {
     }
 
     for (const alias of aliases) {
+      if (!alias.wildcard && specifier !== alias.prefix) continue
       if (!specifier.startsWith(alias.prefix) || !specifier.endsWith(alias.suffix)) continue
       if (specifier.length < alias.prefix.length + alias.suffix.length) continue
       const wildcard = specifier.slice(alias.prefix.length, specifier.length - alias.suffix.length)
@@ -150,14 +154,18 @@ export function createImportResolver(rootDir: string): ImportResolver {
 export function analyzeImports(
   sourceFile: SourceFile,
   rootDir: string,
-  resolver: ImportResolver = createImportResolver(rootDir)
+  resolver: ImportResolver = createImportResolver(rootDir),
+  /** Receives relative specifiers that point at no file (yet) */
+  unresolved?: string[]
 ): ImportInfo[] {
   const imports: ImportInfo[] = []
   const absolutePath = sourceFile.getFilePath()
   const sourceFilePath = path.relative(rootDir, absolutePath)
 
   for (const importDecl of sourceFile.getImportDeclarations()) {
-    const targetPath = resolver(importDecl.getModuleSpecifierValue(), absolutePath)
+    const specifier = importDecl.getModuleSpecifierValue()
+    const targetPath = resolver(specifier, absolutePath)
+    if (!targetPath && specifier.startsWith('.')) unresolved?.push(specifier)
     if (!targetPath || targetPath === sourceFilePath) continue
 
     const namedImports = importDecl.getNamedImports()
@@ -187,6 +195,7 @@ export function analyzeImports(
     const specifier = exportDecl.getModuleSpecifierValue()
     if (!specifier) continue
     const targetPath = resolver(specifier, absolutePath)
+    if (!targetPath && specifier.startsWith('.')) unresolved?.push(specifier)
     if (!targetPath || targetPath === sourceFilePath) continue
 
     const named = exportDecl.getNamedExports().map((e) => e.getName())

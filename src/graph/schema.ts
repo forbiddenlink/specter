@@ -62,6 +62,7 @@ export const GraphMetadataSchema = z.object({
   edgeCount: z.number(),
   headCommit: z.string().optional(),
   authorCount: z.number().optional(),
+  dirtyFiles: z.array(z.string()).optional(),
   coChangeAccuracy: z.object({ precision: z.number(), predictions: z.number() }).optional(),
 })
 
@@ -77,6 +78,7 @@ export const KnowledgeGraphSchema = z.object({
   nodes: z.record(z.string(), GraphNodeSchema),
   edges: z.array(GraphEdgeSchema),
   coChange: z.record(z.string(), z.array(CoChangePartnerSchema)).optional(),
+  unresolvedImporters: z.array(z.string()).optional(),
 })
 
 export type ValidatedKnowledgeGraph = z.infer<typeof KnowledgeGraphSchema>

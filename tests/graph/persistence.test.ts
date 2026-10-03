@@ -133,6 +133,29 @@ describe('Graph Persistence', () => {
       await expect(fs.access(path.join(tempDir, '.gitignore'))).rejects.toThrow()
     })
 
+    it('replaces a planted symlink instead of writing through it', async () => {
+      const victim = path.join(tempDir, 'victim.txt')
+      await fs.writeFile(victim, 'precious')
+      await fs.mkdir(path.join(tempDir, '.specter'), { recursive: true })
+      await fs.symlink(victim, path.join(tempDir, '.specter', '.gitignore'))
+
+      await saveGraph(createMockGraph(), tempDir)
+
+      expect(await fs.readFile(victim, 'utf-8')).toBe('precious')
+      expect((await fs.lstat(path.join(tempDir, '.specter', '.gitignore'))).isSymbolicLink()).toBe(
+        false
+      )
+    })
+
+    it('refuses to save through a symlinked .specter directory', async () => {
+      const elsewhere = path.join(tempDir, 'elsewhere')
+      await fs.mkdir(elsewhere)
+      await fs.symlink(elsewhere, path.join(tempDir, '.specter'))
+
+      await expect(saveGraph(createMockGraph(), tempDir)).rejects.toThrow(/symlink/)
+      expect(await fs.readdir(elsewhere)).toEqual([])
+    })
+
     it('leaves no temp files behind after an atomic save', async () => {
       await saveGraph(createMockGraph(), tempDir)
 

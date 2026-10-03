@@ -15,7 +15,8 @@
     "README.md",
     "action.yml",
     "scripts/",
-    "claude-plugin/"
+    "claude-plugin/",
+    ".claude-plugin/"
   ],
   "scripts": {
     "build": "tsc && cp -r src/dashboard/static dist/dashboard/",

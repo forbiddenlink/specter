@@ -23,7 +23,11 @@ import {
   type ImportInfo,
   type ImportResolver,
 } from '../analyzers/imports.js'
+import { getDirtyFiles } from './changes.js'
 import type { FileNode, GraphEdge, GraphMetadata, GraphNode, KnowledgeGraph } from './types.js'
+
+/** Extensions a full scan includes (see getSourceFiles defaults) */
+const SOURCE_FILE = /\.(ts|tsx|js|jsx)$/
 
 export interface BuildOptions {
   rootDir: string
@@ -74,6 +78,8 @@ interface AnalyzeFilesOptions {
 }
 
 interface AnalyzedFiles {
+  /** Files with a relative import that resolved to nothing */
+  unresolvedImporters: Set<string>
   astResults: ASTAnalysisResult[]
   allImports: ImportInfo[]
   nodes: Record<string, GraphNode>
@@ -89,6 +95,7 @@ function analyzeFiles(sourceFiles: SourceFile[], options: AnalyzeFilesOptions): 
   const allImports: ImportInfo[] = []
   const nodes: Record<string, GraphNode> = {}
   const edges: GraphEdge[] = []
+  const unresolvedImporters = new Set<string>()
 
   for (let i = 0; i < sourceFiles.length; i++) {
     if (Date.now() - startTime > timeoutMs) {
@@ -125,7 +132,9 @@ function analyzeFiles(sourceFiles: SourceFile[], options: AnalyzeFilesOptions): 
         })
       }
 
-      allImports.push(...analyzeImports(sourceFile, rootDir, resolver))
+      const unresolved: string[] = []
+      allImports.push(...analyzeImports(sourceFile, rootDir, resolver, unresolved))
+      if (unresolved.length > 0) unresolvedImporters.add(filePath)
     } catch (error) {
       errors.push({
         file: filePath,
@@ -143,7 +152,7 @@ function analyzeFiles(sourceFiles: SourceFile[], options: AnalyzeFilesOptions): 
     if (fileNode) fileNode.importCount = deps.size
   }
 
-  return { astResults, allImports, nodes, edges }
+  return { astResults, allImports, nodes, edges, unresolvedImporters }
 }
 
 /**
@@ -173,7 +182,8 @@ function assembleGraph(
   edges: GraphEdge[],
   rootDir: string,
   startTime: number,
-  gitResult: GitAnalysisResult | null
+  gitResult: GitAnalysisResult | null,
+  extras: { dirtyFiles?: string[]; unresolvedImporters?: Iterable<string> } = {}
 ): KnowledgeGraph {
   const counters: Record<string, number> = {}
   for (const edge of edges) {
@@ -210,6 +220,9 @@ function assembleGraph(
 
   const graph: KnowledgeGraph = { version: '1.0.0', metadata, nodes, edges }
   if (gitResult?.isGitRepo) graph.coChange = gitResult.coChange
+  if (extras.dirtyFiles && extras.dirtyFiles.length > 0) metadata.dirtyFiles = extras.dirtyFiles
+  const unresolved = [...(extras.unresolvedImporters ?? [])].filter((f) => f in nodes).sort()
+  if (unresolved.length > 0) graph.unresolvedImporters = unresolved
   return graph
 }
 
@@ -292,7 +305,10 @@ export async function buildKnowledgeGraph(options: BuildOptions): Promise<BuildR
   }
 
   // Phase 5: Calculate metadata
-  const graph = assembleGraph(nodes, edges, rootDir, startTime, gitResult)
+  const graph = assembleGraph(nodes, edges, rootDir, startTime, gitResult, {
+    dirtyFiles: gitResult?.isGitRepo ? await getDirtyFiles(rootDir) : undefined,
+    unresolvedImporters: analyzed.unresolvedImporters,
+  })
 
   onProgress?.('Complete', 1, 1)
 
@@ -348,6 +364,11 @@ export async function updateGraphIncremental(
   for (const edge of existingGraph.edges) {
     if (edge.type === 'imports' && changed.has(edge.target)) changed.add(edge.source)
   }
+  // A new file may be the target an existing import was waiting for
+  const knownFiles = new Set(Object.values(existingGraph.nodes).map((n) => n.filePath))
+  if ([...changed].some((f) => !knownFiles.has(f))) {
+    for (const importer of existingGraph.unresolvedImporters ?? []) changed.add(importer)
+  }
 
   // Drop everything owned by a changed file
   const nodes: Record<string, GraphNode> = {}
@@ -369,7 +390,10 @@ export async function updateGraphIncremental(
       ? getSourceFiles(
           project,
           rootDir,
-          [...changed].map((f) => fg.escapePath(f.split(path.sep).join('/')))
+          [...changed]
+            // Same extensions a full scan globs for; README.md and friends never become nodes
+            .filter((f) => SOURCE_FILE.test(f))
+            .map((f) => fg.escapePath(f.split(path.sep).join('/')))
         )
       : []
   const analyzed = analyzeFiles(sourceFiles, {
@@ -394,7 +418,13 @@ export async function updateGraphIncremental(
     applyGitHistory(nodes, gitResult)
   }
 
-  const graph = assembleGraph(nodes, edges, rootDir, startTime, gitResult)
+  const graph = assembleGraph(nodes, edges, rootDir, startTime, gitResult, {
+    dirtyFiles: gitResult?.isGitRepo ? await getDirtyFiles(rootDir) : undefined,
+    unresolvedImporters: [
+      ...(existingGraph.unresolvedImporters ?? []).filter((f) => !changed.has(f)),
+      ...analyzed.unresolvedImporters,
+    ],
+  })
   onProgress?.('Complete', 1, 1)
   return { graph, errors, warnings }
 }

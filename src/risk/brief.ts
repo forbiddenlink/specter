@@ -173,6 +173,14 @@ function distance(fromDir: string, to: string): number {
 }
 
 /**
+ * Strings that reach the agent's context are file paths and symbol names from the
+ * graph. Anything outside these character sets is dropped rather than quoted, so a
+ * hostile file name cannot carry sentences into the prompt.
+ */
+const SAFE_PATH = /^[\w@+\-./[\]()~]{1,200}$/
+const SAFE_SYMBOL = /^[\w$.#]{1,80}$/
+
+/**
  * The short brief an agent sees before editing, or null when nothing clears a
  * threshold. Plain text, at most a handful of lines.
  */
@@ -180,7 +188,9 @@ export function renderAgentBrief(
   brief: FileBrief,
   thresholds: BriefThresholds = DEFAULT_BRIEF_THRESHOLDS
 ): string | null {
-  if (!brief.inGraph) return null
+  if (!brief.inGraph || !SAFE_PATH.test(brief.file)) return null
+  const safeDependents = brief.dependents.filter((d) => SAFE_PATH.test(d))
+  const tests = brief.tests.filter((t) => SAFE_PATH.test(t))
 
   const lines: string[] = []
 
@@ -190,6 +200,7 @@ export function renderAgentBrief(
   const trusted = !measured || (accuracy?.precision ?? 0) >= thresholds.minCoChangePrecision
 
   const partners = (trusted ? brief.coChange : [])
+    .filter((p) => SAFE_PATH.test(p.file))
     .filter((p) => p.shared >= thresholds.minShared && p.confidence >= thresholds.minConfidence)
     // Partners with no import link are the ones an agent cannot discover by reading code
     .sort((a, b) => Number(a.linked) - Number(b.linked) || b.confidence - a.confidence)
@@ -209,7 +220,7 @@ export function renderAgentBrief(
   }
 
   if (brief.dependents.length >= thresholds.minDependents) {
-    const sample = brief.dependents.slice(0, 3).join(', ')
+    const sample = safeDependents.slice(0, 3).join(', ')
     lines.push(
       `Imported by ${brief.dependents.length} files (${sample}${brief.dependents.length > 3 ? ', ...' : ''}). Keep its exports compatible.`
     )
@@ -222,14 +233,14 @@ export function renderAgentBrief(
   if (isHotspot) {
     const top = Math.max(1, Math.round((1 - (brief.hotspotPercentile ?? 0)) * 100))
     lines.push(
-      `Hotspot: top ${top}% by complexity x churn (complexity ${brief.maxComplexity}${brief.complexSymbol ? ` in ${brief.complexSymbol}` : ''}, ${brief.churn} commits). Prefer small, contained edits.`
+      `Hotspot: top ${top}% by complexity x churn (complexity ${brief.maxComplexity}${brief.complexSymbol && SAFE_SYMBOL.test(brief.complexSymbol) ? ` in ${brief.complexSymbol}` : ''}, ${brief.churn} commits). Prefer small, contained edits.`
     )
   }
 
   if (lines.length === 0) return null
 
-  if (brief.tests.length > 0) {
-    lines.push(`Tests: ${brief.tests.join(', ')}`)
+  if (tests.length > 0) {
+    lines.push(`Tests: ${tests.join(', ')}`)
   }
 
   return [`Specter change-risk brief for ${brief.file}:`, ...lines.map((l) => `- ${l}`)].join('\n')

@@ -44,7 +44,12 @@ const NOISE_FILE =
  */
 export async function readGitLog(git: SimpleGit, maxCommits: number): Promise<string> {
   return git.raw([
+    // Literal UTF-8 paths instead of "\303\251"-style quoting
+    '-c',
+    'core.quotePath=false',
     'log',
+    // A user's diff.relative=true would make paths subdirectory-relative; callers strip the prefix themselves
+    '--no-relative',
     '--no-merges',
     '--no-renames',
     `--max-count=${maxCommits}`,
@@ -71,7 +76,7 @@ export function parseGitLog(raw: string): MinedCommit[] {
       email: email ?? '',
       date,
       subject: subject ?? '',
-      files: fileLines.map((f) => f.trim()).filter(Boolean),
+      files: fileLines.map((f) => f.replace(/\r$/, '')).filter(Boolean),
     })
   }
 

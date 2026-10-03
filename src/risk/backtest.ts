@@ -86,7 +86,8 @@ export function runCoChangeBacktest(
   }))
 
   chronological.forEach((files, index) => {
-    if (index >= evalStart && files.length >= 2) {
+    // Single-file commits count too: a partner predicted for a file edited alone was wrong
+    if (index >= evalStart) {
       for (const file of files) {
         const total = commitCount.get(file) ?? 0
         const partners = pairCount.get(file)

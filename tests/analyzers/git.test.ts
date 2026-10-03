@@ -275,7 +275,9 @@ describe('Git Analyzer', () => {
       const F = '\x1f'
       mockGit.status.mockResolvedValue({ current: 'main' })
       mockGit.log.mockResolvedValue({ latest: { date: '2024-01-15T10:00:00Z' }, total: 1, all: [] })
-      mockGit.raw.mockImplementation((args: string[]) => {
+      mockGit.raw.mockImplementation((rawArgs: string[]) => {
+        // Drop leading `-c key=value` config pairs
+        const args = rawArgs[0] === '-c' ? rawArgs.slice(2) : rawArgs
         switch (args[0]) {
           case 'shortlog':
             return Promise.resolve('  10\tAlice\n')

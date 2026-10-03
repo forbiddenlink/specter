@@ -12,6 +12,35 @@ const FULL_RESCAN_TRIGGERS = /(^|\/)(tsconfig[^/]*\.json|jsconfig\.json|package\
 const MAX_INCREMENTAL_SHARE = 0.4
 
 /**
+ * Uncommitted and untracked files right now (relative to rootDir). Recorded with each
+ * scan so the next incremental scan re-checks them even if they were reverted.
+ */
+export async function getDirtyFiles(rootDir: string): Promise<string[]> {
+  try {
+    const git = simpleGit(rootDir)
+    const tracked = await git.raw([
+      '-c',
+      'core.quotePath=false',
+      'diff',
+      '--name-only',
+      '--no-renames',
+      '--relative',
+      'HEAD',
+    ])
+    const untracked = await git.raw([
+      '-c',
+      'core.quotePath=false',
+      'ls-files',
+      '--others',
+      '--exclude-standard',
+    ])
+    return [...new Set([...tracked.split('\n'), ...untracked.split('\n')])].filter(Boolean)
+  } catch {
+    return []
+  }
+}
+
+/**
  * Files (relative to rootDir) that changed since the graph was built: commits since
  * `metadata.headCommit`, uncommitted edits, and untracked files.
  *
@@ -26,15 +55,34 @@ export async function getChangedFiles(
   const since = graph.metadata.headCommit
   if (!since) return null
 
-  const git = simpleGit(rootDir)
   try {
+    const git = simpleGit(rootDir)
     await git.raw(['cat-file', '-e', `${since}^{commit}`])
     // Commit vs working tree: covers new commits and uncommitted edits in one call
-    const diff = await git.raw(['diff', '--name-only', '--no-renames', '--relative', since])
-    const untracked = await git.raw(['ls-files', '--others', '--exclude-standard'])
+    const diff = await git.raw([
+      '-c',
+      'core.quotePath=false',
+      'diff',
+      '--name-only',
+      '--no-renames',
+      '--relative',
+      since,
+    ])
+    const untracked = await git.raw([
+      '-c',
+      'core.quotePath=false',
+      'ls-files',
+      '--others',
+      '--exclude-standard',
+    ])
 
+    // Files dirty at the last scan: if they were reverted since, the diff alone would miss them
     const changed = [
-      ...new Set([...diff.split('\n'), ...untracked.split('\n')].map((f) => f.trim())),
+      ...new Set([
+        ...diff.split('\n'),
+        ...untracked.split('\n'),
+        ...(graph.metadata.dirtyFiles ?? []),
+      ]),
     ].filter(Boolean)
 
     if (changed.some((f) => FULL_RESCAN_TRIGGERS.test(f))) return null

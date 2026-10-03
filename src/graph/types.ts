@@ -76,6 +76,8 @@ export interface GraphMetadata {
   headCommit?: string
   /** Distinct authors in the mined history window (1 = solo project) */
   authorCount?: number
+  /** Uncommitted/untracked files at scan time; rechecked next scan in case they were reverted */
+  dirtyFiles?: string[]
   /** Backtested co-change hit rate on this repo at the brief's thresholds */
   coChangeAccuracy?: { precision: number; predictions: number }
 }
@@ -96,6 +98,8 @@ export interface KnowledgeGraph {
   edges: GraphEdge[]
   /** Change coupling per file path (absent on graphs built before 1.3) */
   coChange?: Record<string, CoChangePartner[]>
+  /** Files with a relative import that resolved to nothing; re-analyzed when files are added */
+  unresolvedImporters?: string[]
 }
 
 export interface ComplexityHotspot {
