@@ -135,7 +135,7 @@ export function createImportResolver(rootDir: string): ImportResolver {
       if (specifier.length < alias.prefix.length + alias.suffix.length) continue
       const wildcard = specifier.slice(alias.prefix.length, specifier.length - alias.suffix.length)
       for (const target of alias.targets) {
-        const hit = probe(target.replace('*', wildcard))
+        const hit = probe(target.replaceAll('*', wildcard))
         if (hit) return toRelative(hit)
       }
     }
