@@ -83,7 +83,12 @@ runs:
           -*|*[!A-Za-z0-9._/-]*|"") echo "::error::Invalid base-ref"; exit 1 ;;
         esac
         git fetch origin "$INPUT_BASE_REF" --depth=1
-        specter predict --branch "origin/$INPUT_BASE_REF" --json > /tmp/specter-predict.json
+        if specter predict --help | grep -q -- '--branch'; then
+          specter predict --branch "origin/$INPUT_BASE_REF" --json > /tmp/specter-predict.json
+        else
+          echo "::warning::Installed specter predates 'predict --branch'; analysing the working tree instead of the PR diff"
+          specter predict --json > /tmp/specter-predict.json
+        fi
         : > /tmp/specter-precommit.txt
 
         RISK_LEVEL=$(node -e "const d=require('/tmp/specter-predict.json'); console.log(d.data.summary.overallRisk)")
