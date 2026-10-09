@@ -65,6 +65,8 @@ runs:
       working-directory: ${{ inputs.scan-dir }}
       env:
         SPECTER_PERSONALITY: ${{ inputs.personality }}
+        INPUT_BASE_REF: ${{ inputs.base-ref }}
+        ACTION_PATH: ${{ github.action_path }}
       run: |
         # Generate JSON report for parsing
         specter report --json --quick > /tmp/specter-report.json
@@ -77,8 +79,11 @@ runs:
         " 2>/dev/null || echo "0")
 
         # Analyze the PR diff, not the runner's empty staging area
-        git fetch origin "${{ inputs.base-ref }}" --depth=1
-        specter predict --branch "origin/${{ inputs.base-ref }}" --json > /tmp/specter-predict.json
+        case "$INPUT_BASE_REF" in
+          -*|*[!A-Za-z0-9._/-]*|"") echo "::error::Invalid base-ref"; exit 1 ;;
+        esac
+        git fetch origin "$INPUT_BASE_REF" --depth=1
+        specter predict --branch "origin/$INPUT_BASE_REF" --json > /tmp/specter-predict.json
         : > /tmp/specter-precommit.txt
 
         RISK_LEVEL=$(node -e "const d=require('/tmp/specter-predict.json'); console.log(d.data.summary.overallRisk)")
@@ -90,7 +95,7 @@ runs:
         echo "review_minutes=${REVIEW_MINUTES}" >> $GITHUB_OUTPUT
 
         # Generate the PR comment markdown
-        node "${{ github.action_path }}/scripts/generate-pr-comment.cjs" \
+        node "$ACTION_PATH/scripts/generate-pr-comment.cjs" \
           --health-score "${HEALTH_SCORE}" \
           --risk-level "${RISK_LEVEL}" \
           --review-minutes "${REVIEW_MINUTES}" \
@@ -145,8 +150,9 @@ runs:
     - name: Check Risk Threshold
       if: inputs.fail-on-high-risk == 'true'
       shell: bash
+      env:
+        RISK_LEVEL: ${{ steps.analysis.outputs.risk_level }}
       run: |
-        RISK_LEVEL="${{ steps.analysis.outputs.risk_level }}"
         if [ "$RISK_LEVEL" = "critical" ] || [ "$RISK_LEVEL" = "high" ]; then
           echo "::error::High-risk changes detected (risk level: $RISK_LEVEL)"
           exit 1
