@@ -161,6 +161,20 @@ export async function isGraphStale(rootDir: string): Promise<boolean> {
 
   try {
     const files = await getSourceFilePaths(rootDir)
+    const graph = await loadGraph(rootDir)
+
+    if (!graph) {
+      return true
+    }
+
+    const currentFiles = new Set(files)
+    const scannedFiles = Object.values(graph.nodes)
+      .filter((node) => node.type === 'file')
+      .map((node) => node.filePath)
+
+    if (scannedFiles.some((file) => !currentFiles.has(file))) {
+      return true
+    }
 
     for (const file of files) {
       const stats = await fs.stat(path.join(rootDir, file))

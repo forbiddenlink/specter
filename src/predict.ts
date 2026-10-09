@@ -7,6 +7,7 @@
 
 import { type SimpleGit, simpleGit } from 'simple-git'
 import type { GraphNode, KnowledgeGraph } from './graph/types.js'
+import { getBranchChanges } from './risk/diff-analyzer.js'
 
 export interface StagedFile {
   path: string
@@ -37,6 +38,10 @@ export interface PredictionResult {
   }
   warnings: string[]
   recommendations: string[]
+}
+
+export interface PredictionOptions {
+  baseBranch?: string
 }
 
 /**
@@ -217,12 +222,21 @@ function estimateReviewTime(file: StagedFile, riskScore: number): number {
  */
 export async function generatePrediction(
   rootDir: string,
-  graph: KnowledgeGraph
+  graph: KnowledgeGraph,
+  options: PredictionOptions = {}
 ): Promise<PredictionResult> {
   const git: SimpleGit = simpleGit(rootDir)
 
-  // Get staged files
-  const staged = await getStagedFiles(git)
+  const staged = options.baseBranch
+    ? await getBranchChanges(rootDir, options.baseBranch).then((files) =>
+        files.map((file) => ({
+          path: file.filePath,
+          status: file.status,
+          additions: file.additions,
+          deletions: file.deletions,
+        }))
+      )
+    : await getStagedFiles(git)
 
   if (staged.length === 0) {
     return {
@@ -236,7 +250,11 @@ export async function generatePrediction(
         estimatedReviewMinutes: 0,
         reviewerCount: 1,
       },
-      warnings: ['No staged changes found. Stage some files with `git add` first.'],
+      warnings: [
+        options.baseBranch
+          ? `No changes found compared with ${options.baseBranch}.`
+          : 'No staged changes found. Stage some files with `git add` first.',
+      ],
       recommendations: [],
     }
   }

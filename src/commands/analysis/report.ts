@@ -27,12 +27,12 @@ export function register(program: Command): void {
       const rootDir = path.resolve(options.dir)
       const fs = await import('node:fs/promises')
 
-      const spinner = createSpinner('Generating comprehensive report...')
-      spinner.start()
+      const spinner = options.json ? null : createSpinner('Generating comprehensive report...')
+      spinner?.start()
 
       const graph = await ensureGraph(rootDir, { json: options.json })
       if (!graph) {
-        spinner.stop()
+        spinner?.stop()
         return
       }
 
@@ -49,7 +49,7 @@ export function register(program: Command): void {
         }
 
         const result = await generateReport(rootDir, graph, reportOptions)
-        spinner.stop()
+        spinner?.stop()
 
         // Output or save the report
         if (options.output) {
@@ -78,7 +78,7 @@ export function register(program: Command): void {
           }
         }
       } catch (error) {
-        spinner.fail('Failed to generate report')
+        spinner?.fail('Failed to generate report')
         console.error(chalk.red(error instanceof Error ? error.message : String(error)))
       }
     })

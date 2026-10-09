@@ -12,6 +12,9 @@ inputs:
   scan-dir:
     description: 'Directory to scan'
     default: '.'
+  base-ref:
+    description: 'Base branch used to calculate the pull request diff'
+    default: 'main'
   personality:
     description: 'Personality mode (default, noir, therapist, roast)'
     default: 'default'
@@ -53,7 +56,7 @@ runs:
       working-directory: ${{ inputs.scan-dir }}
       run: |
         echo "Scanning codebase..."
-        specter scan --quiet || true
+        specter scan --quiet
         echo "Scan complete"
 
     - name: Generate PR Analysis
@@ -64,7 +67,7 @@ runs:
         SPECTER_PERSONALITY: ${{ inputs.personality }}
       run: |
         # Generate JSON report for parsing
-        specter report --format json --quick > /tmp/specter-report.json 2>/dev/null || echo '{}' > /tmp/specter-report.json
+        specter report --json --quick > /tmp/specter-report.json
 
         # Extract metrics from report
         HEALTH_SCORE=$(cat /tmp/specter-report.json | node -e "
@@ -73,17 +76,13 @@ runs:
           console.log(data.health?.score || 0);
         " 2>/dev/null || echo "0")
 
-        # Run precommit check on changed files
-        specter precommit > /tmp/specter-precommit.txt 2>/dev/null || true
+        # Analyze the PR diff, not the runner's empty staging area
+        git fetch origin "${{ inputs.base-ref }}" --depth=1
+        specter predict --branch "origin/${{ inputs.base-ref }}" --json > /tmp/specter-predict.json
+        : > /tmp/specter-precommit.txt
 
-        # Run predict for PR impact
-        specter predict > /tmp/specter-predict.txt 2>/dev/null || true
-
-        # Parse risk level from predict output
-        RISK_LEVEL=$(grep -i "overall risk" /tmp/specter-predict.txt | grep -oE "(low|medium|high|critical)" | head -1 || echo "low")
-
-        # Parse review minutes
-        REVIEW_MINUTES=$(grep -i "review time" /tmp/specter-predict.txt | grep -oE "[0-9]+" | head -1 || echo "5")
+        RISK_LEVEL=$(node -e "const d=require('/tmp/specter-predict.json'); console.log(d.data.summary.overallRisk)")
+        REVIEW_MINUTES=$(node -e "const d=require('/tmp/specter-predict.json'); console.log(d.data.summary.estimatedReviewMinutes)")
 
         # Set outputs
         echo "health_score=${HEALTH_SCORE}" >> $GITHUB_OUTPUT
@@ -96,7 +95,7 @@ runs:
           --risk-level "${RISK_LEVEL}" \
           --review-minutes "${REVIEW_MINUTES}" \
           --precommit-file /tmp/specter-precommit.txt \
-          --predict-file /tmp/specter-predict.txt \
+          --predict-file /tmp/specter-predict.json \
           --report-file /tmp/specter-report.json \
           > /tmp/specter-comment.md
 

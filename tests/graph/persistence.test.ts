@@ -255,6 +255,28 @@ describe('Graph Persistence', () => {
     })
   })
 
+  describe('isGraphStale', () => {
+    it('marks the graph stale when a scanned source file was deleted', async () => {
+      const sourceDir = path.join(tempDir, 'src')
+      const sourcePath = path.join(sourceDir, 'test.ts')
+      await fs.mkdir(sourceDir, { recursive: true })
+      await fs.writeFile(sourcePath, 'export const value = 1\n', 'utf-8')
+      await saveGraph(
+        createMockGraph({
+          metadata: {
+            ...createMockGraph().metadata,
+            scannedAt: new Date(Date.now() + 1000).toISOString(),
+          },
+        }),
+        tempDir
+      )
+
+      await fs.unlink(sourcePath)
+
+      await expect(isGraphStale(tempDir)).resolves.toBe(true)
+    })
+  })
+
   describe('loadMetadata', () => {
     it('should load only metadata for quick access', async () => {
       const graph = createMockGraph({
