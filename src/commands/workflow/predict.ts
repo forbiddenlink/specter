@@ -15,6 +15,7 @@ export function register(program: Command): void {
     .command('predict')
     .description('Predict impact of staged changes before creating a PR')
     .option('-d, --dir <path>', 'Directory to analyze', '.')
+    .option('-b, --branch <branch>', 'Compare the current branch against a base branch')
     .option('--json', 'Output as JSON for CI/CD integration')
     .action(async (options) => {
       const rootDir = path.resolve(options.dir)
@@ -32,7 +33,7 @@ export function register(program: Command): void {
         return
       }
 
-      const prediction = await generatePrediction(rootDir, graph)
+      const prediction = await generatePrediction(rootDir, graph, { baseBranch: options.branch })
       spinner?.stop()
 
       // JSON output for CI/CD

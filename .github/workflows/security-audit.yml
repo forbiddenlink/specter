@@ -12,26 +12,28 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+
       - name: Setup Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: '20'
-          cache: 'npm'
+          cache: 'pnpm'
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
-      - name: Run npm audit
-        run: npm audit --audit-level=moderate
+      - name: Run pnpm audit
+        run: pnpm audit --audit-level=moderate
         continue-on-error: true
 
-      - name: Run npm audit (JSON output)
-        run: npm audit --json > audit-report.json || true
+      - name: Run pnpm audit (JSON output)
+        run: pnpm audit --json > audit-report.json || true
 
       - name: Check for vulnerabilities
         id: audit-check
         run: |
-          VULNS=$(npm audit --json 2>/dev/null | jq '.metadata.vulnerabilities.total // 0')
+          VULNS=$(jq 'if .metadata.vulnerabilities then (.metadata.vulnerabilities.high + .metadata.vulnerabilities.critical) else [.advisories // {} | to_entries[] | select(.value.severity == "high" or .value.severity == "critical")] | length end' audit-report.json)
           echo "vulnerabilities=$VULNS" >> $GITHUB_OUTPUT
           if [ "$VULNS" -gt 0 ]; then
             echo "::warning::Found $VULNS vulnerabilities"
@@ -52,7 +54,14 @@ jobs:
           script: |
             const fs = require('fs');
             const report = JSON.parse(fs.readFileSync('audit-report.json', 'utf8'));
-            const vulns = report.metadata?.vulnerabilities || {};
+            const vulns = report.metadata?.vulnerabilities || Object.values(report.advisories || {}).reduce(
+              (counts, advisory) => {
+                counts[advisory.severity] = (counts[advisory.severity] || 0) + 1;
+                counts.total += 1;
+                return counts;
+              },
+              { critical: 0, high: 0, moderate: 0, low: 0, total: 0 }
+            );
 
             const body = `## Monthly Security Audit Report
 
@@ -66,7 +75,7 @@ jobs:
 
             ### Next Steps
             1. Review the audit report artifact
-            2. Run \`npm audit fix\` locally
+            2. Run \`pnpm audit\` locally
             3. Update dependencies as needed
 
             ---

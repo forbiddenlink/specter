@@ -9,27 +9,27 @@
 
 <p align="center">
   <strong>Give your codebase a voice.</strong><br/>
-  A code intelligence CLI that speaks <em>as</em> your codebase in first person.<br/>
-  <strong>74 commands. 14 MCP tools. 19 personality modes. 1 ghost in your git history.</strong>
+  A local code-intelligence CLI for understanding change impact and prioritizing refactors.<br/>
+  <strong>74 commands. 14 MCP tools. 19 personality modes. 1 graph built from your code and git history.</strong>
 </p>
 
 ---
 
 ## What Makes Specter Different?
 
-Traditional analysis tools show metrics without meaning. Specter **connects the dots**:
+Specter combines source relationships with git history to make change risk and refactoring priorities actionable:
 
 | The Problem | Specter's Answer |
 |-------------|------------------|
 | "Cyclomatic complexity: 45" | **Where** the hotspots are + **why** they matter |
-| "Tech debt exists" | **$510k** annual maintenance burden (your hourly rate) |
+| "Tech debt exists" | Prioritized hotspots based on complexity and change frequency |
 | "Bus factor: 1" | **Who** owns what + **what breaks** if they leave |
-| Numbers without context | AI-powered explanations in 19 personality modes |
+| Numbers without context | Evidence an AI coding assistant can use to explain risk |
 
 ```bash
 # Install and get started in 30 seconds
 npm install -g @purplegumdropz/specter
-specter scan && specter health
+specter scan && specter next
 
 # Or try without installing
 npx @purplegumdropz/specter-roast
@@ -315,7 +315,7 @@ Specter creates a `.specter/` directory (auto-added to `.gitignore`):
 - **Git repository** (optional, for history features)
 - **~50MB disk** for typical projects
 
-No external services. No telemetry. Your data stays on your machine.
+Your source graph and git analysis stay on your machine. Specter only exports telemetry when you explicitly configure an OTLP endpoint; AI commands require the provider credentials you choose to set.
 
 ---
 

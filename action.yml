@@ -12,6 +12,9 @@ inputs:
   scan-dir:
     description: 'Directory to scan'
     default: '.'
+  base-ref:
+    description: 'Base branch used to calculate the pull request diff'
+    default: 'main'
   personality:
     description: 'Personality mode (default, noir, therapist, roast)'
     default: 'default'
@@ -53,7 +56,7 @@ runs:
       working-directory: ${{ inputs.scan-dir }}
       run: |
         echo "Scanning codebase..."
-        specter scan --quiet || true
+        specter scan --quiet
         echo "Scan complete"
 
     - name: Generate PR Analysis
@@ -62,9 +65,11 @@ runs:
       working-directory: ${{ inputs.scan-dir }}
       env:
         SPECTER_PERSONALITY: ${{ inputs.personality }}
+        INPUT_BASE_REF: ${{ inputs.base-ref }}
+        ACTION_PATH: ${{ github.action_path }}
       run: |
         # Generate JSON report for parsing
-        specter report --format json --quick > /tmp/specter-report.json 2>/dev/null || echo '{}' > /tmp/specter-report.json
+        specter report --json --quick > /tmp/specter-report.json
 
         # Extract metrics from report
         HEALTH_SCORE=$(cat /tmp/specter-report.json | node -e "
@@ -73,17 +78,21 @@ runs:
           console.log(data.health?.score || 0);
         " 2>/dev/null || echo "0")
 
-        # Run precommit check on changed files
-        specter precommit > /tmp/specter-precommit.txt 2>/dev/null || true
+        # Analyze the PR diff, not the runner's empty staging area
+        case "$INPUT_BASE_REF" in
+          -*|*[!A-Za-z0-9._/-]*|"") echo "::error::Invalid base-ref"; exit 1 ;;
+        esac
+        git fetch origin "$INPUT_BASE_REF" --depth=1
+        if specter predict --help | grep -q -- '--branch'; then
+          specter predict --branch "origin/$INPUT_BASE_REF" --json > /tmp/specter-predict.json
+        else
+          echo "::warning::Installed specter predates 'predict --branch'; analysing the working tree instead of the PR diff"
+          specter predict --json > /tmp/specter-predict.json
+        fi
+        : > /tmp/specter-precommit.txt
 
-        # Run predict for PR impact
-        specter predict > /tmp/specter-predict.txt 2>/dev/null || true
-
-        # Parse risk level from predict output
-        RISK_LEVEL=$(grep -i "overall risk" /tmp/specter-predict.txt | grep -oE "(low|medium|high|critical)" | head -1 || echo "low")
-
-        # Parse review minutes
-        REVIEW_MINUTES=$(grep -i "review time" /tmp/specter-predict.txt | grep -oE "[0-9]+" | head -1 || echo "5")
+        RISK_LEVEL=$(node -e "const d=require('/tmp/specter-predict.json'); console.log(d.data.summary.overallRisk)")
+        REVIEW_MINUTES=$(node -e "const d=require('/tmp/specter-predict.json'); console.log(d.data.summary.estimatedReviewMinutes)")
 
         # Set outputs
         echo "health_score=${HEALTH_SCORE}" >> $GITHUB_OUTPUT
@@ -91,12 +100,12 @@ runs:
         echo "review_minutes=${REVIEW_MINUTES}" >> $GITHUB_OUTPUT
 
         # Generate the PR comment markdown
-        node "${{ github.action_path }}/scripts/generate-pr-comment.cjs" \
+        node "$ACTION_PATH/scripts/generate-pr-comment.cjs" \
           --health-score "${HEALTH_SCORE}" \
           --risk-level "${RISK_LEVEL}" \
           --review-minutes "${REVIEW_MINUTES}" \
           --precommit-file /tmp/specter-precommit.txt \
-          --predict-file /tmp/specter-predict.txt \
+          --predict-file /tmp/specter-predict.json \
           --report-file /tmp/specter-report.json \
           > /tmp/specter-comment.md
 
@@ -146,8 +155,9 @@ runs:
     - name: Check Risk Threshold
       if: inputs.fail-on-high-risk == 'true'
       shell: bash
+      env:
+        RISK_LEVEL: ${{ steps.analysis.outputs.risk_level }}
       run: |
-        RISK_LEVEL="${{ steps.analysis.outputs.risk_level }}"
         if [ "$RISK_LEVEL" = "critical" ] || [ "$RISK_LEVEL" = "high" ]; then
           echo "::error::High-risk changes detected (risk level: $RISK_LEVEL)"
           exit 1

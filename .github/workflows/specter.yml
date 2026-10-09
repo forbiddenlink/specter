@@ -28,6 +28,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           scan-dir: '.'
+          base-ref: ${{ github.base_ref }}
           personality: 'default'
           comment-on-pr: 'true'
           # Uncomment to fail on high-risk changes:

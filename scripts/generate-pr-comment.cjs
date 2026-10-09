@@ -139,6 +139,14 @@ function parsePredictOutput(content) {
 
   if (!content) return { recommendations, warnings }
 
+  const json = parseJsonSafe(content)
+  if (json?.data) {
+    return {
+      recommendations: json.data.recommendations || [],
+      warnings: json.data.warnings || [],
+    }
+  }
+
   const lines = content.split('\n')
   let inRecommendations = false
   let inWarnings = false
@@ -178,6 +186,11 @@ function parsePredictOutput(content) {
 function getChangedFilesCount(content) {
   if (!content) return 0
 
+  const json = parseJsonSafe(content)
+  if (json?.data?.summary?.totalFiles !== undefined) {
+    return json.data.summary.totalFiles
+  }
+
   const match = content.match(/Files changed:\s*(\d+)/i)
   if (match) {
     return parseInt(match[1], 10)
@@ -195,7 +208,14 @@ function generateComment(args) {
   const reportContent = readFileSafe(args.reportFile)
   const report = parseJsonSafe(reportContent)
 
-  const fileRisks = parsePrecommitOutput(precommitContent)
+  const predict = parseJsonSafe(predictContent)
+  const fileRisks =
+    parsePrecommitOutput(precommitContent).length > 0
+      ? parsePrecommitOutput(precommitContent)
+      : (predict?.data?.impacts || []).map((impact) => ({
+          path: impact.path,
+          risk: impact.riskScore >= 60 ? 'high' : impact.riskScore >= 40 ? 'medium' : 'low',
+        }))
   const { recommendations, warnings } = parsePredictOutput(predictContent)
   const changedFiles = getChangedFilesCount(predictContent)
 
