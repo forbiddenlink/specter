@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Ally accessibility scan
         continue-on-error: true
-        uses: forbiddenlink/ally@c9a96e499b72798a641100d3a04e08e185d68270 # main
+        uses: forbiddenlink/ally@4c9f08d7481b6942a6e3c206f8a691e3f2160a8f # main
         with:
           path: "."
           threshold: "9999"
@@ -24,7 +24,7 @@ jobs:
           output: ".ally"
       - name: Upload report
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: ally-a11y-report
           path: ".ally/**"
