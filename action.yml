@@ -89,8 +89,10 @@ runs:
         if specter predict --help | grep -q -- '--branch'; then
           specter predict --branch "origin/$INPUT_BASE_REF" --json > /tmp/specter-predict.json
         else
-          echo "::warning::Installed specter predates 'predict --branch'; analysing the working tree instead of the PR diff"
-          specter predict --json > /tmp/specter-predict.json
+          # The working tree has nothing staged in CI, so analysing it reports "low" for every
+          # PR. Report the risk as unknown instead of a low score that was never computed.
+          echo "::warning::Installed specter predates 'predict --branch'; PR risk was not analysed"
+          printf '%s\n' '{"data":{"summary":{"overallRisk":"unknown","estimatedReviewMinutes":0},"warnings":["PR risk not analysed: the installed specter predates predict --branch."],"recommendations":[]}}' > /tmp/specter-predict.json
         fi
         : > /tmp/specter-precommit.txt
 
@@ -165,4 +167,9 @@ runs:
           echo "::error::High-risk changes detected (risk level: $RISK_LEVEL)"
           exit 1
         fi
+        # A gate that was asked for must not pass a PR it could not analyse.
+        case "$RISK_LEVEL" in
+          low|medium) ;;
+          *) echo "::error::PR risk could not be determined (risk level: ${RISK_LEVEL:-empty})"; exit 1 ;;
+        esac
         echo "Risk level acceptable: $RISK_LEVEL"
