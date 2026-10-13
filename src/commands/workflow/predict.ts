@@ -33,7 +33,19 @@ export function register(program: Command): void {
         return
       }
 
-      const prediction = await generatePrediction(rootDir, graph, { baseBranch: options.branch })
+      let prediction: Awaited<ReturnType<typeof generatePrediction>>
+      try {
+        prediction = await generatePrediction(rootDir, graph, { baseBranch: options.branch })
+      } catch (error) {
+        // Fail closed: an unreadable diff must not look like a low-risk PR
+        const message = `Could not compute changes: ${error instanceof Error ? error.message : String(error)}`
+        spinner?.fail(message)
+        if (options.json) {
+          outputJsonError('predict', message)
+        }
+        process.exitCode = 1
+        return
+      }
       spinner?.stop()
 
       // JSON output for CI/CD
