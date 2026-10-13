@@ -7,7 +7,7 @@
 
 import { type SimpleGit, simpleGit } from 'simple-git'
 import type { GraphNode, KnowledgeGraph } from './graph/types.js'
-import { getBranchChanges } from './risk/diff-analyzer.js'
+import { getBranchChangesOrThrow } from './risk/diff-analyzer.js'
 
 export interface StagedFile {
   path: string
@@ -228,7 +228,7 @@ export async function generatePrediction(
   const git: SimpleGit = simpleGit(rootDir)
 
   const staged = options.baseBranch
-    ? await getBranchChanges(rootDir, options.baseBranch).then((files) =>
+    ? await getBranchChangesOrThrow(rootDir, options.baseBranch).then((files) =>
         files.map((file) => ({
           path: file.filePath,
           status: file.status,
