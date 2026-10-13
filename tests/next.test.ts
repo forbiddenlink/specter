@@ -325,7 +325,7 @@ describe('formatNext', () => {
       dependents: 8,
       busFactor: 1,
       impactScore: 0.95,
-      estimatedCostSavings: 37500,
+      maintenanceImpact: 375,
     }
 
     const result = formatNext([suggestion])
@@ -335,7 +335,8 @@ describe('formatNext', () => {
     expect(result).toContain('15')
     expect(result).toContain('1')
     expect(result).toContain('8')
-    expect(result).toContain('$37,500')
+    expect(result).toContain('Maintenance impact: 375')
+    expect(result).toContain('not a cost estimate')
   })
 
   it('gives first suggestion detailed view and rest summary lines', () => {
@@ -347,7 +348,7 @@ describe('formatNext', () => {
         dependents: 10,
         busFactor: 1,
         impactScore: 0.98,
-        estimatedCostSavings: 60000,
+        maintenanceImpact: 600,
       },
       {
         file: 'src/second.ts',
@@ -356,7 +357,7 @@ describe('formatNext', () => {
         dependents: 5,
         busFactor: 2,
         impactScore: 0.7,
-        estimatedCostSavings: 15000,
+        maintenanceImpact: 150,
       },
     ]
 

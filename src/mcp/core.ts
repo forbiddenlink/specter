@@ -5,13 +5,16 @@
  * graph caching, error handling, and timeout management.
  */
 
-import { loadGraph } from '../graph/persistence.js'
+import { isGraphStale, loadGraph } from '../graph/persistence.js'
 import type { KnowledgeGraph } from '../graph/types.js'
 import { logger } from '../lib/logger.js'
 
 // Global graph cache
 let cachedGraph: KnowledgeGraph | null = null
 let graphLoadError: string | null = null
+let lastFreshnessCheckAt = 0
+
+const FRESHNESS_CHECK_INTERVAL_MS = 1000
 
 // Error tracking for monitoring
 interface ErrorMetrics {
@@ -42,11 +45,19 @@ export function logError(toolName: string, error: Error): void {
  * Get or load the knowledge graph with enhanced error handling
  */
 export async function getGraph(): Promise<KnowledgeGraph> {
+  const cwd = process.cwd()
+
+  if (!cachedGraph || Date.now() - lastFreshnessCheckAt >= FRESHNESS_CHECK_INTERVAL_MS) {
+    if (await isGraphStale(cwd)) {
+      clearGraphCache()
+      throw new Error("Knowledge graph is stale. Run 'specter scan' before requesting analysis.")
+    }
+    lastFreshnessCheckAt = Date.now()
+  }
+
   if (cachedGraph) {
     return cachedGraph
   }
-
-  const cwd = process.cwd()
 
   try {
     const graph = await loadGraph(cwd)
@@ -100,4 +111,5 @@ export function getErrorMetrics(): ErrorMetrics {
 export function clearGraphCache(): void {
   cachedGraph = null
   graphLoadError = null
+  lastFreshnessCheckAt = 0
 }

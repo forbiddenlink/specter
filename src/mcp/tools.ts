@@ -232,7 +232,7 @@ export function registerTools(server: McpServer): void {
       const graph = await getGraph()
       const result = await getImpactAnalysis.execute(graph, args)
       return {
-        content: [{ type: 'text', text: result.summary }],
+        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
       }
     }
   )

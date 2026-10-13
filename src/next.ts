@@ -12,7 +12,8 @@ export interface NextSuggestion {
   dependents: number
   busFactor: number
   impactScore: number
-  estimatedCostSavings: number
+  /** Relative maintenance burden, not a financial estimate. */
+  maintenanceImpact: number
 }
 
 export function analyzeNext(
@@ -74,8 +75,7 @@ export function analyzeNext(
 
     const impactScore = normComplexity * 0.3 + normChurn * 0.25 + normDeps * 0.25 + busFrisk * 0.2
 
-    // Rough cost estimate: complexity * churn * $50/hr developer rate * 2hrs/fix
-    const estimatedCostSavings = Math.round(metrics.complexity * Math.max(metrics.churn, 1) * 100)
+    const maintenanceImpact = Math.round(metrics.complexity * Math.max(metrics.churn, 1))
 
     suggestions.push({
       file,
@@ -84,7 +84,7 @@ export function analyzeNext(
       dependents: metrics.dependents,
       busFactor: metrics.busFactor,
       impactScore,
-      estimatedCostSavings,
+      maintenanceImpact,
     })
   }
 
@@ -120,7 +120,10 @@ export function formatNext(suggestions: NextSuggestion[]): string {
       lines.push(`    Dependents:  ${chalk.yellow(String(s.dependents))} files import this`)
       lines.push('')
       lines.push(
-        `  ${chalk.bold('Impact:')} Fixing this saves ~${chalk.green(`$${s.estimatedCostSavings.toLocaleString()}`)}/year in maintenance`
+        `  ${chalk.bold('Maintenance impact:')} ${chalk.green(String(s.maintenanceImpact))}`
+      )
+      lines.push(
+        chalk.dim('  Relative score based on complexity and change frequency; not a cost estimate.')
       )
       lines.push('')
       lines.push(chalk.bold('  Get started:'))
@@ -134,7 +137,7 @@ export function formatNext(suggestions: NextSuggestion[]): string {
     } else {
       lines.push('')
       lines.push(
-        `  ${chalk.dim(`#${i + 1}`)} ${chalk.cyan(s.file)} — complexity ${s.complexity}, ${s.dependents} dependents, ~$${s.estimatedCostSavings.toLocaleString()}/yr`
+        `  ${chalk.dim(`#${i + 1}`)} ${chalk.cyan(s.file)} — complexity ${s.complexity}, ${s.dependents} dependents, impact ${s.maintenanceImpact}`
       )
     }
   }
