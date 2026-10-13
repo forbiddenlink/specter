@@ -99,7 +99,7 @@ Let AI assistants analyze your codebase directly:
 
 ```bash
 # Add to Copilot CLI
-copilot mcp add specter -- npx @purplegumdropz/specter-mcp
+copilot mcp add specter -- npx -y -p @purplegumdropz/specter specter-mcp
 
 # Then use natural language
 copilot -p "Use specter to find complexity hotspots"

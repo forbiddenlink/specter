@@ -19,20 +19,20 @@ Build or rebuild the knowledge graph for the current codebase.
 Execute the specter scan command:
 
 ```bash
-npx specter-mcp scan
+npx -y @purplegumdropz/specter scan
 ```
 
 Or with options:
 
 ```bash
 # Skip git history analysis (faster)
-npx specter-mcp scan --no-git
+npx -y @purplegumdropz/specter scan --no-git
 
 # Force rescan even if graph exists
-npx specter-mcp scan --force
+npx -y @purplegumdropz/specter scan --force
 
 # Scan a specific directory
-npx specter-mcp scan --dir ./packages/core
+npx -y @purplegumdropz/specter scan --dir ./packages/core
 ```
 
 ## What It Does

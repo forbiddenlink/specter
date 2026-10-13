@@ -17,14 +17,14 @@ Get a comprehensive health report for your codebase.
 ## How to Run
 
 ```bash
-npx specter-mcp health
+npx -y @purplegumdropz/specter health
 ```
 
 Or with options:
 
 ```bash
 # Show more hotspots
-npx specter-mcp health --limit 20
+npx -y @purplegumdropz/specter health --limit 20
 ```
 
 ## What It Shows
