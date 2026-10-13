@@ -82,6 +82,9 @@ runs:
         case "$INPUT_BASE_REF" in
           -*|*[!A-Za-z0-9._/-]*|"") echo "::error::Invalid base-ref"; exit 1 ;;
         esac
+        if ! git check-ref-format --branch "$INPUT_BASE_REF" >/dev/null 2>&1; then
+          echo "::error::Invalid base-ref"; exit 1
+        fi
         git fetch origin "$INPUT_BASE_REF" --depth=1
         if specter predict --help | grep -q -- '--branch'; then
           specter predict --branch "origin/$INPUT_BASE_REF" --json > /tmp/specter-predict.json
