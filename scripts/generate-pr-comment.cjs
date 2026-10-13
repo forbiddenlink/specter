@@ -77,6 +77,32 @@ function parseJsonSafe(content) {
   }
 }
 
+// Values below come from the pull request (file paths, predict warnings and
+// recommendations), so they are untrusted. Escape them before they reach the
+// comment so a crafted path cannot inject links, HTML, or @-mentions.
+function singleLine(value) {
+  return String(value ?? '').replace(/[\r\n]+/g, ' ')
+}
+
+function escapeMarkdown(value) {
+  return singleLine(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/([\\`*_{}[\]()#+!|~])/g, '\\$1')
+    .replace(/@/g, '@\u200b')
+}
+
+// Wrap in a code span whose fence is longer than any backtick run inside it,
+// so the content cannot close the span early. Mentions do not render in code.
+function codeSpan(value) {
+  const text = singleLine(value)
+  const longestRun = Math.max(0, ...(text.match(/`+/g) || []).map((run) => run.length))
+  const fence = '`'.repeat(longestRun + 1)
+  const pad = text.startsWith('`') || text.endsWith('`') ? ' ' : ''
+  return `${fence}${pad}${text}${pad}${fence}`
+}
+
 // Get health emoji based on score
 function getHealthEmoji(score) {
   if (score >= 80) return ':green_circle:'
@@ -237,7 +263,7 @@ function generateComment(args) {
   lines.push('|--------|-------|')
   lines.push(`| Health Score | ${args.healthScore}/100 ${healthEmoji} |`)
   lines.push(
-    `| PR Risk | ${args.riskLevel.charAt(0).toUpperCase() + args.riskLevel.slice(1)} ${riskEmoji} |`
+    `| PR Risk | ${escapeMarkdown(args.riskLevel.charAt(0).toUpperCase() + args.riskLevel.slice(1))} ${riskEmoji} |`
   )
   lines.push(`| Files Changed | ${changedFiles || fileRisks.length || '-'} |`)
   lines.push(`| Est. Review Time | ~${args.reviewMinutes} min |`)
@@ -252,10 +278,10 @@ function generateComment(args) {
     lines.push('')
 
     for (const file of highRiskFiles.slice(0, 5)) {
-      lines.push(`- :red_circle: \`${file.path}\` - High risk`)
+      lines.push(`- :red_circle: ${codeSpan(file.path)} - High risk`)
     }
     for (const file of mediumRiskFiles.slice(0, 5)) {
-      lines.push(`- :yellow_circle: \`${file.path}\` - Medium risk`)
+      lines.push(`- :yellow_circle: ${codeSpan(file.path)} - Medium risk`)
     }
 
     if (highRiskFiles.length > 5 || mediumRiskFiles.length > 5) {
@@ -271,7 +297,7 @@ function generateComment(args) {
     lines.push('### :warning: Warnings')
     lines.push('')
     for (const warning of warnings.slice(0, 5)) {
-      lines.push(`- ${warning}`)
+      lines.push(`- ${escapeMarkdown(warning)}`)
     }
     lines.push('')
   }
@@ -281,7 +307,7 @@ function generateComment(args) {
     lines.push('### :bulb: Recommendations')
     lines.push('')
     for (const rec of recommendations.slice(0, 5)) {
-      lines.push(`- ${rec}`)
+      lines.push(`- ${escapeMarkdown(rec)}`)
     }
     lines.push('')
   }
@@ -328,4 +354,8 @@ function main() {
   console.log(comment)
 }
 
-main()
+if (require.main === module) {
+  main()
+}
+
+module.exports = { escapeMarkdown, codeSpan, generateComment }
