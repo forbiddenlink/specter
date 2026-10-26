@@ -153,13 +153,14 @@
       "brace-expansion@5": ">=5.0.12 <6",
       "@fastify/static@10": ">=10.1.2 <11",
       "shell-quote@1": ">=1.11.0 <2",
-      "fast-uri@4": ">=4.1.1 <5",
+      "fast-uri@4": ">=4.2.3 <5",
       "@fastify/static": ">=10.1.2 <11",
-      "fast-uri": ">=4.0.1 <5",
+      "fast-uri": ">=4.2.3 <5",
       "hono": ">=4.12.34 <5",
       "markdown-it": ">=14.3.3 <15",
-      "undici@8": ">=8.10.2 <9",
-      "source-map-js": ">=1.2.2 <2"
+      "undici@8": ">=8.12.2 <9",
+      "source-map-js": ">=1.2.2 <2",
+      "body-parser": ">=2.4.0 <3"
     }
   },
   "packageManager": "pnpm@10.34.5"
