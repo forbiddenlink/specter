@@ -61,7 +61,7 @@ npx specter-roast --json
 
 ## Want More?
 
-This is a mini-tool from [Specter](https://github.com/forbiddenlink/specter) - a full codebase intelligence toolkit with 63 commands.
+This is a mini-tool from [Specter](https://github.com/forbiddenlink/specter) - a full codebase intelligence toolkit with 72 commands.
 
 ```bash
 npm install -g @purplegumdropz/specter

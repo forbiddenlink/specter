@@ -55,6 +55,7 @@ vi.mock('../../src/analyzers/git.js', () => ({
     Promise.resolve({
       isGitRepo: true,
       fileHistories: new Map(),
+      coChange: {},
       repoStats: { totalCommits: 100, totalContributors: 5 },
     })
   ),
@@ -66,6 +67,7 @@ vi.mock('../../src/analyzers/imports.js', () => ({
   createImportEdges: vi.fn(() => []),
   buildDependencyMap: vi.fn(() => new Map()),
   buildReverseDependencyMap: vi.fn(() => new Map()),
+  createImportResolver: vi.fn(() => () => null),
 }))
 
 import { analyzeSourceFile, createProject, getSourceFiles } from '../../src/analyzers/ast.js'

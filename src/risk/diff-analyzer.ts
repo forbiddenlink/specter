@@ -138,29 +138,41 @@ export async function getBranchChanges(
   baseBranch: string,
   compareBranch?: string
 ): Promise<DiffFile[]> {
-  const git = simpleGit(rootDir)
-
   try {
-    const compare = compareBranch || 'HEAD'
-    const diffRange = `${baseBranch}...${compare}`
-
-    // Get numstat
-    const numstatOutput = await git.diff([diffRange, '--numstat'])
-    if (!numstatOutput.trim()) {
-      return []
-    }
-
-    const numstatFiles = parseNumstat(numstatOutput)
-
-    // Get name-status
-    const nameStatusOutput = await git.diff([diffRange, '--name-status'])
-    const statusMap = parseNameStatus(nameStatusOutput)
-
-    return combineData(numstatFiles, statusMap)
+    return await getBranchChangesOrThrow(rootDir, baseBranch, compareBranch)
   } catch (error) {
     console.error(`Error getting branch changes for ${baseBranch}:`, error)
     return []
   }
+}
+
+/**
+ * Like getBranchChanges, but a git failure (unknown ref, no merge base in a
+ * shallow clone) throws instead of looking like an empty diff. Use this when
+ * the result gates CI, where "no changes" would read as "low risk".
+ */
+export async function getBranchChangesOrThrow(
+  rootDir: string,
+  baseBranch: string,
+  compareBranch?: string
+): Promise<DiffFile[]> {
+  const git = simpleGit(rootDir)
+  const compare = compareBranch || 'HEAD'
+  const diffRange = `${baseBranch}...${compare}`
+
+  // Get numstat
+  const numstatOutput = await git.diff([diffRange, '--numstat'])
+  if (!numstatOutput.trim()) {
+    return []
+  }
+
+  const numstatFiles = parseNumstat(numstatOutput)
+
+  // Get name-status
+  const nameStatusOutput = await git.diff([diffRange, '--name-status'])
+  const statusMap = parseNameStatus(nameStatusOutput)
+
+  return combineData(numstatFiles, statusMap)
 }
 
 /**

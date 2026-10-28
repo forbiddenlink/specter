@@ -53,7 +53,7 @@ Once the knowledge graph is built, ask the codebase about itself:
 Run a scan first if you haven't:
 
 ```bash
-npx specter-mcp scan
+npx -y @purplegumdropz/specter scan
 ```
 
 ## Example Session

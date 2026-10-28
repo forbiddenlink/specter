@@ -1,0 +1,14 @@
+{
+  "name": "specter",
+  "description": "Specter: git-history change-risk context for Claude Code.",
+  "owner": {
+    "name": "Liz Stein"
+  },
+  "plugins": [
+    {
+      "name": "specter",
+      "source": "./claude-plugin",
+      "description": "Change-risk briefs before Claude edits a file: co-changing files, dependents, hotspots and tests, mined from your git history."
+    }
+  ]
+}

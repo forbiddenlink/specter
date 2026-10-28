@@ -13,10 +13,10 @@ jobs:
   a11y:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Ally accessibility scan
         continue-on-error: true
-        uses: forbiddenlink/ally@main
+        uses: forbiddenlink/ally@32f7847f6818f9043f262085726b7fe93f91a35b # main
         with:
           path: "."
           threshold: "9999"
@@ -24,7 +24,7 @@ jobs:
           output: ".ally"
       - name: Upload report
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: ally-a11y-report
           path: ".ally/**"

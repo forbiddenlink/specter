@@ -5,7 +5,7 @@ applyTo: '**'
 
 # Specter + GitHub Copilot Integration Guide
 
-Specter is a codebase intelligence toolkit that gives your code a voice. Use these instructions to leverage Specter's 65 commands effectively with GitHub Copilot.
+Specter is a codebase intelligence toolkit that gives your code a voice. Use these instructions to leverage Specter's 72 commands effectively with GitHub Copilot.
 
 ## 🚀 Quick Start Pattern
 
@@ -244,9 +244,8 @@ specter health --json | jq '.healthScore'
 
 ## 📖 Further Reading
 
-- **MCP Integration**: See `docs/MCP_INTEGRATION.md` for MCP server usage
-- **Example Prompts**: See `docs/MCP_EXAMPLE_PROMPTS.md` for AI prompt examples
-- **Full Documentation**: Run `specter --help` or visit the docs folder
+- **MCP tools**: See `src/mcp/` (server wiring) and `src/tools/` (tool implementations)
+- **Full Documentation**: Run `specter --help`
 
 ## 🎓 Teaching Copilot About Context
 

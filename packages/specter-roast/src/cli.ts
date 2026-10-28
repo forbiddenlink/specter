@@ -441,7 +441,7 @@ function roastFooter(): string[] {
   return [
     chalk.bold.red('  \u{1F3A4} *drops mic*'),
     '',
-    chalk.dim('  Want the full analysis? Check out: npm install -g specter-mcp'),
+    chalk.dim('  Want the full analysis? Check out: npm install -g @purplegumdropz/specter'),
     chalk.dim('  https://github.com/forbiddenlink/specter'),
     '',
   ]

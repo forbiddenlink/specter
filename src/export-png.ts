@@ -8,7 +8,8 @@
 
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import { type CanvasRenderingContext2D, createCanvas } from 'canvas'
+// canvas is a native module that may not have built; load it only when exporting
+import type { CanvasRenderingContext2D } from 'canvas'
 import { type SimpleGit, simpleGit } from 'simple-git'
 import {
   calculateContentArea,
@@ -118,6 +119,8 @@ export async function exportToPng(
 
   // Parse ANSI codes
   const parsedLines = parseAnsiCodes(content, theme)
+
+  const { createCanvas } = await import('canvas')
 
   // Create temporary canvas for measurements
   const tempCanvas = createCanvas(width, 100)

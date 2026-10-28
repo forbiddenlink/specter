@@ -10,7 +10,7 @@
 <p align="center">
   <strong>Give your codebase a voice.</strong><br/>
   A local code-intelligence CLI for understanding change impact and prioritizing refactors.<br/>
-  <strong>72 commands. 14 MCP tools. 19 personality modes. 1 graph built from your code and git history.</strong>
+  <strong>74 commands. 14 MCP tools. 19 personality modes. 1 graph built from your code and git history.</strong>
 </p>
 
 ---
@@ -64,13 +64,42 @@ specter roast                         # Comedic codebase roast
 
 ---
 
+## Claude Code: change-risk briefs before every edit
+
+Before Claude edits a file, Specter tells it what the file's git history knows and the code does not show:
+
+```
+Specter change-risk brief for components/pages/pricing/PricingPageClient.tsx:
+- Usually changes together with: components/pages/home/HomePageClient.tsx (55% of its changes, 28 commits, no import link). Check whether they need the same change. In this repo such predictions held 26% of the time.
+```
+
+That is real output from a Next.js repo, quoted back by Claude Code during an edit. Two files with no import between them had changed together in 28 commits. Nothing in the code shows that link, and the brief states its own measured hit rate.
+
+It stays silent for unremarkable files, and tells Claude about each file once per session. Research on context files for coding agents found that overview-style context raised cost without improving results, while specific, actionable instructions do get followed (Gloaguen et al., 2026, [arXiv:2602.11988](https://arxiv.org/abs/2602.11988)).
+
+```bash
+npm install -g @purplegumdropz/specter
+specter scan                                   # once per repo; later scans are incremental
+claude plugin marketplace add forbiddenlink/specter
+claude plugin install specter@specter
+```
+
+The plugin adds a `PreToolUse` hook on `Edit|Write`, which injects the brief, and a `SessionStart` hook, which refreshes the graph in the background. Both do nothing in repos without a `.specter/` graph.
+
+**How accurate is it?** Run `specter backtest` on your repo. It replays history and checks each co-change prediction against what actually changed in the same commit, using the evaluation design of Zimmermann et al., [ROSE](https://thomas-zimmermann.com/publications/files/zimmermann-tse-2005.pdf). On 9 real TypeScript repos, at the brief's thresholds (at least 5 shared commits and 50% confidence):
+
+- Precision ranged from 26% to 65%, with a median of about 43%. Single-file commits count as misses whenever a partner was predicted.
+- The brief named a partner on 7% to 21% of edits.
+
+Every scan measures this for its own repo, and the brief drops co-change hints in repos where they prove unreliable. To see exactly what Claude would be told about a file, run `specter brief <file>`.
+
 ## GitHub Copilot CLI Integration
 
 Let AI assistants analyze your codebase directly:
 
 ```bash
 # Add to Copilot CLI
-copilot mcp add specter -- npx @purplegumdropz/specter-mcp
+copilot mcp add specter -- npx -y -p @purplegumdropz/specter specter-mcp
 
 # Then use natural language
 copilot -p "Use specter to find complexity hotspots"
@@ -81,7 +110,8 @@ copilot -p "Use specter to suggest refactoring for the most complex file"
 
 **6 prompt templates**: `specter:introduce`, `specter:review`, `specter:onboard`, `specter:refactor-plan`, `specter:standup-summary`, `specter:health-check`
 
-See [Copilot CLI Integration](docs/COPILOT_CLI_INTEGRATION.md) | [MCP Integration](docs/MCP_INTEGRATION.md) | [Example Prompts](docs/MCP_EXAMPLE_PROMPTS.md)
+See `.github/instructions/specter-copilot.instructions.md` for the full Copilot CLI integration
+guide, and `plugin/` for the plugin manifest and MCP tool implementations.
 
 ---
 
@@ -263,8 +293,6 @@ specter health --accessible
 SPECTER_ACCESSIBLE=true specter health
 ```
 
-See the [Accessibility Guide](docs/ACCESSIBILITY.md) for details.
-
 ---
 
 ## Data Storage
@@ -295,12 +323,7 @@ Your source graph and git analysis stay on your machine. Specter only exports te
 
 | Guide | Topic |
 |-------|-------|
-| [**Copilot CLI Integration**](docs/COPILOT_CLI_INTEGRATION.md) | GitHub Copilot CLI setup |
-| [**MCP Integration**](docs/MCP_INTEGRATION.md) | All 14 MCP tools |
-| [**Example Prompts**](docs/MCP_EXAMPLE_PROMPTS.md) | Real-world AI prompts |
-| [**Accessibility**](docs/ACCESSIBILITY.md) | Colorblind-friendly mode |
-| [**Comparison**](docs/COMPARISON.md) | vs SonarQube, CodeClimate, etc |
-| [**Troubleshooting**](docs/TROUBLESHOOTING.md) | Common issues & solutions |
+| [**Copilot instructions**](.github/instructions/specter-copilot.instructions.md) | GitHub Copilot CLI integration guide |
 | [**Contributing**](CONTRIBUTING.md) | How to contribute |
 | [**Security**](SECURITY.md) | Security policy |
 

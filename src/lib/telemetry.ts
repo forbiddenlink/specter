@@ -6,11 +6,7 @@
  */
 
 import { context, type Span, SpanKind, SpanStatusCode, trace } from '@opentelemetry/api'
-import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node'
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http'
-import { resourceFromAttributes } from '@opentelemetry/resources'
-import { NodeSDK, node } from '@opentelemetry/sdk-node'
-import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions'
+import type { NodeSDK } from '@opentelemetry/sdk-node'
 
 // Service name for all traces
 export const SERVICE_NAME = 'specter'
@@ -25,16 +21,38 @@ const tracer = trace.getTracer(SERVICE_NAME, '1.0.0')
 let sdkInstance: NodeSDK | null = null
 
 /**
- * Initialize the OpenTelemetry SDK
+ * Initialize the OpenTelemetry SDK.
+ *
+ * Opt-in: does nothing unless OTEL_ENABLED=true or an OTLP endpoint is set. The SDK
+ * packages load lazily, because importing and starting them on every run cost
+ * several seconds of CLI startup. Without an SDK, the span helpers below record
+ * into the API's built-in no-op tracer.
  */
-export function initTelemetry(): void {
+export async function initTelemetry(): Promise<void> {
   const isOtelEnabled = process.env['OTEL_ENABLED'] === 'true'
   const endpoint = process.env['OTEL_EXPORTER_OTLP_ENDPOINT']
+  if (!isOtelEnabled && !endpoint) return
+
+  const [{ NodeSDK, node }, { resourceFromAttributes }, { ATTR_SERVICE_NAME }] = await Promise.all([
+    import('@opentelemetry/sdk-node'),
+    import('@opentelemetry/resources'),
+    import('@opentelemetry/semantic-conventions'),
+  ])
 
   // Use OTLP exporter if endpoint is configured, otherwise console
   const traceExporter = endpoint
-    ? new OTLPTraceExporter({ url: endpoint })
+    ? new (await import('@opentelemetry/exporter-trace-otlp-http')).OTLPTraceExporter({
+        url: endpoint,
+      })
     : new node.ConsoleSpanExporter()
+
+  const instrumentations = isOtelEnabled
+    ? [
+        (await import('@opentelemetry/auto-instrumentations-node')).getNodeAutoInstrumentations({
+          '@opentelemetry/instrumentation-fs': { enabled: false },
+        }),
+      ]
+    : []
 
   const sdk = new NodeSDK({
     resource: resourceFromAttributes({
@@ -43,13 +61,7 @@ export function initTelemetry(): void {
       'deployment.environment': process.env['NODE_ENV'] || 'development',
     }),
     traceExporter,
-    instrumentations: isOtelEnabled
-      ? [
-          getNodeAutoInstrumentations({
-            '@opentelemetry/instrumentation-fs': { enabled: false },
-          }),
-        ]
-      : [],
+    instrumentations,
   })
 
   sdk.start()

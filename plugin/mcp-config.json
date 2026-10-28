@@ -3,7 +3,7 @@
     "specter": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "specter-mcp"]
+      "args": ["-y", "-p", "@purplegumdropz/specter", "specter-mcp"]
     },
     "mcp-tsmorph-refactor": {
       "type": "stdio",
