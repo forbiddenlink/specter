@@ -34,7 +34,8 @@ export async function reasonAboutCode(prompt: string, context: string): Promise<
       messages: [
         {
           role: 'user',
-          content: `${prompt}\n\nContext:\n${context}`,
+          // Long context first, question last: the model answers the final instruction best.
+          content: `<context>\n${context}\n</context>\n\n${prompt}`,
         },
       ],
     })
