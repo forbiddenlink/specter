@@ -1,10 +1,8 @@
-# 👻 Specter
+# Specter
 
 <p align="center">
   <a href="https://www.npmjs.com/package/@purplegumdropz/specter"><img src="https://img.shields.io/npm/v/@purplegumdropz/specter.svg" alt="npm version"></a>
   <a href="https://github.com/forbiddenlink/specter/actions"><img src="https://github.com/forbiddenlink/specter/workflows/CI/badge.svg" alt="Build Status"></a>
-  <a href="https://github.com/forbiddenlink/specter/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/@purplegumdropz/specter.svg" alt="License"></a>
-  <a href="https://www.npmjs.com/package/@purplegumdropz/specter"><img src="https://img.shields.io/npm/dm/@purplegumdropz/specter" alt="npm downloads"></a>
 </p>
 
 <p align="center">
@@ -15,7 +13,7 @@
 
 ---
 
-## What Makes Specter Different?
+## What makes Specter different
 
 Specter combines source relationships with git history to make change risk and refactoring priorities actionable:
 
@@ -39,9 +37,9 @@ npx @purplegumdropz/specter-roast
 
 ---
 
-## Real-World Examples
+## Examples
 
-### Find the code that's slowing your team down
+### Find the code that is slowing your team down
 ```bash
 specter hotspots              # Complexity × Churn = Refactoring Priority
 specter cost                  # Tech debt in dollars ($510k/year)
@@ -66,16 +64,18 @@ specter roast                         # Comedic codebase roast
 
 ## Claude Code: change-risk briefs before every edit
 
-Before Claude edits a file, Specter tells it what the file's git history knows and the code does not show:
+Before Claude edits a file, Specter tells it what the file's git history knows and the code does not show. Example output:
 
 ```
 Specter change-risk brief for components/pages/pricing/PricingPageClient.tsx:
 - Usually changes together with: components/pages/home/HomePageClient.tsx (55% of its changes, 28 commits, no import link). Check whether they need the same change. In this repo such predictions held 26% of the time.
 ```
 
-That is real output from a Next.js repo, quoted back by Claude Code during an edit. Two files with no import between them had changed together in 28 commits. Nothing in the code shows that link, and the brief states its own measured hit rate.
+In this example, two files with no import between them changed together in 28 commits. Nothing in the code shows that link, and the brief states its own measured hit rate.
 
 It stays silent for unremarkable files, and tells Claude about each file once per session. Research on context files for coding agents found that overview-style context raised cost without improving results, while specific, actionable instructions do get followed (Gloaguen et al., 2026, [arXiv:2602.11988](https://arxiv.org/abs/2602.11988)).
+
+> Note: `specter brief`, `specter backtest` and the plugin are on `main` but not yet published. npm `latest` is 1.1.1 (`npm view @purplegumdropz/specter version`) while `package.json` is at 1.3.0. Until the next release, build from source (see CONTRIBUTING.md) to use them.
 
 ```bash
 npm install -g @purplegumdropz/specter
@@ -86,10 +86,7 @@ claude plugin install specter@specter
 
 The plugin adds a `PreToolUse` hook on `Edit|Write`, which injects the brief, and a `SessionStart` hook, which refreshes the graph in the background. Both do nothing in repos without a `.specter/` graph.
 
-**How accurate is it?** Run `specter backtest` on your repo. It replays history and checks each co-change prediction against what actually changed in the same commit, using the evaluation design of Zimmermann et al., [ROSE](https://thomas-zimmermann.com/publications/files/zimmermann-tse-2005.pdf). On 9 real TypeScript repos, at the brief's thresholds (at least 5 shared commits and 50% confidence):
-
-- Precision ranged from 26% to 65%, with a median of about 43%. Single-file commits count as misses whenever a partner was predicted.
-- The brief named a partner on 7% to 21% of edits.
+**How accurate is it?** Run `specter backtest` on your repo. It replays history and checks each co-change prediction against what actually changed in the same commit, using the evaluation design of Zimmermann et al., [ROSE](https://thomas-zimmermann.com/publications/files/zimmermann-tse-2005.pdf). Precision varies by repository, and single-file commits count as misses whenever a partner was predicted. Run it before you rely on the brief.
 
 Every scan measures this for its own repo, and the brief drops co-change hints in repos where they prove unreliable. To see exactly what Claude would be told about a file, run `specter brief <file>`.
 
@@ -336,6 +333,6 @@ MIT
 ---
 
 <p align="center">
-  Built with 👻 by <a href="https://github.com/elizabethsiegle">Liz Stein</a><br/>
+  Built by <a href="https://github.com/forbiddenlink">Liz Stein</a><br/>
   <em>"I am the ghost in your git history."</em>
 </p>
