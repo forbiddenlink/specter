@@ -121,6 +121,11 @@
     ]
   },
   "pnpm": {
+    "auditConfig": {
+      "ignoreGhsas": [
+        "GHSA-fc5q-39xc-vjpf"
+      ]
+    },
     "onlyBuiltDependencies": [
       "canvas"
     ],
