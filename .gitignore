@@ -70,3 +70,6 @@ out/
 
 
 # Next.js
+
+# Locally packed CLI tarball used by gauge.json (npm pack output)
+*.tgz

@@ -90,3 +90,14 @@ alias `@` -> `./src` (set in `vitest.config.ts`; `tsconfig.json` has no `paths` 
   changes before testing the published binaries (`dist/cli.js`, `dist/index.js`).
 - `.specter/` (in consumer repos) holds Specter's own graph cache; this repo's own `.specter/`
   (if present) is local tool state, not source.
+
+<!-- gauge:start -->
+Gauge project inputs and optional shared cases are configured in gauge.json.
+Saved evals and preference prompts, sessions, and analyses live in private .gauge/
+state locally or the hosted organization. Shared cases use gauge-cases/.
+Before using Gauge, run `gauge instructions`, then the relevant topic.
+For product improvement or a first pilot, use `gauge instructions hillclimb`:
+identify inputs, run representative sessions, analyze, improve, rerun, compare.
+After local runs, follow `gauge instructions session-analysis` to publish
+structured findings. Add `-o json` for machine-readable output.
+<!-- gauge:end -->
