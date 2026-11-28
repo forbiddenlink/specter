@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "inputs": {
+    "cli": {
+      "type": "npm-package",
+      "path": "purplegumdropz-specter-*.tgz",
+      "install": "environment"
+    }
+  }
+}

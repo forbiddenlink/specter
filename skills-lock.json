@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "gauge-agents": {
+      "source": "gauge-sh/gauge-skills",
+      "sourceType": "github",
+      "computedHash": "c73ebb753e20ddf7dc3e274745d6af83affc2bd227ac4ec664c3524601e2fdeb"
+    }
+  }
+}
